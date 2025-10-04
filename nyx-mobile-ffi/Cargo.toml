@@ -30,6 +30,8 @@ android = []
 telemetry = ["dep:metrics"]
 telemetry-otlp = ["telemetry"]
 telemetry-otlp_exporter = ["telemetry"]
+# Export test helpers for integration tests in other crates
+test-helpers = []
 
 [build-dependencies]
 # Updated to latest version to resolve dependency vulnerabilities

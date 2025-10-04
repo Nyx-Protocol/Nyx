@@ -684,6 +684,22 @@ pub fn rust_get_resume_count() -> u32 {
     RESUME_COUNT.load(Ordering::SeqCst)
 }
 
+/// Test helper: increment wake counter atomically.
+/// This is used in tests to simulate wake events without platform-specific triggers.
+/// Exported for integration tests in other crates (e.g., nyx-daemon).
+#[cfg(any(test, feature = "test-helpers"))]
+pub fn rust_increment_wake_count() {
+    WAKE_COUNT.fetch_add(1, Ordering::SeqCst);
+}
+
+/// Test helper: increment resume counter atomically.
+/// This is used in tests to simulate resume events without platform-specific triggers.
+/// Exported for integration tests in other crates (e.g., nyx-daemon).
+#[cfg(any(test, feature = "test-helpers"))]
+pub fn rust_increment_resume_count() {
+    RESUME_COUNT.fetch_add(1, Ordering::SeqCst);
+}
+
 #[cfg(test)]
 mod test_s {
     use super::*;
