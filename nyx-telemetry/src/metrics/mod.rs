@@ -1,6 +1,8 @@
 use once_cell::sync::Lazy;
 use prometheus::Encoder;
-use prometheus::{IntCounter, Registry, TextEncoder};
+use prometheus::{
+    HistogramOpts, HistogramVec, IntCounter, IntCounterVec, Opts, Registry, TextEncoder,
+};
 /// Metrics utilities and Prometheus exposition with robust error handling.
 use std::collections::HashMap;
 use std::sync::Mutex;
@@ -12,6 +14,148 @@ pub(crate) static REGISTRY: Lazy<Registry> = Lazy::new(Registry::new);
 /// Counters are created on-demand and cached for reuse to avoid duplicate registrations
 static COUNTERS: Lazy<Mutex<HashMap<String, IntCounter>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
+
+// ===== Handshake Metrics =====
+
+/// Counter for successful handshakes with labeled dimensions
+/// Labels: session_id, peer_id, handshake_type (client|server)
+static HANDSHAKE_SUCCESS_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    let opts = Opts::new(
+        "nyx_handshake_success_total",
+        "Total number of successful handshakes",
+    );
+    let counter = IntCounterVec::new(opts, &["session_id", "peer_id", "handshake_type"])
+        .expect("Failed to create handshake_success_total counter");
+    REGISTRY
+        .register(Box::new(counter.clone()))
+        .expect("Failed to register handshake_success_total");
+    counter
+});
+
+/// Counter for failed handshakes with error reasons
+/// Labels: session_id, peer_id, handshake_type, error_type
+static HANDSHAKE_FAILURE_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    let opts = Opts::new(
+        "nyx_handshake_failure_total",
+        "Total number of failed handshakes",
+    );
+    let counter = IntCounterVec::new(
+        opts,
+        &["session_id", "peer_id", "handshake_type", "error_type"],
+    )
+    .expect("Failed to create handshake_failure_total counter");
+    REGISTRY
+        .register(Box::new(counter.clone()))
+        .expect("Failed to register handshake_failure_total");
+    counter
+});
+
+/// Histogram for handshake duration in milliseconds
+/// Labels: handshake_type
+/// Buckets: 10ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s
+static HANDSHAKE_DURATION_HISTOGRAM: Lazy<HistogramVec> = Lazy::new(|| {
+    let opts = HistogramOpts::new(
+        "nyx_handshake_duration_ms",
+        "Handshake duration in milliseconds",
+    )
+    .buckets(vec![10.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0, 10000.0]);
+    let histogram = HistogramVec::new(opts, &["handshake_type"])
+        .expect("Failed to create handshake_duration_ms histogram");
+    REGISTRY
+        .register(Box::new(histogram.clone()))
+        .expect("Failed to register handshake_duration_ms");
+    histogram
+});
+
+// ===== cMix Batch Processing Metrics =====
+
+/// Counter for cMix batch processing operations
+/// Labels: batch_size_range (1-10|11-50|51-100|101+), status (success|failure)
+static CMIX_BATCH_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    let opts = Opts::new(
+        "nyx_cmix_batch_total",
+        "Total number of cMix batch processing operations",
+    );
+    let counter = IntCounterVec::new(opts, &["batch_size_range", "status"])
+        .expect("Failed to create cmix_batch_total counter");
+    REGISTRY
+        .register(Box::new(counter.clone()))
+        .expect("Failed to register cmix_batch_total");
+    counter
+});
+
+/// Histogram for cMix batch processing duration
+/// Labels: batch_size_range
+/// Buckets: 1ms, 5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s
+static CMIX_BATCH_DURATION_HISTOGRAM: Lazy<HistogramVec> = Lazy::new(|| {
+    let opts =
+        HistogramOpts::new("nyx_cmix_batch_duration_ms", "cMix batch processing duration")
+            .buckets(vec![1.0, 5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0]);
+    let histogram = HistogramVec::new(opts, &["batch_size_range"])
+        .expect("Failed to create cmix_batch_duration_ms histogram");
+    REGISTRY
+        .register(Box::new(histogram.clone()))
+        .expect("Failed to register cmix_batch_duration_ms");
+    histogram
+});
+
+/// Counter for cMix messages processed
+/// Labels: direction (inbound|outbound)
+static CMIX_MESSAGES_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    let opts = Opts::new(
+        "nyx_cmix_messages_total",
+        "Total number of cMix messages processed",
+    );
+    let counter =
+        IntCounterVec::new(opts, &["direction"]).expect("Failed to create cmix_messages_total counter");
+    REGISTRY
+        .register(Box::new(counter.clone()))
+        .expect("Failed to register cmix_messages_total");
+    counter
+});
+
+// ===== Rekey Event Metrics =====
+
+/// Counter for rekey events
+/// Labels: session_id, rekey_reason (scheduled|forced|error_recovery)
+static REKEY_EVENTS_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    let opts = Opts::new("nyx_rekey_events_total", "Total number of rekey events");
+    let counter = IntCounterVec::new(opts, &["session_id", "rekey_reason"])
+        .expect("Failed to create rekey_events_total counter");
+    REGISTRY
+        .register(Box::new(counter.clone()))
+        .expect("Failed to register rekey_events_total");
+    counter
+});
+
+/// Histogram for rekey operation duration
+/// Labels: rekey_reason
+/// Buckets: 10ms, 50ms, 100ms, 250ms, 500ms, 1s, 2s, 5s
+static REKEY_DURATION_HISTOGRAM: Lazy<HistogramVec> = Lazy::new(|| {
+    let opts = HistogramOpts::new("nyx_rekey_duration_ms", "Rekey operation duration in milliseconds")
+        .buckets(vec![10.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2000.0, 5000.0]);
+    let histogram = HistogramVec::new(opts, &["rekey_reason"])
+        .expect("Failed to create rekey_duration_ms histogram");
+    REGISTRY
+        .register(Box::new(histogram.clone()))
+        .expect("Failed to register rekey_duration_ms");
+    histogram
+});
+
+/// Counter for rekey failures
+/// Labels: session_id, error_type
+static REKEY_FAILURE_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    let opts = Opts::new(
+        "nyx_rekey_failure_total",
+        "Total number of failed rekey operations",
+    );
+    let counter = IntCounterVec::new(opts, &["session_id", "error_type"])
+        .expect("Failed to create rekey_failure_total counter");
+    REGISTRY
+        .register(Box::new(counter.clone()))
+        .expect("Failed to register rekey_failure_total");
+    counter
+});
 
 /// Record a value into an IntCounter, creating and registering it on first use
 ///
@@ -87,55 +231,180 @@ pub fn record_counter(name: &str, v: u64) {
         }
     });
     counter.inc_by(v);
+}
 
-    #[allow(dead_code)]
-    fn dump_prometheus_internal() -> String {
-        // Gather all metric families from the registry
-        let metric_families = REGISTRY.gather();
-        let encoder = TextEncoder::new();
-        let mut buffer = Vec::new();
+// ===== Public Metric Recording Functions =====
 
-        // Attempt to encode metrics into the buffer
-        match encoder.encode(&metric_families, &mut buffer) {
-            Ok(()) => {
-                // Convert bytes to UTF-8 string with fallback
-                String::from_utf8(buffer).unwrap_or_else(|utf8_error| {
-                    tracing::error!(
-                        error = %utf8_error,
-                        "Failed to convert Prometheus metrics to UTF-8 string"
-                    );
-                    // Return a minimal valid Prometheus response
-                    String::from("# Prometheus metrics export failed: UTF-8 conversion error\n")
-                })
-            }
-            Err(encode_error) => {
+/// Record a successful handshake event
+///
+/// # Arguments
+/// * `session_id` - Truncated session identifier (first 8 chars to maintain low cardinality)
+/// * `peer_id` - Truncated peer identifier (first 8 chars)
+/// * `handshake_type` - Type of handshake: "client" or "server"
+/// * `duration_ms` - Duration of handshake in milliseconds
+pub fn record_handshake_success(
+    session_id: &str,
+    peer_id: &str,
+    handshake_type: &str,
+    duration_ms: f64,
+) {
+    HANDSHAKE_SUCCESS_COUNTER
+        .with_label_values(&[session_id, peer_id, handshake_type])
+        .inc();
+    HANDSHAKE_DURATION_HISTOGRAM
+        .with_label_values(&[handshake_type])
+        .observe(duration_ms);
+}
+
+/// Record a failed handshake event
+///
+/// # Arguments
+/// * `session_id` - Truncated session identifier
+/// * `peer_id` - Truncated peer identifier
+/// * `handshake_type` - Type of handshake: "client" or "server"
+/// * `error_type` - Type of error: "timeout", "invalid_signature", "network", etc.
+pub fn record_handshake_failure(
+    session_id: &str,
+    peer_id: &str,
+    handshake_type: &str,
+    error_type: &str,
+) {
+    HANDSHAKE_FAILURE_COUNTER
+        .with_label_values(&[session_id, peer_id, handshake_type, error_type])
+        .inc();
+}
+
+/// Record a cMix batch processing operation
+///
+/// # Arguments
+/// * `batch_size` - Number of messages in the batch
+/// * `success` - Whether the batch processing succeeded
+/// * `duration_ms` - Duration of batch processing in milliseconds
+pub fn record_cmix_batch(batch_size: usize, success: bool, duration_ms: f64) {
+    // Categorize batch size to maintain low cardinality
+    let batch_size_range = match batch_size {
+        1..=10 => "1-10",
+        11..=50 => "11-50",
+        51..=100 => "51-100",
+        _ => "101+",
+    };
+    let status = if success { "success" } else { "failure" };
+
+    CMIX_BATCH_COUNTER
+        .with_label_values(&[batch_size_range, status])
+        .inc();
+    CMIX_BATCH_DURATION_HISTOGRAM
+        .with_label_values(&[batch_size_range])
+        .observe(duration_ms);
+}
+
+/// Record cMix message processing
+///
+/// # Arguments
+/// * `direction` - Message direction: "inbound" or "outbound"
+/// * `count` - Number of messages processed
+pub fn record_cmix_messages(direction: &str, count: u64) {
+    CMIX_MESSAGES_COUNTER
+        .with_label_values(&[direction])
+        .inc_by(count);
+}
+
+/// Record a rekey event
+///
+/// # Arguments
+/// * `session_id` - Truncated session identifier
+/// * `rekey_reason` - Reason for rekey: "scheduled", "forced", "error_recovery"
+/// * `duration_ms` - Duration of rekey operation in milliseconds
+pub fn record_rekey_event(session_id: &str, rekey_reason: &str, duration_ms: f64) {
+    REKEY_EVENTS_COUNTER
+        .with_label_values(&[session_id, rekey_reason])
+        .inc();
+    REKEY_DURATION_HISTOGRAM
+        .with_label_values(&[rekey_reason])
+        .observe(duration_ms);
+}
+
+/// Record a rekey failure
+///
+/// # Arguments
+/// * `session_id` - Truncated session identifier
+/// * `error_type` - Type of error: "timeout", "crypto_error", "network", etc.
+pub fn record_rekey_failure(session_id: &str, error_type: &str) {
+    REKEY_FAILURE_COUNTER
+        .with_label_values(&[session_id, error_type])
+        .inc();
+}
+
+/// Truncate identifier to first N characters for low cardinality labels
+///
+/// Prometheus best practice: keep label cardinality low to avoid memory issues.
+/// Session/peer IDs are truncated to first 8 characters for distinguishability
+/// while maintaining bounded cardinality.
+///
+/// # Arguments
+/// * `id` - Full identifier string
+/// * `max_len` - Maximum length (default: 8)
+///
+/// # Returns
+/// Truncated identifier or "unknown" if empty
+pub fn truncate_id(id: &str, max_len: usize) -> String {
+    if id.is_empty() {
+        return "unknown".to_string();
+    }
+    if id.len() <= max_len {
+        id.to_string()
+    } else {
+        id[..max_len].to_string()
+    }
+}
+
+#[allow(dead_code)]
+fn dump_prometheus_internal() -> String {
+    // Gather all metric families from the registry
+    let metric_families = REGISTRY.gather();
+    let encoder = TextEncoder::new();
+    let mut buffer = Vec::new();
+
+    // Attempt to encode metrics into the buffer
+    match encoder.encode(&metric_families, &mut buffer) {
+        Ok(()) => {
+            // Convert bytes to UTF-8 string with fallback
+            String::from_utf8(buffer).unwrap_or_else(|utf8_error| {
                 tracing::error!(
-                    error = %encode_error,
-                    "Failed to encode Prometheus metrics"
+                    error = %utf8_error,
+                    "Failed to convert Prometheus metrics to UTF-8 string"
                 );
-                // Return a minimal valid Prometheus response indicating the error
-                String::from("# Prometheus metrics export failed: encoding error\n")
-            }
+                // Return a minimal valid Prometheus response
+                String::from("# Prometheus metrics export failed: UTF-8 conversion error\n")
+            })
+        }
+        Err(encode_error) => {
+            tracing::error!(
+                error = %encode_error,
+                "Failed to encode Prometheus metrics"
+            );
+            // Return a minimal valid Prometheus response indicating the error
+            String::from("# Prometheus metrics export failed: encoding error\n")
         }
     }
+}
 
-    /// Export all registered metrics in Prometheus text exposition format
-    ///
-    /// This function gathers all metrics from the global registry and encodes them
-    /// in the standard Prometheus text format. It handles encoding errors gracefully
-    /// by returning an empty string if the encoding process fails.
-    ///
-    /// # Returns
-    /// String containing all metrics in Prometheus format, or empty string on error
-    ///
-    /// # Error Handling
-    /// - Returns empty string if metric gathering fails
-    /// - Returns empty string if text encoding fails
-    /// - Handles UTF-8 conversion errors gracefully
-    #[allow(dead_code)]
-    pub fn dump_prometheus() -> String {
-        dump_prometheus_internal()
-    }
+/// Export all registered metrics in Prometheus text exposition format
+///
+/// This function gathers all metrics from the global registry and encodes them
+/// in the standard Prometheus text format. It handles encoding errors gracefully
+/// by returning an empty string if the encoding process fails.
+///
+/// # Returns
+/// String containing all metrics in Prometheus format, or empty string on error
+///
+/// # Error Handling
+/// - Returns empty string if metric gathering fails
+/// - Returns empty string if text encoding fails
+/// - Handles UTF-8 conversion errors gracefully
+#[allow(dead_code)]
+pub fn dump_prometheus() -> String {
+    dump_prometheus_internal()
 }
 
 #[cfg(feature = "prometheus")]
@@ -266,4 +535,175 @@ pub async fn start_http_server(
         handle: Some(handle),
         addr: bound_addr,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_record_handshake_success() {
+        let session_id = truncate_id("session-12345678", 8);
+        let peer_id = truncate_id("peer-abcdefgh", 8);
+
+        record_handshake_success(&session_id, &peer_id, "client", 150.5);
+
+        // Verify metrics are recorded by checking dump output
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_handshake_success_total"));
+        assert!(output.contains("nyx_handshake_duration_ms"));
+    }
+
+    #[test]
+    fn test_record_handshake_failure() {
+        let session_id = truncate_id("session-failure", 8);
+        let peer_id = truncate_id("peer-error", 8);
+
+        record_handshake_failure(&session_id, &peer_id, "server", "timeout");
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_handshake_failure_total"));
+    }
+
+    #[test]
+    fn test_record_cmix_batch() {
+        // Test different batch sizes
+        record_cmix_batch(5, true, 25.3);
+        record_cmix_batch(25, true, 75.8);
+        record_cmix_batch(75, false, 120.0);
+        record_cmix_batch(150, true, 250.5);
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_cmix_batch_total"));
+        assert!(output.contains("nyx_cmix_batch_duration_ms"));
+    }
+
+    #[test]
+    fn test_record_cmix_messages() {
+        record_cmix_messages("inbound", 100);
+        record_cmix_messages("outbound", 50);
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_cmix_messages_total"));
+        assert!(output.contains("direction=\"inbound\"") || output.contains("direction=\\\"inbound\\\""));
+    }
+
+    #[test]
+    fn test_record_rekey_event() {
+        let session_id = truncate_id("session-rekey", 8);
+
+        record_rekey_event(&session_id, "scheduled", 45.2);
+        record_rekey_event(&session_id, "forced", 78.9);
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_rekey_events_total"));
+        assert!(output.contains("nyx_rekey_duration_ms"));
+    }
+
+    #[test]
+    fn test_record_rekey_failure() {
+        let session_id = truncate_id("session-rekey-fail", 8);
+
+        record_rekey_failure(&session_id, "crypto_error");
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_rekey_failure_total"));
+    }
+
+    #[test]
+    fn test_truncate_id() {
+        assert_eq!(truncate_id("short", 8), "short");
+        assert_eq!(truncate_id("verylongidentifier", 8), "verylong");
+        assert_eq!(truncate_id("", 8), "unknown");
+        assert_eq!(truncate_id("exactly8", 8), "exactly8");
+    }
+
+    #[test]
+    fn test_batch_size_ranges() {
+        // Test batch size categorization
+        record_cmix_batch(1, true, 10.0);
+        record_cmix_batch(10, true, 20.0);
+        record_cmix_batch(11, true, 30.0);
+        record_cmix_batch(50, true, 40.0);
+        record_cmix_batch(51, true, 50.0);
+        record_cmix_batch(100, true, 60.0);
+        record_cmix_batch(101, true, 70.0);
+        record_cmix_batch(1000, true, 80.0);
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("1-10"));
+        assert!(output.contains("11-50"));
+        assert!(output.contains("51-100"));
+        assert!(output.contains("101+"));
+    }
+
+    #[test]
+    fn test_metrics_labels() {
+        let session = truncate_id("session-test-labels", 8);
+        let peer = truncate_id("peer-test-labels", 8);
+
+        record_handshake_success(&session, &peer, "client", 100.0);
+
+        let output = dump_prometheus_internal();
+        // Verify labels are present in output
+        assert!(output.contains("session_id="));
+        assert!(output.contains("peer_id="));
+        assert!(output.contains("handshake_type="));
+    }
+
+    #[test]
+    fn test_histogram_buckets() {
+        // Record values across different histogram buckets
+        record_handshake_success("sess1", "peer1", "client", 5.0); // < 10ms
+        record_handshake_success("sess2", "peer2", "client", 75.0); // 50-100ms
+        record_handshake_success("sess3", "peer3", "client", 350.0); // 250-500ms
+        record_handshake_success("sess4", "peer4", "client", 1500.0); // 1-2.5s
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_handshake_duration_ms_bucket"));
+        // Verify bucket labels exist
+        assert!(output.contains("le="));
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "prometheus")]
+    async fn test_metrics_http_server() {
+        use tokio::time::{sleep, Duration};
+
+        // Start metrics server on random port
+        let addr = "127.0.0.1:0".parse().unwrap();
+        let guard = start_http_server(addr).await.unwrap();
+
+        // Record some metrics
+        record_handshake_success("test1", "peer1", "client", 100.0);
+        record_cmix_batch(25, true, 50.0);
+
+        // Wait for server to be ready
+        sleep(Duration::from_millis(100)).await;
+
+        // Fetch metrics via HTTP
+        let url = format!("http://{}/metrics", guard.addr());
+        let resp = reqwest::get(&url).await.unwrap();
+        assert_eq!(resp.status(), 200);
+
+        let body = resp.text().await.unwrap();
+        assert!(body.contains("nyx_handshake_success_total"));
+        assert!(body.contains("nyx_cmix_batch_total"));
+
+        // Server should stop when guard is dropped
+        drop(guard);
+        sleep(Duration::from_millis(100)).await;
+    }
+
+    #[test]
+    fn test_counter_registration() {
+        // Test that duplicate counter registration doesn't panic
+        record_counter("test_counter_1", 1);
+        record_counter("test_counter_1", 1); // Should reuse existing counter
+        record_counter("test_counter_2", 5);
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("test_counter_1"));
+        assert!(output.contains("test_counter_2"));
+    }
 }
