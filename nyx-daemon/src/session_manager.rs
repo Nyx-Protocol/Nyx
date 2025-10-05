@@ -590,10 +590,12 @@ impl SessionManager {
             .get_mut(&session_id)
             .ok_or(SessionError::SessionNotFound)?;
         
+        // Rekey the session: rotate cryptographic keys to maintain forward secrecy
+        // Maps any rekey error to HandshakeFailed for consistent error handling
         session
             .rekey()
             .await
-            .map_err(|e| SessionError::HandshakeFailed(e))?;
+            .map_err(SessionError::HandshakeFailed)?;
         
         info!(session_id, "Session rekey triggered");
         Ok(())
@@ -645,6 +647,21 @@ impl SessionManager {
     /// Get active session count
     pub async fn active_session_count(&self) -> usize {
         self.sessions.read().await.len()
+    }
+    
+    /// Get session count (alias for active_session_count for compatibility)
+    pub fn session_count(&self) -> usize {
+        // This is a synchronous version that uses try_read for non-blocking access
+        self.sessions.try_read().map(|s| s.len()).unwrap_or(0)
+    }
+    
+    /// Get session state by ID
+    pub fn get_session_state(&self, session_id: u64) -> Result<SessionState, SessionError> {
+        let sessions = self.sessions.try_read().map_err(|_| SessionError::SessionNotFound)?;
+        sessions
+            .get(&(session_id as u32))
+            .map(|s| s.state)
+            .ok_or(SessionError::SessionNotFound)
     }
 }
 

@@ -129,12 +129,9 @@ impl RttEstimator {
             self.srtt = sample;
             self.rttvar = sample / 2;
         } else {
-            // EWMA update
-            let diff = if sample > self.srtt {
-                sample - self.srtt
-            } else {
-                self.srtt - sample
-            };
+            // EWMA (Exponentially Weighted Moving Average) update for RTT variance
+            // Calculates absolute difference between new sample and smoothed RTT
+            let diff = sample.abs_diff(self.srtt);
 
             self.rttvar = Duration::from_secs_f64(
                 (1.0 - self.alpha) * self.rttvar.as_secs_f64() 
@@ -447,6 +444,12 @@ impl ConnectionManager {
     pub async fn list_connections(&self) -> Vec<ConnectionId> {
         let conns = self.connections.read().await;
         conns.keys().copied().collect()
+    }
+    
+    /// Get connection count
+    pub fn connection_count(&self) -> usize {
+        // Non-blocking access for synchronous contexts
+        self.connections.try_read().map(|c| c.len()).unwrap_or(0)
     }
 }
 
