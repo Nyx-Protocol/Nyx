@@ -292,7 +292,7 @@ ExecutePenetrationTest(scenario, target_system) ==
         test_id |-> GenerateTestId,
         scenario |-> scenario,
         timestamp |-> CurrentTime,
-        duration |-> ComputeDuration(),
+        duration |-> ComputeDuration,
         findings |-> findings,
         exploitation_success |-> success,
         detected_by_defenses |-> detected
@@ -370,7 +370,7 @@ CheckComplianceRequirement(checker, requirement) ==
     LET 
         \* Execute checks for each control
         control_results == [c \in requirement.controls |->
-            ExecuteControl Check(c)]
+            ExecuteControlCheck(c)]
         
         \* Determine overall compliance
         all_compliant == \A cr \in control_results : cr.status = "COMPLIANT"
@@ -386,8 +386,8 @@ CheckComplianceRequirement(checker, requirement) ==
         evidence == [cr \in control_results |-> cr.evidence]
         
         \* Identify findings
-        findings == {f : cr \in control_results, f \in cr.findings,
-                     cr.status # "COMPLIANT"}
+        findings == UNION {{f \in cr.findings : cr.status # "COMPLIANT"} : 
+                          cr \in control_results}
     IN [
         check_id |-> GenerateCheckId,
         requirement |-> requirement,
