@@ -1,5 +1,4 @@
 ---- MODULE NyxDeployment ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Deployment and Orchestration                             *)
 (*                                                                          *)
@@ -20,12 +19,13 @@ LOCAL INSTANCE NyxHelpers
 (*   - Multi-region deployment                                             *)
 (****************************************************************************)
 
-EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC,
-        NyxControlPlane, NyxMonitoring
+EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC
+LOCAL INSTANCE NyxHelpers
 
-(****************************************************************************)
-(* Container and Kubernetes Deployment                                      *)
-(****************************************************************************)
+CONSTANTS
+    MaxContainers,
+    MaxServices,
+    MaxNodes
 
 \* Container specification
 ContainerSpec == [
@@ -161,9 +161,6 @@ RollingUpdate(deployment, new_spec, params) ==
                     ELSE UpdatePods(old_pods, new_pods, step)
     IN UpdatePods(GetCurrentPods(deployment), {}, 0)
 
-(****************************************************************************)
-(* Service Mesh Integration                                                 *)
-(****************************************************************************)
 
 \* Service mesh configuration
 ServiceMeshConfig == [
@@ -254,9 +251,6 @@ ApplyServiceMesh(service, mesh_config) ==
                                                      mesh_config.traffic_policy)
     IN traffic_policy_applied
 
-(****************************************************************************)
-(* Deployment Strategies                                                    *)
-(****************************************************************************)
 
 \* Blue-green deployment state
 BlueGreenDeployment == [
@@ -368,9 +362,6 @@ AnalyzeCanary(deployment, analysis) ==
     IN [success |-> criteria_met,
         metrics |-> collected_metrics]
 
-(****************************************************************************)
-(* Rollback Mechanisms                                                      *)
-(****************************************************************************)
 
 \* Rollback configuration
 RollbackConfig == [
@@ -410,9 +401,6 @@ AutoRollbackDecision(deployment, config, current_metrics) ==
        ELSE [should_rollback |-> FALSE,
              reason |-> {}]
 
-(****************************************************************************)
-(* Infrastructure as Code                                                   *)
-(****************************************************************************)
 
 \* Infrastructure resource
 InfrastructureResource == [
@@ -482,9 +470,6 @@ ApplyInfrastructureChanges(plan) ==
                           failed_resource |-> resource]
     IN ExecuteChanges(plan.execution_order)
 
-(****************************************************************************)
-(* Secret Management                                                        *)
-(****************************************************************************)
 
 \* Secret
 Secret == [
@@ -550,9 +535,6 @@ RotateSecret(secret_store, secret_name) ==
          IN updated
     ELSE secret_store
 
-(****************************************************************************)
-(* Health Checking and Readiness                                            *)
-(****************************************************************************)
 
 \* Health check configuration
 HealthCheckConfig == [
@@ -599,9 +581,6 @@ ExecuteHealthCheck(service, config) ==
         ]
     ]
 
-(****************************************************************************)
-(* Auto-Scaling                                                             *)
-(****************************************************************************)
 
 \* Horizontal Pod Autoscaler
 HorizontalPodAutoscaler == [
@@ -655,9 +634,6 @@ ComputeDesiredReplicas(hpa, current_metrics) ==
         bounded == Max(hpa.min_replicas, Min(hpa.max_replicas, desired))
     IN bounded
 
-(****************************************************************************)
-(* Multi-Region Deployment                                                  *)
-(****************************************************************************)
 
 \* Region configuration
 RegionConfig == [
@@ -706,9 +682,6 @@ DeployMultiRegion(deployment_spec, multi_region_config) ==
              error |-> "Failed to deploy to all regions",
              deployments |-> deployment_results]
 
-(****************************************************************************)
-(* Deployment Properties and Invariants                                     *)
-(****************************************************************************)
 
 \* Zero-downtime deployment
 THEOREM ZeroDowntimeDeployment ==
