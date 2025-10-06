@@ -1,5 +1,4 @@
 ---- MODULE NyxPerformanceModels ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Performance Evaluation and Analysis Models               *)
 (*                                                                          *)
@@ -14,12 +13,12 @@ LOCAL INSTANCE NyxHelpers
 (*   - Scalability bounds and limits                                       *)
 (*   - Quality of Service guarantees                                       *)
 (****************************************************************************)
-
-EXTENDS Naturals, Sequences, FiniteSets, Integers, Reals, TLC,
-
 (****************************************************************************)
 (* Common Helper Operators                                                  *)
 (****************************************************************************)
+
+EXTENDS Naturals, Sequences, FiniteSets, Integers, Reals, TLC,
+LOCAL INSTANCE NyxHelpers
 
 \* Minimum of a set
 MIN(S) == IF S = {} THEN 0 ELSE CHOOSE x \in S : \A y \in S : x <= y
@@ -51,9 +50,6 @@ Average(S) == IF S = {} THEN 0 ELSE Sum(S) / Cardinality(S)
         NyxCryptography, NyxNetworkLayer, NyxStreamManagement,
         NyxFaultTolerance
 
-(****************************************************************************)
-(* Performance Constants and Parameters                                     *)
-(****************************************************************************)
 
 \* Latency bounds (in milliseconds)
 MinLatency == 1
@@ -75,9 +71,6 @@ MaxNodes == 10000
 MaxStreamsPerConnection == 1000
 MaxConcurrentConnections == 100000
 
-(****************************************************************************)
-(* Latency Models                                                           *)
-(****************************************************************************)
 
 \* Network propagation delay model
 PropagationDelay(distance_km, medium) ==
@@ -141,9 +134,6 @@ LatencySLAViolation(mean_latency, std_dev, sla_threshold) ==
        THEN 1 - NormalCDF(z_score)  \* Probability of exceeding threshold
        ELSE 1
 
-(****************************************************************************)
-(* Throughput Models                                                        *)
-(****************************************************************************)
 
 \* Single stream throughput with flow control
 StreamThroughput(window_size, rtt, packet_size) ==
@@ -181,9 +171,6 @@ BandwidthUtilization(actual_throughput, link_capacity) ==
 FairShareThroughput(total_bandwidth, weight, total_weight) ==
     (total_bandwidth * weight) / total_weight
 
-(****************************************************************************)
-(* Resource Utilization Models                                              *)
-(****************************************************************************)
 
 \* CPU utilization for cryptographic operations
 CPUUtilizationCrypto(ops_per_second, cpu_cycles_per_op, cpu_frequency_hz) ==
@@ -219,9 +206,6 @@ ThreadPoolUtilization(active_tasks, pool_size) ==
 FileDescriptorUsage(num_connections, num_files) ==
     num_connections * 2 + num_files  \* 2 FDs per connection
 
-(****************************************************************************)
-(* Scalability Models                                                       *)
-(****************************************************************************)
 
 \* Maximum connections based on resources
 MaxConnections ==
@@ -263,9 +247,6 @@ MultipathScalability(num_paths, coordination_overhead) ==
         actual_speedup == num_paths / (1 + coordination_overhead * (num_paths - 1))
     IN actual_speedup / ideal_speedup  \* Efficiency ratio
 
-(****************************************************************************)
-(* Quality of Service Models                                                *)
-(****************************************************************************)
 
 \* Priority-based delay bounds
 PriorityDelayBound(priority, base_delay, priority_levels) ==
@@ -321,9 +302,6 @@ Platinum == [class_name |-> "Platinum", min_bandwidth |-> 1000,
              max_latency |-> 50, max_jitter |-> 10,
              max_loss_rate |-> 0, priority |-> 7]
 
-(****************************************************************************)
-(* Performance Optimization Models                                          *)
-(****************************************************************************)
 
 \* Optimal window size calculation
 OptimalWindowSize(bdp, loss_rate) ==
@@ -351,9 +329,6 @@ OptimalBufferSize(bandwidth_bps, rtt_ms) ==
 PrefetchAmount(prediction_accuracy, window_size) ==
     (window_size * prediction_accuracy) / 100
 
-(****************************************************************************)
-(* Performance Measurement and Analysis                                     *)
-(****************************************************************************)
 
 \* Performance metrics collection
 PerformanceMetrics == [
@@ -396,9 +371,6 @@ Percentiles(samples) ==
         p999 |-> LatencyPercentile(samples, 999\div10)
     ]
 
-(****************************************************************************)
-(* Cost Models                                                               *)
-(****************************************************************************)
 
 \* Computational cost (CPU cycles)
 ComputationalCost(operation) ==
@@ -426,9 +398,6 @@ StorageCost(data_type, quantity) ==
       [] data_type = "routing_table_entry" -> quantity * 128
       [] OTHER -> quantity * 512
 
-(****************************************************************************)
-(* Capacity Planning Models                                                 *)
-(****************************************************************************)
 
 \* Required capacity calculation
 RequiredCapacity ==
@@ -454,9 +423,6 @@ OverprovisioningFactor(service_type) ==
       [] service_type = "development" -> 1
       [] OTHER -> 15 \div 10
 
-(****************************************************************************)
-(* Benchmark Scenarios                                                      *)
-(****************************************************************************)
 
 \* Baseline performance benchmark
 BaselineBenchmark ==
