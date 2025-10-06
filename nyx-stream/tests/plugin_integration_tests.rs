@@ -94,6 +94,14 @@ async fn test_plugin_sandbox_integration() {
     let registry = Arc::new(PluginRegistry::new());
     let dispatcher = PluginDispatcher::new_with_sandbox(registry.clone(), policy);
 
+    // Negotiate required capability (CAP_PLUGIN_FRAMEWORK = 2) before loading plugin
+    // This simulates proper capability negotiation during connection handshake
+    let mut capabilities = std::collections::HashSet::new();
+    capabilities.insert(2); // CAP_PLUGIN_FRAMEWORK
+    dispatcher
+        .set_negotiated_capabilities(capabilities, false)
+        .await;
+
     let plugin_id = PluginId(2);
     let info = PluginInfo::new(plugin_id, "sandbox_test_plugin", [Permission::DataAccess]);
 
