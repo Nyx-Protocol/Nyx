@@ -11,7 +11,7 @@ fn test_help_performance() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("--help");
     cmd.assert().success();
     let elapsed = start.elapsed();
-    
+
     assert!(
         elapsed < Duration::from_millis(100),
         "Help command took too long: {:?}",
@@ -27,7 +27,7 @@ fn test_config_show_performance() -> Result<(), Box<dyn std::error::Error>> {
     cmd.args(["config", "show"]);
     cmd.assert().success();
     let elapsed = start.elapsed();
-    
+
     assert!(
         elapsed < Duration::from_millis(500),
         "Config show took too long: {:?}",
@@ -43,7 +43,7 @@ fn test_frame_limit_performance() -> Result<(), Box<dyn std::error::Error>> {
     cmd.arg("frame-limit");
     cmd.assert().success();
     let elapsed = start.elapsed();
-    
+
     assert!(
         elapsed < Duration::from_millis(100),
         "Frame limit command took too long: {:?}",
@@ -55,16 +55,16 @@ fn test_frame_limit_performance() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_multiple_commands_sequential() -> Result<(), Box<dyn std::error::Error>> {
     let start = Instant::now();
-    
+
     for _ in 0..5 {
         let mut cmd = Command::cargo_bin("nyx-cli")?;
         cmd.args(["config", "show"]);
         cmd.assert().success();
     }
-    
+
     let elapsed = start.elapsed();
     let avg = elapsed / 5;
-    
+
     assert!(
         avg < Duration::from_millis(500),
         "Average command time too high: {:?}",
@@ -80,7 +80,7 @@ fn test_invalid_command_fast_failure() -> Result<(), Box<dyn std::error::Error>>
     cmd.arg("nonexistent-command");
     cmd.assert().failure();
     let elapsed = start.elapsed();
-    
+
     assert!(
         elapsed < Duration::from_millis(100),
         "Invalid command took too long to fail: {:?}",
