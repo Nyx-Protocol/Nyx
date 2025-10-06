@@ -11,8 +11,9 @@ use std::time::Duration;
 use tokio::sync::RwLock;
 
 /// Helper to create a test node with all components
+/// Note: node_id parameter reserved for future use in test identification
 async fn create_test_node(
-    node_id: &str,
+    _node_id: &str,
     addr: &str,
 ) -> (RendezvousService, Arc<RwLock<GossipManager>>, SigningKey) {
     let socket_addr: SocketAddr = addr.parse().unwrap();
@@ -33,7 +34,8 @@ async fn create_test_node(
 #[tokio::test]
 async fn test_three_node_config_propagation() {
     // Create 3-node network
-    let (mut rv1, gm1, sk1) = create_test_node("node1", "127.0.0.1:0").await;
+    // Note: sk1 (signing key) not used in this particular test scenario
+    let (mut rv1, gm1, _sk1) = create_test_node("node1", "127.0.0.1:0").await;
     let (mut rv2, gm2, sk2) = create_test_node("node2", "127.0.0.1:0").await;
     let (mut rv3, gm3, sk3) = create_test_node("node3", "127.0.0.1:0").await;
 
