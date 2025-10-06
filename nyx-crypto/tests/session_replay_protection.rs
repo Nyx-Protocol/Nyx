@@ -1,5 +1,7 @@
 //! Session Replay Protection Tests
 
+#![allow(clippy::expect_used)] // Tests are allowed to use expect() for clear failure messages
+
 use nyx_crypto::aead::{AeadCipher, AeadKey, AeadNonce, AeadSuite};
 
 #[test]
@@ -10,8 +12,12 @@ fn test_aead_encrypt_decrypt() {
     let plaintext = b"test_message";
     let aad = b"additional_data";
 
-    let ciphertext = cipher.seal(nonce, aad, plaintext).unwrap();
-    let decrypted = cipher.open(nonce, aad, &ciphertext).unwrap();
+    let ciphertext = cipher
+        .seal(nonce, aad, plaintext)
+        .expect("AEAD encryption should succeed");
+    let decrypted = cipher
+        .open(nonce, aad, &ciphertext)
+        .expect("AEAD decryption should succeed");
 
     assert_eq!(decrypted, plaintext);
 }
@@ -25,8 +31,12 @@ fn test_aead_different_nonces() {
     let plaintext = b"test";
     let aad = b"";
 
-    let ct1 = cipher.seal(nonce1, aad, plaintext).unwrap();
-    let ct2 = cipher.seal(nonce2, aad, plaintext).unwrap();
+    let ct1 = cipher
+        .seal(nonce1, aad, plaintext)
+        .expect("AEAD encryption with nonce1 should succeed");
+    let ct2 = cipher
+        .seal(nonce2, aad, plaintext)
+        .expect("AEAD encryption with nonce2 should succeed");
 
     assert_ne!(
         ct1, ct2,
