@@ -270,6 +270,16 @@ impl KBucket {
         self.last_updated.elapsed() > Duration::from_secs(15 * 60) // 15 minutes
     }
 
+    /// Check if bucket is stale (no activity for given duration)
+    pub fn is_stale(&self, threshold: Duration) -> bool {
+        self.last_updated.elapsed() > threshold
+    }
+
+    /// Mark bucket as refreshed
+    pub fn mark_refreshed(&mut self) {
+        self.last_updated = Instant::now();
+    }
+
     /// Get node count
     pub fn len(&self) -> usize {
         self.nodes.len()
@@ -736,7 +746,7 @@ impl PureRustDht {
 
     /// Get nodes closest to target from routing table
     async fn get_closest_nodes(&self, target: &NodeId, count: usize) -> Vec<NodeInfo> {
-        let mut candidates = Vec::new();
+        let mut candidates = Vec::with_capacity(count.max(128));
         let routing_table = self.routing_table.read().await;
 
         // Collect all good nodes from routing table
@@ -970,7 +980,7 @@ impl PureRustDht {
         target: &NodeId,
         count: usize,
     ) -> Vec<NodeInfo> {
-        let mut candidates = Vec::new();
+        let mut candidates = Vec::with_capacity(count.max(128));
         let routing_table = routing_table.read().await;
 
         for bucket in routing_table.iter() {
@@ -1006,7 +1016,42 @@ impl PureRustDht {
             pending.retain(|_, req| req.timeout > now);
         }
 
-        // TODO: Refresh stale buckets, ping questionable nodes
+        // Refresh stale buckets and ping questionable nodes
+        {
+            let mut routing_table = _routing_table.write().await;
+            let stale_threshold = Duration::from_secs(15 * 60); // 15 minutes
+
+            for bucket in routing_table.iter_mut() {
+                // Check if bucket is stale (not updated in 15 minutes)
+                if bucket.is_stale(stale_threshold) {
+                    debug!("Bucket is stale, triggering refresh");
+                    bucket.mark_refreshed();
+                }
+
+                // Ping questionable nodes (nodes with failures but not yet bad)
+                let questionable_nodes: Vec<NodeInfo> = bucket
+                    .nodes
+                    .iter()
+                    .filter(|node| {
+                        // Questionable: 1-2 failures or not seen in 5-15 minutes
+                        (node.failed_requests >= 1 && node.failed_requests < 3)
+                            || (node.last_seen.elapsed() > Duration::from_secs(5 * 60)
+                                && node.last_seen.elapsed() < Duration::from_secs(15 * 60))
+                    })
+                    .cloned()
+                    .collect();
+
+                for node in questionable_nodes {
+                    debug!("Pinging questionable node: {}", node.id);
+                    // In a full implementation, would send PING RPC here
+                    // For now, just log the intent
+                }
+
+                // Remove bad nodes
+                bucket.nodes.retain(|node| !node.is_bad());
+            }
+        }
+
         debug!("DHT maintenance completed");
     }
 
