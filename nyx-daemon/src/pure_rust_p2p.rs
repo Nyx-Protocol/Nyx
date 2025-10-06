@@ -856,7 +856,6 @@ pub enum P2pError {
 mod tests {
     use super::*;
     use std::net::{IpAddr, Ipv4Addr};
-    use tokio::time::sleep;
 
     async fn create_test_p2p(port: u16) -> PureRustP2p {
         let config = P2pConfig {
@@ -880,8 +879,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_peer_connection() {
-        let mut p2p1 = create_test_p2p(0).await;
-        let mut p2p2 = create_test_p2p(0).await;
+        let p2p1 = create_test_p2p(0).await;
+        let p2p2 = create_test_p2p(0).await;
 
         // Just test basic creation and stats
         let stats1 = p2p1.get_stats().await;
@@ -897,7 +896,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_message_sending() {
-        let mut p2p1 = create_test_p2p(0).await;
+        let p2p1 = create_test_p2p(0).await;
 
         // Test message handler registration
         let (tx, _rx) = mpsc::unbounded_channel();
@@ -950,8 +949,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_message_framing() {
-        use tokio::io::DuplexStream;
-
         let (mut client, mut server) = tokio::io::duplex(1024);
 
         let test_message = P2pMessage::Ping {

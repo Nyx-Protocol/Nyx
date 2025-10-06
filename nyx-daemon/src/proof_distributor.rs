@@ -303,7 +303,6 @@ impl ProofDistributor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nyx_mix::accumulator::AccumulatorConfig;
 
     // Note: Tests involving RSA accumulators are slow due to prime generation
     // Run with --ignored to execute them

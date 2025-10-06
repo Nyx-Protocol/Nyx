@@ -108,10 +108,10 @@ impl VectorClock {
     pub fn happens_before(&self, other: &VectorClock) -> Option<bool> {
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         enum Ordering {
-            AllEqual,         // All components equal so far
-            StrictlyLess,     // Self < Other (some less, none greater)
-            StrictlyGreater,  // Self > Other (some greater, none less)
-            Concurrent,       // Incomparable (both less and greater exist)
+            AllEqual,        // All components equal so far
+            StrictlyLess,    // Self < Other (some less, none greater)
+            StrictlyGreater, // Self > Other (some greater, none less)
+            Concurrent,      // Incomparable (both less and greater exist)
         }
 
         // Collect union of all node IDs from both vector clocks
@@ -127,25 +127,27 @@ impl VectorClock {
             match (state, self_val.cmp(&other_val)) {
                 // Early termination: if already concurrent, stay concurrent
                 (Ordering::Concurrent, _) => Ordering::Concurrent,
-                
+
                 // Equal component maintains current ordering state
                 (current, std::cmp::Ordering::Equal) => current,
-                
+
                 // Found less component: check compatibility with current state
                 (Ordering::AllEqual, std::cmp::Ordering::Less) => Ordering::StrictlyLess,
                 (Ordering::StrictlyLess, std::cmp::Ordering::Less) => Ordering::StrictlyLess,
                 (Ordering::StrictlyGreater, std::cmp::Ordering::Less) => Ordering::Concurrent,
-                
+
                 // Found greater component: check compatibility with current state
                 (Ordering::AllEqual, std::cmp::Ordering::Greater) => Ordering::StrictlyGreater,
-                (Ordering::StrictlyGreater, std::cmp::Ordering::Greater) => Ordering::StrictlyGreater,
+                (Ordering::StrictlyGreater, std::cmp::Ordering::Greater) => {
+                    Ordering::StrictlyGreater
+                }
                 (Ordering::StrictlyLess, std::cmp::Ordering::Greater) => Ordering::Concurrent,
             }
         });
 
         // Map internal ordering to standard Option<bool> causality result
         match causality {
-            Ordering::StrictlyLess => Some(true),     // self happens-before other
+            Ordering::StrictlyLess => Some(true), // self happens-before other
             Ordering::StrictlyGreater => Some(false), // other happens-before self
             Ordering::AllEqual | Ordering::Concurrent => None, // no causal order
         }
@@ -276,17 +278,15 @@ impl SignedConfig {
         let signature = Signature::from_bytes(&sig_bytes);
 
         // Verify signature (constant-time operation)
-        verifying_key
-            .verify(&message, &signature)
-            .map_err(|e| {
-                warn!(
-                    "Ed25519 signature verification failed for config version {}: {}",
-                    self.version, e
-                );
-                ConfigGossipError::InvalidSignature {
-                    version: self.version,
-                }
-            })
+        verifying_key.verify(&message, &signature).map_err(|e| {
+            warn!(
+                "Ed25519 signature verification failed for config version {}: {}",
+                self.version, e
+            );
+            ConfigGossipError::InvalidSignature {
+                version: self.version,
+            }
+        })
     }
 
     /// Construct canonical message for signing/verification
@@ -311,7 +311,7 @@ impl SignedConfig {
             8 +                 // version (u64)
             8 +                 // timestamp (u64)
             originator.len() +  // originator string (variable)
-            content.len()       // config content (variable)
+            content.len(), // config content (variable)
         );
 
         // Append fields in deterministic order with explicit encoding
@@ -362,7 +362,10 @@ impl SignedConfig {
     }
 
     /// Legacy stub verification (DEPRECATED)
-    #[deprecated(since = "0.1.0", note = "Use verify_with_key() for Ed25519 verification")]
+    #[deprecated(
+        since = "0.1.0",
+        note = "Use verify_with_key() for Ed25519 verification"
+    )]
     pub fn verify(&self) -> Result<(), ConfigGossipError> {
         let expected_sig = Self::compute_stub_signature(
             &self.content,
@@ -534,7 +537,10 @@ impl ConfigGossipManager {
     /// # Returns
     /// * `Ok(SignedConfig)` - Successfully published configuration
     /// * `Err(ConfigGossipError)` - Validation or storage failure
-    pub async fn publish_config(&self, content: Vec<u8>) -> Result<SignedConfig, ConfigGossipError> {
+    pub async fn publish_config(
+        &self,
+        content: Vec<u8>,
+    ) -> Result<SignedConfig, ConfigGossipError> {
         // Get current version and vector clock
         // If no prior config exists, start with version 1 and empty vector clock
         // Otherwise, increment version and clone existing vector clock for causality tracking
@@ -932,7 +938,7 @@ mod tests {
     #[test]
     #[ignore = "LEGACY: Requires migration to new Ed25519 API - see test_ed25519_* tests"]
     fn test_gossip_manager_creation() {
-        let dht = Arc::new(RwLock::new(DhtStorage::new()));
+        let _dht = Arc::new(RwLock::new(DhtStorage::new()));
         // OLD API: ConfigGossipManager::new now requires SigningKey parameter
         // let manager = ConfigGossipManager::new("node1".to_string(), dht);
 
@@ -1141,7 +1147,7 @@ mod tests {
     #[test]
     fn test_ed25519_signature_roundtrip() {
         use rand::rngs::OsRng;
-        
+
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
         let verifying_key = signing_key.verifying_key();
@@ -1166,7 +1172,7 @@ mod tests {
     #[test]
     fn test_ed25519_signature_tamper_detection() {
         use rand::rngs::OsRng;
-        
+
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
         let verifying_key = signing_key.verifying_key();
@@ -1194,7 +1200,7 @@ mod tests {
     #[test]
     fn test_ed25519_wrong_key_rejection() {
         use rand::rngs::OsRng;
-        
+
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
         let wrong_key = SigningKey::generate(&mut csprng).verifying_key();
@@ -1215,7 +1221,7 @@ mod tests {
     #[test]
     fn test_ed25519_signature_bytes_format() {
         use rand::rngs::OsRng;
-        
+
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
 
@@ -1235,17 +1241,14 @@ mod tests {
     async fn test_ed25519_unknown_node_rejection() {
         use rand::rngs::OsRng;
         use tokio::sync::RwLock;
-        
+
         let mut csprng = OsRng;
         let node1_signing_key = SigningKey::generate(&mut csprng);
         let node2_signing_key = SigningKey::generate(&mut csprng);
 
         let dht = Arc::new(RwLock::new(DhtStorage::new()));
-        let manager = ConfigGossipManager::new(
-            "node1".to_string(),
-            dht.clone(),
-            node1_signing_key.clone(),
-        );
+        let manager =
+            ConfigGossipManager::new("node1".to_string(), dht.clone(), node1_signing_key.clone());
 
         // Create config from unknown node2 (not registered)
         let content = b"log_level = \"debug\"".to_vec();
@@ -1260,10 +1263,7 @@ mod tests {
         // Should reject with UnknownNode error
         let result = manager.receive_config(unknown_config).await;
         assert!(result.is_err());
-        assert!(matches!(
-            result,
-            Err(ConfigGossipError::UnknownNode { .. })
-        ));
+        assert!(matches!(result, Err(ConfigGossipError::UnknownNode { .. })));
 
         // Verify stats tracked rejection
         let stats = manager.get_stats().await;
@@ -1275,21 +1275,19 @@ mod tests {
     async fn test_ed25519_signature_verification_in_gossip() {
         use rand::rngs::OsRng;
         use tokio::sync::RwLock;
-        
+
         let mut csprng = OsRng;
         let node1_signing_key = SigningKey::generate(&mut csprng);
         let node2_signing_key = SigningKey::generate(&mut csprng);
         let node2_verifying_key = node2_signing_key.verifying_key();
 
         let dht = Arc::new(RwLock::new(DhtStorage::new()));
-        let manager = ConfigGossipManager::new(
-            "node1".to_string(),
-            dht.clone(),
-            node1_signing_key,
-        );
+        let manager = ConfigGossipManager::new("node1".to_string(), dht.clone(), node1_signing_key);
 
         // Register node2's public key
-        manager.register_node_key("node2".to_string(), node2_verifying_key).await;
+        manager
+            .register_node_key("node2".to_string(), node2_verifying_key)
+            .await;
 
         // Create valid signed config from node2
         let content = b"log_level = \"debug\"".to_vec();
@@ -1317,21 +1315,19 @@ mod tests {
     async fn test_ed25519_invalid_signature_rejection() {
         use rand::rngs::OsRng;
         use tokio::sync::RwLock;
-        
+
         let mut csprng = OsRng;
         let node1_signing_key = SigningKey::generate(&mut csprng);
         let node2_signing_key = SigningKey::generate(&mut csprng);
         let node2_verifying_key = node2_signing_key.verifying_key();
 
         let dht = Arc::new(RwLock::new(DhtStorage::new()));
-        let manager = ConfigGossipManager::new(
-            "node1".to_string(),
-            dht.clone(),
-            node1_signing_key,
-        );
+        let manager = ConfigGossipManager::new("node1".to_string(), dht.clone(), node1_signing_key);
 
         // Register node2's public key
-        manager.register_node_key("node2".to_string(), node2_verifying_key).await;
+        manager
+            .register_node_key("node2".to_string(), node2_verifying_key)
+            .await;
 
         // Create config with tampered signature
         let content = b"log_level = \"debug\"".to_vec();
@@ -1363,14 +1359,14 @@ mod tests {
     async fn test_ed25519_multinode_gossip_scenario() {
         use rand::rngs::OsRng;
         use tokio::sync::RwLock;
-        
+
         let mut csprng = OsRng;
-        
+
         // Setup 3 nodes with keypairs
         let node1_signing_key = SigningKey::generate(&mut csprng);
         let node2_signing_key = SigningKey::generate(&mut csprng);
         let node3_signing_key = SigningKey::generate(&mut csprng);
-        
+
         let node2_verifying_key = node2_signing_key.verifying_key();
         let node3_verifying_key = node3_signing_key.verifying_key();
 
@@ -1378,13 +1374,14 @@ mod tests {
         let dht = Arc::new(RwLock::new(DhtStorage::new()));
 
         // Node1 manager
-        let manager1 = ConfigGossipManager::new(
-            "node1".to_string(),
-            dht.clone(),
-            node1_signing_key,
-        );
-        manager1.register_node_key("node2".to_string(), node2_verifying_key).await;
-        manager1.register_node_key("node3".to_string(), node3_verifying_key).await;
+        let manager1 =
+            ConfigGossipManager::new("node1".to_string(), dht.clone(), node1_signing_key);
+        manager1
+            .register_node_key("node2".to_string(), node2_verifying_key)
+            .await;
+        manager1
+            .register_node_key("node3".to_string(), node3_verifying_key)
+            .await;
 
         // Node2 publishes config
         let mut clock2 = VectorClock::new();
@@ -1430,7 +1427,7 @@ mod tests {
     fn test_ed25519_performance_signature_generation() {
         use rand::rngs::OsRng;
         use std::time::Instant;
-        
+
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
 
@@ -1453,14 +1450,18 @@ mod tests {
         println!("Average signature generation time: {}μs", avg_micros);
 
         // PERFORMANCE REQUIREMENT: <100μs per signature
-        assert!(avg_micros < 100, "Signature generation too slow: {}μs", avg_micros);
+        assert!(
+            avg_micros < 100,
+            "Signature generation too slow: {}μs",
+            avg_micros
+        );
     }
 
     #[test]
     fn test_ed25519_performance_signature_verification() {
         use rand::rngs::OsRng;
         use std::time::Instant;
-        
+
         let mut csprng = OsRng;
         let signing_key = SigningKey::generate(&mut csprng);
         let verifying_key = signing_key.verifying_key();
@@ -1488,7 +1489,10 @@ mod tests {
         println!("Average signature verification time: {}μs", avg_micros);
 
         // PERFORMANCE REQUIREMENT: <200μs per verification
-        assert!(avg_micros < 200, "Signature verification too slow: {}μs", avg_micros);
+        assert!(
+            avg_micros < 200,
+            "Signature verification too slow: {}μs",
+            avg_micros
+        );
     }
 }
-

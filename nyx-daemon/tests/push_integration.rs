@@ -113,10 +113,10 @@ async fn test_proxy_connectivity() {
 }
 
 /// Test proxy health check endpoint
-/// 
+///
 /// This test requires the Go push proxy to be running on localhost:8765.
 /// To start the proxy manually: `cd nyx-push-proxy && go run .` or `./nyx-push-proxy.exe`
-/// 
+///
 /// The test is marked as `#[ignore]` by default to avoid CI failures when the proxy is not running.
 /// Run with `cargo test --ignored` to execute this test.
 #[tokio::test]
@@ -139,10 +139,9 @@ async fn test_proxy_health_check() {
         .body(http_body_util::Full::new(hyper::body::Bytes::new()))
         .unwrap();
 
-    let response = client
-        .request(req)
-        .await
-        .expect("Go proxy not running? Start: cd nyx-push-proxy && go run . or ./nyx-push-proxy.exe");
+    let response = client.request(req).await.expect(
+        "Go proxy not running? Start: cd nyx-push-proxy && go run . or ./nyx-push-proxy.exe",
+    );
 
     assert_eq!(response.status(), hyper::StatusCode::OK);
 

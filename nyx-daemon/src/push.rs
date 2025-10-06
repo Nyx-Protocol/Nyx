@@ -513,7 +513,7 @@ mod tests {
     #[test]
     fn test_provider_detection_fcm() {
         let config = PushConfig::default();
-        let relay = PushRelay::new(config).unwrap();
+        let _relay = PushRelay::new(config).unwrap();
 
         // FCM tokens are typically long (>150 chars)
         let long_token = "a".repeat(160);

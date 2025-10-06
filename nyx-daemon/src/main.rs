@@ -488,7 +488,7 @@ fn ensure_token_from_env_or_cookie() -> Option<String> {
     let mut bytes = [0u8; 32];
     rand::thread_rng().fill_bytes(&mut bytes);
     let tok = hex::encode(bytes);
-    
+
     // Create parent directory with secure permissions before writing cookie
     if let Some(parent) = cookie_path.parent() {
         if let Err(e) = std::fs::create_dir_all(parent) {
@@ -498,7 +498,7 @@ fn ensure_token_from_env_or_cookie() -> Option<String> {
             );
             return None;
         }
-        
+
         // Set directory permissions before creating file (Unix only)
         #[cfg(unix)]
         {
@@ -512,7 +512,7 @@ fn ensure_token_from_env_or_cookie() -> Option<String> {
             }
         }
     }
-    
+
     // Write cookie file atomically (write to temp, then rename)
     // This prevents partial writes and ensures atomic visibility
     let temp_path = cookie_path.with_extension("tmp");
@@ -523,7 +523,7 @@ fn ensure_token_from_env_or_cookie() -> Option<String> {
         );
         return None;
     }
-    
+
     // Set file permissions before making visible (Unix only)
     #[cfg(unix)]
     {
@@ -538,7 +538,7 @@ fn ensure_token_from_env_or_cookie() -> Option<String> {
             }
         }
     }
-    
+
     // Atomic rename to final location
     if let Err(e) = std::fs::rename(&temp_path, &cookie_path) {
         warn!(
@@ -549,7 +549,7 @@ fn ensure_token_from_env_or_cookie() -> Option<String> {
         let _ = std::fs::remove_file(&temp_path);
         return None;
     }
-    
+
     #[cfg(windows)]
     {
         // Windows: Set read-only after creation
@@ -563,7 +563,7 @@ fn ensure_token_from_env_or_cookie() -> Option<String> {
             }
         }
     }
-    
+
     info!(
         path = ?cookie_path,
         token_length = tok.len(),
@@ -571,7 +571,7 @@ fn ensure_token_from_env_or_cookie() -> Option<String> {
     );
     #[cfg(feature = "telemetry")]
     nyx_telemetry::record_counter("nyx_daemon_cookie_generated", 1);
-    
+
     Some(tok)
 }
 
@@ -1102,7 +1102,11 @@ fn is_authorized(state: &DaemonState, auth: Option<&str>) -> bool {
             static ONCE: std::sync::Once = std::sync::Once::new();
             ONCE.call_once(|| {
                 warn!(
-                    build_profile = if cfg!(debug_assertions) { "debug" } else { "release" },
+                    build_profile = if cfg!(debug_assertions) {
+                        "debug"
+                    } else {
+                        "release"
+                    },
                     "SECURITY WARNING: authentication disabled via NYX_DAEMON_DISABLE_AUTH=1"
                 );
             });
@@ -1124,7 +1128,7 @@ fn is_authorized(state: &DaemonState, auth: Option<&str>) -> bool {
         Some(provided) => {
             // SECURITY ENHANCEMENT: Use constant-time comparison to prevent timing attacks
             // This prevents attackers from deducing token characters through timing analysis
-            
+
             let provided_bytes = provided.as_bytes();
             let expected_bytes = expected.as_bytes();
 
@@ -1133,7 +1137,7 @@ fn is_authorized(state: &DaemonState, auth: Option<&str>) -> bool {
             if provided_bytes.len() != expected_bytes.len() {
                 #[cfg(feature = "telemetry")]
                 nyx_telemetry::record_counter("nyx_daemon_auth_length_mismatch", 1);
-                
+
                 warn!(
                     provided_length = provided_bytes.len(),
                     expected_length = expected_bytes.len(),

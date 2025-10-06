@@ -48,8 +48,9 @@ tokio = { version = "1.37", features = ["full"] }
 thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
-# tonic WITHOUT TLS features to avoid ring/openssl (Pure Rust only)
-# TLS support will be added later with pure Rust alternatives
+# tonic WITHOUT TLS features to avoid ring/C dependencies (Pure Rust only)
+# TLS will be added later using RustCrypto-based pure Rust implementation
+# Current rustls depends on ring which contains C/assembly code
 tonic = { version = "0.11", default-features = false, features = ["transport", "prost", "codegen"] }
 tokio-stream = { version = "0.1", features = ["net"] }
 clap = { version = "4.0", features = ["derive"] }

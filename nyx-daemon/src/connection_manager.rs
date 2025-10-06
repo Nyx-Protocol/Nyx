@@ -456,6 +456,42 @@ impl ConnectionManager {
         // Non-blocking access for synchronous contexts
         self.connections.try_read().map(|c| c.len()).unwrap_or(0)
     }
+
+    /// Get total statistics across all connections
+    ///
+    /// Returns aggregate bytes_in, bytes_out, packets_in, packets_out across all active connections.
+    /// This is useful for high-level monitoring and telemetry.
+    ///
+    /// # Performance
+    /// This method acquires a read lock and iterates all connections, O(n) complexity.
+    pub async fn get_total_stats(&self) -> TotalStats {
+        let conns = self.connections.read().await;
+
+        let mut stats = TotalStats {
+            bytes_in: 0,
+            bytes_out: 0,
+            packets_in: 0,
+            packets_out: 0,
+        };
+
+        for conn in conns.values() {
+            stats.bytes_in += conn.bytes_rx;
+            stats.bytes_out += conn.bytes_tx;
+            stats.packets_in += conn.packets_rx;
+            stats.packets_out += conn.packets_tx;
+        }
+
+        stats
+    }
+}
+
+/// Total statistics across all connections
+#[derive(Debug, Clone, Default)]
+pub struct TotalStats {
+    pub bytes_in: u64,
+    pub bytes_out: u64,
+    pub packets_in: u64,
+    pub packets_out: u64,
 }
 
 /// Connection status (for API exposure)

@@ -1171,7 +1171,7 @@ mod tests {
     #[tokio::test]
     async fn test_dht_storage() {
         let config = DhtConfig::default();
-        let mut dht = PureRustDht::new(config).await.unwrap();
+        let dht = PureRustDht::new(config).await.unwrap();
 
         let key = "test_key";
         let value = vec![1, 2, 3, 4];

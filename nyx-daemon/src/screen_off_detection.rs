@@ -762,12 +762,12 @@ mod tests {
         let event = detector.update_screen_state(ScreenState::Off).await;
         assert!(event.is_some());
 
-        let (screen_state, power_state, battery) = detector.get_states().await;
+        let (screen_state, _power_state, battery) = detector.get_states().await;
         assert_eq!(screen_state, ScreenState::Off);
         assert_eq!(battery, 1.0);
 
         // Test battery update
-        let event = detector.update_battery_level(0.5).await;
+        let _event = detector.update_battery_level(0.5).await;
         let battery = detector.get_states().await.2;
         assert_eq!(battery, 0.5);
     }

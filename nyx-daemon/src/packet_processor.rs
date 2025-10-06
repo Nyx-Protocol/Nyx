@@ -9,12 +9,12 @@
 //! - Packet boundary padding for traffic analysis resistance
 //! - Integration with Connection Manager and Stream Manager
 
-use nyx_stream::extended_packet::{
-    ConnectionId, ExtendedPacket, ExtendedPacketHeader,
-    MAX_PAYLOAD_SIZE, PacketFlags, PacketType, PathId,
-};
 #[cfg(test)]
 use nyx_stream::extended_packet::EXTENDED_HEADER_SIZE;
+use nyx_stream::extended_packet::{
+    ConnectionId, ExtendedPacket, ExtendedPacketHeader, PacketFlags, PacketType, PathId,
+    MAX_PAYLOAD_SIZE,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;

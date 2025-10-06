@@ -16,7 +16,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::session_manager::SessionManager;
+use crate::session_manager::{SessionManager, SessionRole, SessionState};
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -96,6 +96,50 @@ pub struct ApiState {
     pub session_manager: Arc<SessionManager>,
 }
 
+/// Convert SessionState to string for JSON response
+fn session_state_to_string(state: SessionState) -> String {
+    match state {
+        SessionState::Idle => "idle".to_string(),
+        SessionState::ClientHandshaking => "client_handshaking".to_string(),
+        SessionState::ServerHandshaking => "server_handshaking".to_string(),
+        SessionState::Established => "established".to_string(),
+        SessionState::Closing => "closing".to_string(),
+        SessionState::Closed => "closed".to_string(),
+        SessionState::Failed => "failed".to_string(),
+    }
+}
+
+/// Convert SessionRole to string for JSON response
+fn session_role_to_string(role: SessionRole) -> String {
+    match role {
+        SessionRole::Client => "client".to_string(),
+        SessionRole::Server => "server".to_string(),
+    }
+}
+
+/// Parse SessionState from string
+fn parse_session_state(state: &str) -> Option<SessionState> {
+    match state.to_lowercase().as_str() {
+        "idle" => Some(SessionState::Idle),
+        "client_handshaking" => Some(SessionState::ClientHandshaking),
+        "server_handshaking" => Some(SessionState::ServerHandshaking),
+        "established" => Some(SessionState::Established),
+        "closing" => Some(SessionState::Closing),
+        "closed" => Some(SessionState::Closed),
+        "failed" => Some(SessionState::Failed),
+        _ => None,
+    }
+}
+
+/// Parse SessionRole from string
+fn parse_session_role(role: &str) -> Option<SessionRole> {
+    match role.to_lowercase().as_str() {
+        "client" => Some(SessionRole::Client),
+        "server" => Some(SessionRole::Server),
+        _ => None,
+    }
+}
+
 /// Creates the session API router
 ///
 /// # Arguments
@@ -119,7 +163,7 @@ pub fn create_session_router(session_manager: Arc<SessionManager>) -> Router {
 /// - `state`: Filter by state (e.g., "established", "idle")
 /// - `role`: Filter by role (e.g., "client", "server")
 async fn list_sessions(
-    State(_state): State<ApiState>,
+    State(state): State<ApiState>,
     Query(query): Query<ListSessionsQuery>,
 ) -> Result<Json<ListSessionsResponse>, ErrorResponse> {
     info!(
@@ -127,11 +171,51 @@ async fn list_sessions(
         query.state_filter, query.role_filter
     );
 
-    // TODO: Implement actual filtering once SessionManager supports listing
-    // For now, return empty list (implementation will be completed in integration phase)
+    // Parse filters
+    let state_filter = query
+        .state_filter
+        .as_ref()
+        .and_then(|s| parse_session_state(s));
+    let role_filter = query
+        .role_filter
+        .as_ref()
+        .and_then(|r| parse_session_role(r));
+
+    // Get filtered sessions from manager
+    let sessions = state
+        .session_manager
+        .list_sessions(state_filter, role_filter)
+        .await;
+
+    let total_count = sessions.len();
+
+    // Convert to JSON response format
+    let session_responses = sessions
+        .into_iter()
+        .map(|s| SessionStatusResponse {
+            session_id: s.id,
+            role: session_role_to_string(s.role),
+            state: session_state_to_string(s.state),
+            age_ms: s.age.as_millis() as u64,
+            idle_time_ms: s.idle_time.as_millis() as u64,
+            has_traffic_keys: s.has_traffic_keys,
+            metrics: SessionMetricsResponse {
+                bytes_tx: s.metrics.bytes_tx,
+                bytes_rx: s.metrics.bytes_rx,
+                frames_tx: s.metrics.frames_tx,
+                frames_rx: s.metrics.frames_rx,
+                handshake_duration_ms: s.metrics.handshake_duration.map(|d| d.as_millis() as u64),
+                established_at_ms: s
+                    .metrics
+                    .established_at
+                    .map(|t| t.elapsed().as_millis() as u64),
+            },
+        })
+        .collect();
+
     let response = ListSessionsResponse {
-        sessions: vec![],
-        total_count: 0,
+        sessions: session_responses,
+        total_count,
     };
 
     Ok(Json(response))
@@ -150,8 +234,8 @@ async fn get_session_status(
         Some(s) => {
             let response = SessionStatusResponse {
                 session_id,
-                role: format!("{:?}", s.role),
-                state: format!("{:?}", s.state),
+                role: session_role_to_string(s.role),
+                state: session_state_to_string(s.state),
                 age_ms: s.age.as_millis() as u64,
                 idle_time_ms: s.idle_time.as_millis() as u64,
                 has_traffic_keys: s.has_traffic_keys,

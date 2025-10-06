@@ -649,6 +649,39 @@ impl SessionManager {
         self.sessions.read().await.len()
     }
 
+    /// List all sessions with optional filtering
+    ///
+    /// Returns session statuses for all sessions that match the optional filter.
+    /// If no filter is provided, returns all sessions.
+    ///
+    /// # Arguments
+    /// * `state_filter` - Optional state to filter by
+    /// * `role_filter` - Optional role to filter by
+    pub async fn list_sessions(
+        &self,
+        state_filter: Option<SessionState>,
+        role_filter: Option<SessionRole>,
+    ) -> Vec<SessionStatus> {
+        let sessions = self.sessions.read().await;
+        sessions
+            .values()
+            .filter(|s| {
+                let state_match = state_filter.is_none_or(|f| s.state == f);
+                let role_match = role_filter.is_none_or(|f| s.role == f);
+                state_match && role_match
+            })
+            .map(|s| SessionStatus {
+                id: s.id,
+                role: s.role,
+                state: s.state,
+                age: s.age(),
+                idle_time: s.last_activity.elapsed(),
+                has_traffic_keys: s.traffic_keys.is_some(),
+                metrics: s.metrics.clone(),
+            })
+            .collect()
+    }
+
     /// Get session count (alias for active_session_count for compatibility)
     pub fn session_count(&self) -> usize {
         // This is a synchronous version that uses try_read for non-blocking access

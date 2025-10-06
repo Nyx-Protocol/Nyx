@@ -293,7 +293,6 @@ impl TelemetryBridge {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nyx_stream::telemetry_schema::TelemetryConfig;
 
     fn create_test_span() -> TelemetrySpan {
         TelemetrySpan {

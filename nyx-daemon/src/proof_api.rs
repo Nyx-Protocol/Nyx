@@ -116,7 +116,7 @@ mod tests {
     use crate::proof_distributor::ProofDistributorConfig;
     use axum::body::Body;
     use axum::http::Request;
-    use nyx_mix::accumulator::{Accumulator, AccumulatorConfig};
+    use nyx_mix::accumulator::Accumulator;
     use tokio::sync::RwLock;
     use tower::ServiceExt;
 

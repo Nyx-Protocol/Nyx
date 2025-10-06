@@ -265,15 +265,10 @@ impl Stream {
     /// It iterates through pending_frames in order and appends any that
     /// are now consecutive with the recv_offset.
     fn reassemble_pending_frames(&mut self) {
-        loop {
-            if let Some(data) = self.pending_frames.remove(&self.recv_offset) {
-                self.recv_buffer.extend(&data);
-                self.recv_offset += data.len() as u64;
-                self.bytes_received += data.len() as u64;
-            } else {
-                // No more consecutive frames
-                break;
-            }
+        while let Some(data) = self.pending_frames.remove(&self.recv_offset) {
+            self.recv_buffer.extend(&data);
+            self.recv_offset += data.len() as u64;
+            self.bytes_received += data.len() as u64;
         }
     }
 
@@ -1057,7 +1052,7 @@ mod tests {
         // Both streams belong to connection 1
         assert_eq!(index.get(&stream1), Some(&1));
         assert_eq!(index.get(&stream2), Some(&1));
-        
+
         // Verify stream IDs are different (client odd, server even)
         assert_ne!(stream1, stream2);
         assert_eq!(stream1 % 2, 1); // Client stream is odd
