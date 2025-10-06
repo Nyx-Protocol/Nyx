@@ -540,9 +540,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_retry_backoff_timing() {
-        let mut config = PushConfig::default();
-        config.max_retries = 3;
-        config.backoff_base_ms = 100; // Fast for testing
+        // Initialize config with retry settings directly to avoid field_reassign_with_default lint
+        let config = PushConfig {
+            max_retries: 3,
+            backoff_base_ms: 100, // Fast for testing
+            ..Default::default()
+        };
         let relay = PushRelay::new(config).unwrap();
 
         // send_with_retry is private, so we test through send()
