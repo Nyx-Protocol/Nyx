@@ -6,7 +6,8 @@
 // - Error categorization
 // - Retry logic implementation
 
-use nyx_sdk::{error::ErrorCategory, Error, NyxStream, Result};
+// Removed unused import: error::ErrorCategory (not used in this example)
+use nyx_sdk::{Error, NyxStream, Result};
 use std::time::Duration;
 use tokio::time::sleep;
 
@@ -35,7 +36,10 @@ async fn example_timeout_error() {
         Ok(None) => println!("Stream closed"),
         Err(Error::Timeout { duration_ms }) => {
             println!("✓ Caught timeout error after {}ms", duration_ms);
-            println!("  This error is retryable: {}", Error::timeout(duration_ms).is_retryable());
+            println!(
+                "  This error is retryable: {}",
+                Error::timeout(duration_ms).is_retryable()
+            );
         }
         Err(e) => println!("Other error: {}", e),
     }
@@ -70,19 +74,20 @@ async fn example_retry_logic() {
     println!("4. Retry Logic Example");
     println!("---------------------");
 
+    // Use AtomicU32 instead of mutable static to avoid undefined behavior
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static ATTEMPT: AtomicU32 = AtomicU32::new(0);
+
     // Simulate an operation that might fail
     let result = retry_operation(
         || async {
-            static mut ATTEMPT: u32 = 0;
-            unsafe {
-                ATTEMPT += 1;
-                if ATTEMPT < 3 {
-                    println!("  Attempt {} - simulating failure", ATTEMPT);
-                    Err(Error::timeout(1000))
-                } else {
-                    println!("  Attempt {} - success!", ATTEMPT);
-                    Ok("Operation succeeded")
-                }
+            let attempt = ATTEMPT.fetch_add(1, Ordering::SeqCst) + 1;
+            if attempt < 3 {
+                println!("  Attempt {} - simulating failure", attempt);
+                Err(Error::timeout(1000))
+            } else {
+                println!("  Attempt {} - success!", attempt);
+                Ok("Operation succeeded")
             }
         },
         5,
