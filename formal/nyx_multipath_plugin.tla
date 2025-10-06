@@ -1,12 +1,12 @@
 ---- MODULE nyx_multipath_plugin ----
-EXTENDS Naturals, Sequences, FiniteSets, TLAPS
+EXTENDS Naturals, Sequences, FiniteSets
 
 (*************************************************************************)
-(* Nyx Protocol – Complete Multipath Protocol State Machine             *)
+(* Nyx Protocol  EComplete Multipath Protocol State Machine             *)
 (* Enhanced formal model for comprehensive protocol verification          *)
 (*                                                                       *)
 (* This model captures the complete Nyx protocol state machine including:*)
-(*   • Dynamic path construction and validation (3–7 hops)               *)
+(*   • Dynamic path construction and validation (3 E hops)               *)
 (*   • Comprehensive capability negotiation with error handling          *)
 (*   • Cryptographic handshake states and key management                 *)
 (*   • Stream management and flow control states                         *)
