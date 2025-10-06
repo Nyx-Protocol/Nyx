@@ -24,6 +24,8 @@ struct TestNetwork {
     sender_socket: Arc<UdpSocket>,
     receiver_socket: Arc<UdpSocket>,
     receiver_addr: SocketAddr,
+    // Transport is kept for potential future extensions but not actively used in current benchmarks
+    #[allow(dead_code)]
     transport: Arc<UdpTransport>,
     cipher: Arc<Mutex<ChaCha20Poly1305>>,
 }
@@ -283,7 +285,7 @@ fn bench_voip(c: &mut Criterion) {
             let frame_size = (bitrate_kbps * frame_duration_ms / 8) as usize;
             let duration_secs = 10;
 
-            let start = Instant::now();
+            let _start = Instant::now();
             let mut latencies = Vec::new();
             let mut jitters = Vec::new();
             let mut prev_latency = Duration::ZERO;
@@ -320,12 +322,9 @@ fn bench_voip(c: &mut Criterion) {
                 };
 
                 let latency = frame_start.elapsed();
+                // Calculate jitter as absolute difference between consecutive latencies
                 let jitter = if prev_latency > Duration::ZERO {
-                    if latency > prev_latency {
-                        latency - prev_latency
-                    } else {
-                        prev_latency - latency
-                    }
+                    latency.abs_diff(prev_latency)
                 } else {
                     Duration::ZERO
                 };
