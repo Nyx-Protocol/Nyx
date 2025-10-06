@@ -1,4 +1,5 @@
 ---- MODULE NyxEdgeComputing ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Edge Computing and Fog Networking                        *)
 (*                                                                          *)
