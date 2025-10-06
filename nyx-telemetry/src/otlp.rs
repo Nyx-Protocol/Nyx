@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::{mpsc, RwLock};
-use tokio::time::{interval, sleep, timeout};
+use tokio::time::{interval, sleep};
 use tracing::{debug, error, info, warn};
 
 /// Maximum number of spans to batch before sending
@@ -133,9 +133,9 @@ pub struct OtlpExporter {
     /// Configuration
     #[allow(dead_code)]
     config: OtlpConfig,
-    /// HTTP client
+    /// HTTP client (ureq Agent is thread-safe and can be cloned cheaply)
     #[allow(dead_code)]
-    client: reqwest::Client,
+    client: ureq::Agent,
     /// Span sender channel
     span_sender: mpsc::UnboundedSender<Span>,
     /// Export statistics
@@ -166,10 +166,11 @@ pub struct ExportStats {
 impl OtlpExporter {
     /// Create a new OTLP exporter
     pub async fn new(config: OtlpConfig) -> Result<Self> {
-        let client = reqwest::Client::builder()
+        // Create ureq agent with timeout configuration
+        // ureq::Agent is lightweight, thread-safe, and pure Rust (no C/C++ deps)
+        let client = ureq::AgentBuilder::new()
             .timeout(config.timeout)
-            .build()
-            .map_err(|e| Error::Init(format!("Failed to create HTTP client: {}", e)))?;
+            .build();
 
         let (span_sender, span_receiver) = mpsc::unbounded_channel();
         let (shutdown_tx, shutdown_rx) = mpsc::channel(1);
@@ -260,7 +261,7 @@ impl Drop for OtlpExporter {
 /// Background export task
 struct ExportTask {
     config: OtlpConfig,
-    client: reqwest::Client,
+    client: ureq::Agent,
     span_receiver: mpsc::UnboundedReceiver<Span>,
     shutdown_receiver: mpsc::Receiver<()>,
     stats: Arc<RwLock<ExportStats>>,
@@ -271,7 +272,7 @@ struct ExportTask {
 impl ExportTask {
     fn new(
         config: OtlpConfig,
-        client: reqwest::Client,
+        client: ureq::Agent,
         span_receiver: mpsc::UnboundedReceiver<Span>,
         shutdown_receiver: mpsc::Receiver<()>,
         stats: Arc<RwLock<ExportStats>>,
@@ -416,40 +417,65 @@ impl ExportTask {
         let body = serde_json::to_vec(batch)
             .map_err(|e| Error::Init(format!("Failed to serialize batch: {}", e)))?;
 
-        let mut request = self
-            .client
-            .post(&url)
-            .header("Content-Type", "application/json");
+        // Clone client and headers for use in spawn_blocking
+        // ureq::Agent is cheaply cloneable and thread-safe
+        let client = self.client.clone();
+        let headers = self.config.headers.clone();
+        let compression = self.config.compression;
 
-        // Add custom headers
-        for (key, value) in &self.config.headers {
-            request = request.header(key, value);
-        }
+        // ureq is synchronous, so wrap in spawn_blocking for async compatibility
+        // This prevents blocking the tokio runtime
+        let result = tokio::task::spawn_blocking(move || {
+            let mut request = client.post(&url).set("Content-Type", "application/json");
 
-        // Add compression if enabled
-        if self.config.compression {
-            request = request.header("Content-Encoding", "gzip");
-            // Note: In a real implementation, you would compress the body here
-        }
+            // Add custom headers
+            for (key, value) in &headers {
+                request = request.set(key, value);
+            }
 
-        let response = timeout(self.config.timeout, request.body(body).send())
-            .await
-            .map_err(|_| Error::Init("Request timeout".to_string()))?
-            .map_err(|e| Error::Init(format!("Request failed: {}", e)))?;
+            // Add compression header if enabled
+            // Note: Actual compression would require additional implementation
+            if compression {
+                request = request.set("Content-Encoding", "gzip");
+            }
 
-        if response.status().is_success() {
-            Ok(())
-        } else {
-            let status = response.status();
-            let body = response
-                .text()
-                .await
-                .unwrap_or_else(|_| "Failed to read response body".to_string());
-            Err(Error::Init(format!(
-                "Export failed with status {}: {}",
-                status, body
-            )))
-        }
+            // Send request with body
+            // ureq handles timeout via agent configuration
+            let response = request.send_bytes(&body);
+
+            match response {
+                Ok(resp) => {
+                    if resp.status() >= 200 && resp.status() < 300 {
+                        Ok(())
+                    } else {
+                        let status = resp.status();
+                        let body = resp
+                            .into_string()
+                            .unwrap_or_else(|_| "Failed to read response body".to_string());
+                        Err(Error::Init(format!(
+                            "Export failed with status {}: {}",
+                            status, body
+                        )))
+                    }
+                }
+                Err(ureq::Error::Status(code, resp)) => {
+                    let body = resp
+                        .into_string()
+                        .unwrap_or_else(|_| "Failed to read response body".to_string());
+                    Err(Error::Init(format!(
+                        "Export failed with status {}: {}",
+                        code, body
+                    )))
+                }
+                Err(ureq::Error::Transport(transport)) => {
+                    Err(Error::Init(format!("Transport error: {}", transport)))
+                }
+            }
+        })
+        .await
+        .map_err(|e| Error::Init(format!("Task execution failed: {}", e)))?;
+
+        result
     }
 }
 
