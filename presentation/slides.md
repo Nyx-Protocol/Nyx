@@ -1,27 +1,50 @@
 ---
-theme: default
-background: https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920
+theme: seriph
+background: https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=1920&q=80
 class: text-center
 highlighter: shiki
 lineNumbers: true
 info: |
   ## NyxNet - Post-Quantum Anonymous Network
-  U-22 Programming Contest Presentation
+  U-22 Programming Contest 2025 Presentation
 drawings:
   persist: false
 transition: slide-left
 title: NyxNet - ポスト量子時代の匿名通信プラットフォーム
 mdc: true
+css: unocss
+fonts:
+  sans: 'Noto Sans JP'
+  mono: 'Fira Code'
 ---
 
-# NyxNet
-
-ポスト量子時代の匿名通信プラットフォーム
-
-<div class="pt-12">
-  <span @click="$slidev.nav.next" class="px-2 py-1 rounded cursor-pointer" hover="bg-white bg-opacity-10">
-    Press Space for next page <carbon:arrow-right class="inline"/>
-  </span>
+<div class="flex flex-col items-center justify-center h-full">
+  <div class="mb-8 text-6xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+    NyxNet
+  </div>
+  
+  <div class="text-2xl mb-4 opacity-80">
+    ポスト量子時代の匿名通信プラットフォーム
+  </div>
+  
+  <div class="flex gap-4 mt-8 text-sm opacity-60">
+    <div class="flex items-center gap-2">
+      <carbon:shield-security class="text-lg"/>
+      <span>Post-Quantum Secure</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <carbon:lightning class="text-lg"/>
+      <span>60x Faster than Tor</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <carbon:code class="text-lg"/>
+      <span>85,000+ Lines</span>
+    </div>
+  </div>
+  
+  <div class="mt-12">
+    <div class="text-xs opacity-50 mb-2">U-22 プログラミングコンテスト 2025</div>
+  </div>
 </div>
 
 <div class="abs-br m-6 flex gap-2">
@@ -31,34 +54,106 @@ mdc: true
   </a>
 </div>
 
+<style>
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+}
+
+.slidev-layout {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+</style>
+
 ---
 layout: center
+class: text-center
 ---
 
-# Why NyxNet?
+# <span class="text-gradient">Why NyxNet?</span>
 
-<div class="grid grid-cols-3 gap-4 mt-10">
+<div class="grid grid-cols-3 gap-8 mt-12 px-8">
 
-<div>
-<h3>🔐 量子コンピュータ脅威</h3>
-<p class="text-sm">既存の暗号は2030年代に破られる可能性</p>
+<div v-click class="problem-card">
+  <div class="icon-wrapper mb-4">
+    <carbon:warning-alt class="text-5xl text-red-400"/>
+  </div>
+  <h3 class="text-xl font-bold mb-3">🔐 量子コンピュータ脅威</h3>
+  <p class="text-sm opacity-80">既存の暗号は2030年代に破られる可能性</p>
+  <div class="mt-4 text-xs opacity-60">RSA, ECDSA → 危険</div>
 </div>
 
-<div>
-<h3>🐌 Torの性能限界</h3>
-<p class="text-sm">レイテンシ1.2秒、リアルタイム通信不可</p>
+<div v-click class="problem-card">
+  <div class="icon-wrapper mb-4">
+    <carbon:hourglass class="text-5xl text-yellow-400"/>
+  </div>
+  <h3 class="text-xl font-bold mb-3">🐌 Torの性能限界</h3>
+  <p class="text-sm opacity-80">レイテンシ1.2秒、リアルタイム通信不可</p>
+  <div class="mt-4 text-xs opacity-60">ビデオ通話、ゲーム不可</div>
 </div>
 
-<div>
-<h3>📱 モバイル時代</h3>
-<p class="text-sm">スマホでも使える匿名通信が必要</p>
+<div v-click class="problem-card">
+  <div class="icon-wrapper mb-4">
+    <carbon:mobile class="text-5xl text-blue-400"/>
+  </div>
+  <h3 class="text-xl font-bold mb-3">📱 モバイル時代</h3>
+  <p class="text-sm opacity-80">スマホでも使える匿名通信が必要</p>
+  <div class="mt-4 text-xs opacity-60">バッテリー消費が課題</div>
 </div>
 
 </div>
 
-<div class="mt-16 text-center">
-<h2 class="text-3xl font-bold text-green-400">→ NyxNet で解決</h2>
+<div v-click class="mt-16">
+  <div class="solution-banner">
+    <carbon:checkmark-filled class="text-2xl text-green-400 inline-block mr-2"/>
+    <span class="text-3xl font-bold text-gradient-green">NyxNet で全て解決</span>
+  </div>
 </div>
+
+<style>
+.text-gradient {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-green {
+  background: linear-gradient(90deg, #34d399 0%, #10b981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.problem-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  transition: all 0.3s ease;
+}
+
+.problem-card:hover {
+  transform: translateY(-8px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.icon-wrapper {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.solution-banner {
+  display: inline-flex;
+  align-items: center;
+  padding: 1rem 3rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 2px solid rgba(16, 185, 129, 0.3);
+  border-radius: 50px;
+}
+</style>
 
 ---
 layout: two-cols

@@ -33,11 +33,7 @@ log_info "Deploying NyxNet on ${HOSTNAME} (VM-${VM_NUMBER})..."
 ################################################################################
 log_info "Step 1/5: Building NyxNet project..."
 
-cd ~/nyxnet/src/NyxNet || {
-    log_error "NyxNet source not found at ~/nyxnet/src/NyxNet"
-    log_error "Clone the repository first: git clone <repo-url> ~/nyxnet/src/NyxNet"
-    exit 1
-}
+cd ../
 
 # Dockerイメージをビルド
 log_info "Building Docker images..."
