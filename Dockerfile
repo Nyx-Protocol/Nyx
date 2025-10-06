@@ -4,9 +4,20 @@
 FROM --platform=$BUILDPLATFORM rust:1.77-slim AS builder
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
-ARG TARGET=x86_64-unknown-linux-musl
+ARG TARGET=x86_64-unknown-linux-gnu
 ENV CARGO_TERM_COLOR=always
+
+# Install required build dependencies
+RUN apt-get update && apt-get install -y \
+    protobuf-compiler \
+    libprotobuf-dev \
+    pkg-config \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add Rust target
 RUN rustup target add $TARGET
+
 WORKDIR /workspace
 
 # Copy manifests separately for better layer caching
@@ -41,7 +52,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 # -------- runtime stage --------
 FROM gcr.io/distroless/cc-debian12:latest
-ARG TARGET=x86_64-unknown-linux-musl
+ARG TARGET=x86_64-unknown-linux-gnu
 
 # Copy daemon binary; crate name produces binary `nyx-daemon`
 COPY --from=builder /workspace/target/${TARGET}/release/nyx-daemon /usr/bin/nyx-daemon
