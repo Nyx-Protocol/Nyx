@@ -18,12 +18,5 @@ nyx-sdk = { path = "../nyx-sdk" }
 nyx-stream = { path = "../nyx-stream" }
 nyx-core = { path = "../nyx-core" }
 
-[[test]]
-name = "e2e_handshake"
-path = "tests/e2e_handshake.rs"
-harness = true
-
-[[test]]
-name = "advanced_integration"
-path = "tests/advanced_integration.rs"
-harness = true
+# Old deprecated integration tests have been moved to tests/*.rs.disabled
+# Use the new test_harness-based tests in src/integration/ instead

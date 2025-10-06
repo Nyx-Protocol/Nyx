@@ -1,0 +1,136 @@
+//! Deterministic Network Simulator Tests
+
+use nyx_conformance::simulator::{NetworkSimulator, SimulatedNode, NetworkConfig};
+use std::time::Duration;
+
+#[tokio::test]
+async fn test_deterministic_packet_delivery() {
+    let config = NetworkConfig {
+        seed: 42,
+        latency: Duration::from_millis(50),
+        jitter: Duration::from_millis(5),
+        loss_rate: 0.0,
+    };
+    
+    let mut sim = NetworkSimulator::new(config);
+    
+    let node1 = sim.add_node().await;
+    let node2 = sim.add_node().await;
+    
+    node1.send_to(node2, b"test message").await.unwrap();
+    
+    sim.advance_time(Duration::from_millis(60)).await;
+    
+    let received = node2.receive().await.unwrap();
+    assert_eq!(received, b"test message");
+}
+
+#[tokio::test]
+async fn test_packet_loss_simulation() {
+    let config = NetworkConfig {
+        seed: 42,
+        latency: Duration::from_millis(10),
+        jitter: Duration::ZERO,
+        loss_rate: 0.5, // 50% loss
+    };
+    
+    let mut sim = NetworkSimulator::new(config);
+    
+    let node1 = sim.add_node().await;
+    let node2 = sim.add_node().await;
+    
+    let mut received = 0;
+    for i in 0..100 {
+        node1.send_to(node2, &[i]).await.unwrap();
+        sim.advance_time(Duration::from_millis(20)).await;
+        
+        if node2.try_receive().await.is_some() {
+            received += 1;
+        }
+    }
+    
+    let actual_rate = received as f64 / 100.0;
+    assert!((actual_rate - 0.5).abs() < 0.1, "Loss rate: {:.2}", actual_rate);
+}
+
+#[tokio::test]
+async fn test_network_partition() {
+    let config = NetworkConfig::default();
+    let mut sim = NetworkSimulator::new(config);
+    
+    let node1 = sim.add_node().await;
+    let node2 = sim.add_node().await;
+    
+    // Create partition
+    sim.partition(node1, node2).await;
+    
+    node1.send_to(node2, b"blocked").await.ok();
+    sim.advance_time(Duration::from_secs(1)).await;
+    
+    assert!(node2.try_receive().await.is_none(), "Should be partitioned");
+    
+    // Heal partition
+    sim.heal_partition(node1, node2).await;
+    
+    node1.send_to(node2, b"healed").await.unwrap();
+    sim.advance_time(Duration::from_millis(100)).await;
+    
+    assert!(node2.try_receive().await.is_some(), "Should be healed");
+}
+
+#[tokio::test]
+async fn test_bandwidth_limiting() {
+    let config = NetworkConfig::default()
+        .with_bandwidth_limit(1_000_000); // 1 Mbps
+    
+    let mut sim = NetworkSimulator::new(config);
+    
+    let node1 = sim.add_node().await;
+    let node2 = sim.add_node().await;
+    
+    let large_data = vec![0u8; 10_000_000]; // 10 MB
+    
+    let start = sim.current_time();
+    node1.send_to(node2, &large_data).await.unwrap();
+    
+    // Should take ~80 seconds at 1 Mbps
+    while node2.bytes_received() < large_data.len() {
+        sim.advance_time(Duration::from_secs(1)).await;
+    }
+    
+    let duration = sim.current_time() - start;
+    assert!(duration > Duration::from_secs(70), "Should be bandwidth-limited");
+}
+
+#[tokio::test]
+async fn test_reproducible_with_same_seed() {
+    let run_simulation = |seed: u64| async move {
+        let config = NetworkConfig {
+            seed,
+            latency: Duration::from_millis(50),
+            jitter: Duration::from_millis(10),
+            loss_rate: 0.1,
+        };
+        
+        let mut sim = NetworkSimulator::new(config);
+        let node1 = sim.add_node().await;
+        let node2 = sim.add_node().await;
+        
+        let mut received_count = 0;
+        for i in 0..100 {
+            node1.send_to(node2, &[i]).await.ok();
+            sim.advance_time(Duration::from_millis(60)).await;
+            
+            if node2.try_receive().await.is_some() {
+                received_count += 1;
+            }
+        }
+        
+        received_count
+    };
+    
+    let result1 = run_simulation(42).await;
+    let result2 = run_simulation(42).await;
+    
+    assert_eq!(result1, result2, "Same seed must produce same results");
+}

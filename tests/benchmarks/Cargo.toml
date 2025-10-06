@@ -1,0 +1,23 @@
+[package]
+name = "nyx-benchmarks"
+version = "1.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+criterion = { version = "0.5", features = ["async_tokio", "html_reports"] }
+tokio = { version = "1.35", features = ["full"] }
+futures = "0.3"
+nyx-core = { path = "../../nyx-core" }
+nyx-transport = { path = "../../nyx-transport", features = ["quic"] }
+nyx-crypto = { path = "../../nyx-crypto" }
+nyx-stream = { path = "../../nyx-stream" }
+
+[[bench]]
+name = "application_scenarios"
+harness = false
+path = "application_scenarios.rs"
+
+[[bin]]
+name = "quick-perf-test"
+path = "../quick-perf-test.rs"
