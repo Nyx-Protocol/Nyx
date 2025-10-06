@@ -48,14 +48,14 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/workspace/target \
-    cargo build --release --workspace --exclude nyx-sdk-wasm --target $TARGET
+    cargo build --release --workspace --exclude nyx-sdk-wasm --target $TARGET && \
+    cp /workspace/target/${TARGET}/release/nyx-daemon /usr/local/bin/nyx-daemon
 
 # -------- runtime stage --------
 FROM gcr.io/distroless/cc-debian12:latest
-ARG TARGET=x86_64-unknown-linux-gnu
 
-# Copy daemon binary; crate name produces binary `nyx-daemon`
-COPY --from=builder /workspace/target/${TARGET}/release/nyx-daemon /usr/bin/nyx-daemon
+# Copy daemon binary from builder
+COPY --from=builder /usr/local/bin/nyx-daemon /usr/bin/nyx-daemon
 
 # Run as non-root by default; Kubernetes may override UID/GID
 USER 65532:65532
