@@ -1,7 +1,3 @@
-#![cfg(feature = "hybrid")]
-#![allow(missing_docs, clippy::panic, clippy::unwrap_used, clippy::expect_used)]
-#![doc = "HPKE (Hybrid Public Key Encryption) Envelope Testing Suite"]
-
 //! HPKE (Hybrid Public Key Encryption) Envelope Testing Suite
 //!
 //! This module provides comprehensive testing for HPKE envelope operations including:
@@ -10,6 +6,9 @@
 //! - Large message handling and performance characteristics
 //! - Security properties including tamper detection and wrong-recipient scenarios
 //! - Memory safety and proper error handling under adverse conditions
+
+#![cfg(feature = "hybrid")]
+#![allow(missing_docs, clippy::panic, clippy::unwrap_used, clippy::expect_used)]
 
 use chacha20poly1305::{
     aead::{AeadInPlace, NewAead},
