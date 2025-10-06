@@ -1,5 +1,4 @@
 ---- MODULE NyxConcurrencyModels ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Concurrency and Parallelism Models                       *)
 (*                                                                          *)
@@ -17,6 +16,7 @@ LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 
 EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC
+LOCAL INSTANCE NyxHelpers
 
 (****************************************************************************)
 (* Thread and Process Models                                                *)
