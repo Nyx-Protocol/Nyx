@@ -15,9 +15,7 @@ async fn main() -> Result<()> {
     println!("=== Event Subscription Example ===\n");
 
     // Create configuration
-    let config = SdkConfig::builder()
-        .request_timeout_ms(30000)
-        .build()?;
+    let config = SdkConfig::builder().request_timeout_ms(30000).build()?;
 
     // Create client
     let client = DaemonClient::new_with_auto_token(config).await;
@@ -49,12 +47,10 @@ async fn main() -> Result<()> {
                     println!("  Detail: {}", event.detail);
                     println!();
 
-                    // Check for system events
-                    if event.event_type == "system" {
-                        if event.detail.contains("closed") {
-                            println!("Event stream closed");
-                            break;
-                        }
+                    // Check for system events indicating stream closure
+                    if event.event_type == "system" && event.detail.contains("closed") {
+                        println!("Event stream closed");
+                        break;
                     }
                 }
                 Err(e) => {
