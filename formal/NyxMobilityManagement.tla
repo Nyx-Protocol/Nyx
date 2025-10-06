@@ -1,4 +1,5 @@
 ---- MODULE NyxMobilityManagement ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Mobility Management and Handoff                          *)
 (*                                                                          *)
