@@ -11,6 +11,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use std::collections::HashMap;
 use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::process::Command; // Added: Required for Windows netsh command execution
 use std::sync::Arc;
 use std::time::Instant;
 use thiserror::Error;
@@ -355,7 +356,7 @@ pub struct TeredoAdapter {
 /// interface enumeration. Alternative approach: spawn platform command and parse.
 pub fn detect_teredo_adapters() -> Vec<TeredoAdapter> {
     use std::net::Ipv6Addr;
-    use std::process::Command;
+    // Note: std::process::Command import removed - not used in pure Rust implementation
 
     let mut adapters = Vec::new();
 
@@ -1199,13 +1200,12 @@ mod tests {
 
         // Should prefer native IPv6 with matching prefix
         let selected_addr = selected.unwrap();
-        match selected_addr {
-            SocketAddr::V6(v6) => {
-                let ip = v6.ip();
-                assert!(ip.to_string().starts_with("2001:db8"));
-            }
-            _ => {} // IPv4 is also acceptable
+        // Use if-let pattern for single match with comment preserved
+        if let SocketAddr::V6(v6) = selected_addr {
+            let ip = v6.ip();
+            assert!(ip.to_string().starts_with("2001:db8"));
         }
+        // IPv4 is also acceptable - no action needed for other variants
     }
 
     #[test]
