@@ -1,4 +1,5 @@
 ---- MODULE NyxConcurrencyModels ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Concurrency and Parallelism Models                       *)
 (*                                                                          *)
