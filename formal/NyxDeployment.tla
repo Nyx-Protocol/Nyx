@@ -1,4 +1,5 @@
 ---- MODULE NyxDeployment ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Deployment and Orchestration                             *)
 (*                                                                          *)
