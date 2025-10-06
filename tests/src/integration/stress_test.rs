@@ -12,13 +12,9 @@
 // - Statistical measurement and validation
 // - CI-friendly test durations (shortened for automation)
 
-use crate::test_harness::{DaemonConfig, TestHarness, TestResult};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-use tokio::sync::Barrier;
-use tokio::time::interval;
-use tracing::{info, warn};
+use std::time::Duration;
+use tracing::info;
 
 /// Number of concurrent clients for stress testing
 #[allow(dead_code)]

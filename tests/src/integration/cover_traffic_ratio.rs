@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tracing::{info, warn};
+use tracing::info;
 
 /// Minimum observation duration for cover traffic measurement (10 seconds)
 #[allow(dead_code)]

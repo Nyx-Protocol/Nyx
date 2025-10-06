@@ -161,6 +161,11 @@ pub type SharedSecret = [u8; sizes::SHARED_SECRET];
 
 /// Generate a BIKE-L1 keypair
 ///
+/// # Deprecation Notice
+///
+/// **This function is not implemented and will always return an error.**
+/// Use ML-KEM-768 (Kyber) for post-quantum key encapsulation instead.
+///
 /// # Errors
 ///
 /// Returns `Error::NotImplemented` as BIKE is not yet implemented.
@@ -172,6 +177,10 @@ pub type SharedSecret = [u8; sizes::SHARED_SECRET];
 /// - Proper error handling for bit-flipping decoder failures
 /// - Secure random number generation for key generation
 /// - Zeroization of intermediate values
+#[deprecated(
+    since = "0.1.0",
+    note = "BIKE KEM is not implemented. Use ML-KEM-768 (kyber::keygen_deterministic or kyber::keypair) instead."
+)]
 pub fn keygen<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<(PublicKey, SecretKey)> {
     Err(Error::NotImplemented(
         "BIKE KEM is not implemented. Use ML-KEM-768 (kyber feature) for post-quantum security."
@@ -180,6 +189,11 @@ pub fn keygen<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<(PublicKey, Secret
 }
 
 /// Encapsulate a shared secret to a public key
+///
+/// # Deprecation Notice
+///
+/// **This function is not implemented and will always return an error.**
+/// Use ML-KEM-768 (Kyber) for post-quantum key encapsulation instead.
 ///
 /// # Arguments
 ///
@@ -201,6 +215,10 @@ pub fn keygen<R: CryptoRng + RngCore>(_rng: &mut R) -> Result<(PublicKey, Secret
 /// - Secure syndrome computation
 /// - Constant-time operations
 /// - Protection against chosen-ciphertext attacks
+#[deprecated(
+    since = "0.1.0",
+    note = "BIKE KEM is not implemented. Use ML-KEM-768 (kyber::encapsulate) instead."
+)]
 pub fn encapsulate<R: CryptoRng + RngCore>(
     _pk: &PublicKey,
     _rng: &mut R,
@@ -212,6 +230,11 @@ pub fn encapsulate<R: CryptoRng + RngCore>(
 }
 
 /// Decapsulate a shared secret from a ciphertext
+///
+/// # Deprecation Notice
+///
+/// **This function is not implemented and will always return an error.**
+/// Use ML-KEM-768 (Kyber) for post-quantum key encapsulation instead.
 ///
 /// # Arguments
 ///
@@ -234,6 +257,10 @@ pub fn encapsulate<R: CryptoRng + RngCore>(
 /// - Constant-time failure handling
 /// - Side-channel resistance
 /// - Proper error propagation without leaking secret information
+#[deprecated(
+    since = "0.1.0",
+    note = "BIKE KEM is not implemented. Use ML-KEM-768 (kyber::decapsulate) instead."
+)]
 pub fn decapsulate(_sk: &SecretKey, _ct: &Ciphertext) -> Result<SharedSecret> {
     Err(Error::NotImplemented(
         "BIKE KEM decapsulation is not implemented. Use ML-KEM-768 (kyber feature) instead."
