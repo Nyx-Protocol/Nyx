@@ -217,7 +217,7 @@ fn test_bike_encap_decap_roundtrip() {
 #[ignore]
 #[test]
 fn test_bike_invalid_inputs() {
-    use nyx_crypto::bike::{decapsulate, keygen, sizes, Ciphertext, SecretKey};
+    use nyx_crypto::bike::{decapsulate, keygen, sizes, Ciphertext};
     use rand::thread_rng;
 
     let mut rng = thread_rng();
@@ -253,6 +253,7 @@ fn test_bike_invalid_inputs() {
     );
 
     // Test with corrupted ciphertext (random garbage)
+    use rand::RngCore; // Required for fill_bytes method
     let mut garbage = [0u8; sizes::CIPHERTEXT];
     rng.fill_bytes(&mut garbage);
     let invalid_ct3 = Ciphertext::from_bytes(garbage);
@@ -344,15 +345,11 @@ fn test_bike_timing_side_channels() {
 fn test_bike_zeroization() {
     use nyx_crypto::bike::{encapsulate, keygen, sizes, SecretKey};
     use rand::thread_rng;
-    use std::ptr;
 
     let mut rng = thread_rng();
 
     // Generate a keypair
     let (pk, sk) = keygen(&mut rng).expect("keygen should succeed");
-
-    // Get a pointer to the secret key bytes (for verification after drop)
-    let sk_ptr: *const u8 = sk.as_bytes().as_ptr();
 
     // Make a copy of the secret key bytes before drop
     let mut sk_copy = [0u8; sizes::SECRET_KEY];
@@ -393,7 +390,7 @@ fn test_bike_zeroization() {
     );
 
     // Verify ciphertext also can be zeroized
-    let mut ct_copy = ct.clone();
+    let ct_copy = ct.clone();
     drop(ct_copy);
 
     // SecretKey should implement ZeroizeOnDrop
