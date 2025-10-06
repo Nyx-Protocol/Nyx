@@ -1,21 +1,31 @@
-# Nyx Network - Simple Setup Scripts
+# Nyx Network - Scripts
 
-完璧なワンライナーでKubernetesクラスタ + Nyxデプロイ + マルチノードベンチマーク！
+Nyxプロジェクトの各種スクリプトを用途別に整理したディレクトリです。
+
+## 📁 ディレクトリ構造
+
+- **setup/** - 初期セットアップスクリプト
+- **deploy/** - デプロイ・クリーンアップスクリプト
+- **test/** - テスト実行スクリプト
+- **dev/** - 開発用ツールスクリプト
 
 ## 🚀 Ubuntu/Linux クイックスタート
 
 ```bash
 # 1. セットアップ（初回のみ）
-curl -fsSL https://github.com/SeleniaProject/Nyx/raw/main/scripts/nyx-setup.sh | bash
+./scripts/setup/nyx-setup.sh
 
 # 2. デプロイ＆ベンチマーク実行
-curl -fsSL https://github.com/SeleniaProject/Nyx/raw/main/scripts/nyx-deploy.sh | bash
+./scripts/deploy/nyx-deploy.sh
 ```
 
-または、リポジトリクローン後：
+または、ワンライナーで：
 ```bash
-./scripts/nyx-setup.sh    # 初回セットアップ
-./scripts/nyx-deploy.sh   # デプロイ＆ベンチマーク
+# セットアップ
+curl -fsSL https://github.com/SeleniaProject/Nyx/raw/main/scripts/setup/nyx-setup.sh | bash
+
+# デプロイ
+curl -fsSL https://github.com/SeleniaProject/Nyx/raw/main/scripts/deploy/nyx-deploy.sh | bash
 ```
 
 ## 💻 Windows クイックスタート
@@ -24,10 +34,10 @@ curl -fsSL https://github.com/SeleniaProject/Nyx/raw/main/scripts/nyx-deploy.sh 
 
 ```powershell
 # 1. セットアップ（初回のみ）
-.\scripts\nyx-setup.bat
+.\scripts\setup\nyx-setup.bat
 
 # 2. デプロイ＆ベンチマーク実行  
-.\scripts\nyx-deploy.bat
+.\scripts\deploy\nyx-deploy.bat
 ```
 
 ## 📊 実行内容
@@ -60,7 +70,28 @@ curl -fsSL https://github.com/SeleniaProject/Nyx/raw/main/scripts/nyx-deploy.sh 
 - 🥈 **GOOD**: 70%+ 接続成功 + 60%+ LB成功  
 - 🥉 **NEEDS IMPROVEMENT**: 改善要
 
-## 🛠️ トラブルシューティング
+## � 各ディレクトリの詳細
+
+### setup/
+- `nyx-setup.sh` / `nyx-setup.bat` - Docker、kubectl、Helm、kindのインストール
+
+### deploy/
+- `nyx-deploy.sh` / `nyx-deploy.bat` - Kubernetesクラスタ作成とNyxデプロイ
+- `nyx-cleanup.sh` / `nyx-cleanup.bat` - クラスタのクリーンアップ
+- `multinode-simple.sh` - シンプルなマルチノードデプロイ
+
+### test/
+- `run_comprehensive_tests.ps1` - 包括的テストスイート実行
+- `run-hybrid-tests.sh` / `run-hybrid-tests.ps1` - ハイブリッドテスト実行
+
+### dev/
+- `build-verify.sh` / `build-verify.ps1` - ビルド検証
+- `cargo-verify` - Cargoベースの検証
+- `check_spec_consistency.py` - 仕様の一貫性チェック
+- `measure_quality.sh` / `measure_quality.py` - コード品質測定
+- `verify.py` - 統合検証スクリプト
+
+## �🛠️ トラブルシューティング
 
 ### Docker関連
 ```bash
@@ -75,19 +106,19 @@ sudo usermod -aG docker $USER
 ### クラスタリセット
 ```bash
 # 完全クリーンアップ
-./scripts/nyx-cleanup.sh
+./scripts/deploy/nyx-cleanup.sh
 
 # 再デプロイ
-./scripts/nyx-deploy.sh
+./scripts/deploy/nyx-deploy.sh
 ```
 
 **Windows:**
 ```powershell
 # 完全クリーンアップ
-.\scripts\nyx-cleanup.bat
+.\scripts\deploy\nyx-cleanup.bat
 
 # 再デプロイ
-.\scripts\nyx-deploy.bat
+.\scripts\deploy\nyx-deploy.bat
 ```
 
 ## ✅ U22プログラミングコンテスト対応

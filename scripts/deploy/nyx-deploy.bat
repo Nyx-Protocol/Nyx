@@ -1,0 +1,137 @@
+@echo off
+setlocal enabledelayedexpansion
+
+echo ======================================================
+echo NYX NETWORK - KUBERNETES DEPLOYMENT WITH BENCHMARKS
+echo ======================================================
+echo Creating kind cluster and deploying Nyx with performance testing
+echo ======================================================
+
+REM Check if Docker is running
+docker info >nul 2>&1
+if %errorLevel% neq 0 (
+    echo [!] Docker is not running. Please start Docker Desktop first.
+    pause
+    exit /b 1
+)
+
+REM Create kind cluster configuration
+echo Creating multi-node kind cluster configuration...
+(
+echo kind: Cluster
+echo apiVersion: kind.x-k8s.io/v1alpha4
+echo nodes:
+echo   - role: control-plane
+echo   - role: worker
+echo   - role: worker
+echo   - role: worker
+) > %TEMP%\kind-nyx.yaml
+
+REM Create or use existing kind cluster
+echo Creating kind cluster 'nyx'...
+kind get clusters | findstr /C:"nyx" >nul 2>&1
+if %errorLevel% neq 0 (
+    kind create cluster --name nyx --config %TEMP%\kind-nyx.yaml
+) else (
+    echo Using existing 'nyx' cluster
+)
+
+REM Build and load local image
+echo Building Nyx daemon local image...
+docker build -f Dockerfile.legacy -t nyx-daemon:local .
+if %errorLevel% neq 0 (
+    echo [!] Docker build failed. Please check Dockerfile.legacy exists.
+    pause
+    exit /b 1
+)
+
+echo Loading image into kind cluster...
+kind load docker-image nyx-daemon:local --name nyx
+
+REM Create namespace
+echo Creating Kubernetes namespace...
+kubectl create namespace nyx --dry-run=client -o yaml | kubectl apply -f -
+
+REM Add Prometheus Operator for ServiceMonitor support
+echo Installing Prometheus Operator...
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+REM Check if already installed and upgrade if needed
+helm list -n monitoring | findstr "prometheus-operator" >nul 2>&1
+if %errorLevel% equ 0 (
+    echo Prometheus Operator already installed, upgrading...
+    helm upgrade prometheus-operator prometheus-community/kube-prometheus-stack --namespace monitoring --set grafana.enabled=false --set alertmanager.enabled=false --set prometheus.enabled=false --set kubeStateMetrics.enabled=false --set nodeExporter.enabled=false --set prometheusOperator.enabled=true
+) else (
+    echo Installing new Prometheus Operator...
+    helm install prometheus-operator prometheus-community/kube-prometheus-stack --namespace monitoring --create-namespace --set grafana.enabled=false --set alertmanager.enabled=false --set prometheus.enabled=false --set kubeStateMetrics.enabled=false --set nodeExporter.enabled=false --set prometheusOperator.enabled=true
+)
+
+REM Deploy Nyx with multi-node configuration
+echo Deploying Nyx with multi-node performance testing...
+
+REM Clean up any existing deployment first
+kubectl get deployment nyx -n nyx >nul 2>&1
+if %errorLevel% equ 0 (
+    echo Cleaning up existing Nyx deployment...
+    kubectl delete job nyx-bench -n nyx --ignore-not-found=true
+    helm uninstall nyx -n nyx 2>nul || echo Previous deployment cleaned
+    timeout /t 5 >nul
+)
+
+helm upgrade --install nyx ./charts/nyx -n nyx --set image.repository=nyx-daemon --set image.tag=local --set image.pullPolicy=IfNotPresent --set replicaCount=6 --set bench.enabled=true --set bench.replicas=3 --set bench.testDurationSeconds=30 --set bench.concurrentConnections=5 --set pdb.enabled=true --set pdb.minAvailable=3 --set serviceMonitor.enabled=true --set probes.startup.enabled=false --set probes.liveness.enabled=false --set probes.readiness.enabled=false
+
+REM Wait for deployment
+echo Waiting for Nyx deployment to complete...
+kubectl rollout status -n nyx deploy/nyx --timeout=300s
+
+REM Wait for all daemon pods to be ready
+echo Waiting for all daemon pods to be ready...
+kubectl wait -n nyx --for=condition=ready pod -l app.kubernetes.io/name=nyx --timeout=300s
+
+REM Check pod status before benchmark
+echo Checking pod status before benchmark...
+kubectl get pods -n nyx -o wide
+
+REM Wait for benchmark job completion with better error handling
+echo Waiting for benchmark job to complete...
+kubectl wait -n nyx --for=condition=complete job/nyx-bench --timeout=300s
+if %errorLevel% neq 0 (
+    echo Benchmark job did not complete within 5 minutes. Checking status...
+    kubectl describe job nyx-bench -n nyx
+    kubectl get pods -n nyx | findstr bench
+    echo Showing benchmark pod logs...
+    kubectl logs -n nyx -l job-name=nyx-bench --tail=50
+    echo Continuing with partial results...
+)
+
+REM Show results
+echo ======================================================
+echo MULTI-NODE PERFORMANCE BENCHMARK RESULTS
+echo ======================================================
+
+REM Try to get benchmark results
+kubectl get job nyx-bench -n nyx >nul 2>&1
+if %errorLevel% equ 0 (
+    echo Benchmark job found. Getting results...
+    kubectl logs -n nyx job/nyx-bench --tail=100
+) else (
+    echo Benchmark job not found. Showing current pod status...
+    kubectl get pods -n nyx -o wide
+)
+
+echo ======================================================
+echo CLUSTER STATUS
+echo ======================================================
+kubectl get pods,svc,pdb -n nyx -o wide
+
+echo ======================================================
+echo NODE DISTRIBUTION
+echo ======================================================
+kubectl get pods -n nyx -o wide | findstr /V "NAME" | for /f "tokens=7" %%i in ('more') do echo %%i | sort
+
+echo ======================================================
+echo DEPLOYMENT COMPLETE!
+echo Check the benchmark results above for performance rating
+echo ======================================================
+pause
