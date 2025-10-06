@@ -15,11 +15,9 @@
 use crate::test_harness::{DaemonConfig, TestHarness, TestResult};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-#[allow(unused_imports)] // Duration used in const, Instant used in #[ignore] tests
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-#[allow(unused_imports)] // Used in #[ignore] tests
-use tracing::{info, warn};
+use tracing::info;
 
 /// Minimum observation duration for cover traffic measurement (10 seconds)
 #[allow(dead_code)]
