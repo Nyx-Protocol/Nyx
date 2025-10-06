@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # Mix Node 1 (Entry)
+  mix-node-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TARGET: x86_64-unknown-linux-gnu
+    image: nyxnet:latest
+    container_name: nyx-mix-1
+    hostname: mix-1
+    networks:
+      nyxnet:
+        ipv4_address: 172.25.0.11
+    environment:
+      - RUST_LOG=info
+      - NODE_ID=1
+      - NODE_ROLE=entry
+    cap_add:
+      - NET_ADMIN
+    command: ["/usr/bin/nyx-daemon"]
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+  # Mix Node 2
+  mix-node-2:
+    image: nyxnet:latest
+    container_name: nyx-mix-2
+    hostname: mix-2
+    networks:
+      nyxnet:
+        ipv4_address: 172.25.0.12
+    environment:
+      - RUST_LOG=info
+      - NODE_ID=2
+      - NODE_ROLE=relay
+    cap_add:
+      - NET_ADMIN
+    command: ["/usr/bin/nyx-daemon"]
+    depends_on:
+      mix-node-1:
+        condition: service_healthy
+
+  # Mix Node 3
+  mix-node-3:
+    image: nyxnet:latest
+    container_name: nyx-mix-3
+    hostname: mix-3
+    networks:
+      nyxnet:
+        ipv4_address: 172.25.0.13
+    environment:
+      - RUST_LOG=info
+      - NODE_ID=3
+      - NODE_ROLE=relay
+    cap_add:
+      - NET_ADMIN
+    command: ["/usr/bin/nyx-daemon"]
+    depends_on:
+      mix-node-2:
+        condition: service_healthy
+
+  # Mix Node 4 (Exit)
+  mix-node-4:
+    image: nyxnet:latest
+    container_name: nyx-mix-4
+    hostname: mix-4
+    networks:
+      nyxnet:
+        ipv4_address: 172.25.0.14
+    environment:
+      - RUST_LOG=info
+      - NODE_ID=4
+      - NODE_ROLE=exit
+    cap_add:
+      - NET_ADMIN
+    command: ["/usr/bin/nyx-daemon"]
+    depends_on:
+      mix-node-3:
+        condition: service_healthy
+
+  # Benchmark Client
+  benchmark-client:
+    image: rust:1.77-slim
+    container_name: nyx-benchmark
+    hostname: benchmark
+    networks:
+      nyxnet:
+        ipv4_address: 172.25.0.10
+    volumes:
+      - .:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/workspace/target
+    working_dir: /workspace
+    environment:
+      - RUST_LOG=info
+      - ENTRY_NODE=172.25.0.11
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      - mix-node-1
+      - mix-node-2
+      - mix-node-3
+      - mix-node-4
+    command: ["sleep", "infinity"]
+
+  # Network delay controller
+  delay-controller:
+    image: nicolaka/netshoot
+    container_name: nyx-delay-controller
+    hostname: delay-controller
+    networks:
+      nyxnet:
+        ipv4_address: 172.25.0.100
+    cap_add:
+      - NET_ADMIN
+    privileged: true
+    command: ["sleep", "infinity"]
+
+networks:
+  nyxnet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.0.0/16
+
+volumes:
+  cargo-cache:
+  target-cache:

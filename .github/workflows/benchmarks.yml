@@ -1,0 +1,247 @@
+name: Performance Benchmarks
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'nyx-core/**'
+      - 'nyx-crypto/**'
+      - 'nyx-transport/**'
+      - 'nyx-stream/**'
+      - 'tests/benchmarks/**'
+      - '.github/workflows/benchmarks.yml'
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run weekly on Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+    inputs:
+      run_comparison:
+        description: 'Run Tor comparison benchmarks (Linux only)'
+        required: false
+        default: 'false'
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  benchmark:
+    name: Application Benchmarks
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [stable]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: ${{ matrix.rust }}
+
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache cargo index
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache target directory
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Build benchmarks
+      run: cargo build --package nyx-benchmarks --release
+
+    - name: Run benchmarks
+      run: |
+        cargo bench --package nyx-benchmarks -- --output-format bencher | tee benchmark_results.txt
+      continue-on-error: true
+
+    - name: Store benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results-${{ matrix.os }}
+        path: |
+          benchmark_results.txt
+          target/criterion/
+
+    - name: Generate benchmark report
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        # Install dependencies
+        pip install matplotlib pandas numpy
+        
+        # Generate report
+        python scripts/generate-performance-report.py
+      continue-on-error: true
+
+    - name: Upload performance report
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-report
+        path: benchmarks/results/
+
+  benchmark-comparison:
+    name: Tor Comparison (Linux)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_comparison == 'true'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tor curl bc
+        
+        # Wait for Tor to be ready
+        sudo systemctl start tor
+        sleep 10
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build NyxNet benchmarks
+      run: cargo build --package nyx-benchmarks --release
+
+    - name: Run NyxNet benchmarks
+      run: |
+        cargo bench --package nyx-benchmarks -- --output-format bencher | tee nyx_results.txt
+
+    - name: Run Tor comparison
+      run: |
+        chmod +x scripts/run-comparison-benchmarks.sh
+        ./scripts/run-comparison-benchmarks.sh | tee tor_comparison.txt
+      continue-on-error: true
+
+    - name: Upload comparison results
+      uses: actions/upload-artifact@v4
+      with:
+        name: tor-comparison-results
+        path: |
+          nyx_results.txt
+          tor_comparison.txt
+          benchmarks/results/comparison_*.txt
+
+  benchmark-regression:
+    name: Performance Regression Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Run PR benchmarks
+      run: |
+        cargo bench --package nyx-benchmarks -- --save-baseline pr
+
+    - name: Checkout main branch
+      uses: actions/checkout@v4
+      with:
+        ref: main
+
+    - name: Run main benchmarks
+      run: |
+        cargo bench --package nyx-benchmarks -- --save-baseline main
+
+    - name: Compare benchmarks
+      run: |
+        cargo install critcmp
+        critcmp main pr > comparison.txt
+        cat comparison.txt
+      continue-on-error: true
+
+    - name: Upload comparison
+      uses: actions/upload-artifact@v4
+      with:
+        name: regression-analysis
+        path: comparison.txt
+
+    - name: Comment PR with results
+      if: always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          let comparison = 'Benchmark comparison not available';
+          try {
+            comparison = fs.readFileSync('comparison.txt', 'utf8');
+          } catch (e) {
+            console.log('Could not read comparison file');
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `## Performance Benchmark Results\n\n\`\`\`\n${comparison}\n\`\`\``
+          });
+
+  benchmark-summary:
+    name: Benchmark Summary
+    runs-on: ubuntu-latest
+    needs: [benchmark]
+    if: always()
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+
+    - name: Generate summary
+      run: |
+        echo "# Performance Benchmark Summary" > summary.md
+        echo "" >> summary.md
+        echo "## Results by Platform" >> summary.md
+        echo "" >> summary.md
+        
+        for os in ubuntu-latest windows-latest macos-latest; do
+          echo "### $os" >> summary.md
+          if [ -f "benchmark-results-$os/benchmark_results.txt" ]; then
+            echo "\`\`\`" >> summary.md
+            head -20 "benchmark-results-$os/benchmark_results.txt" >> summary.md
+            echo "\`\`\`" >> summary.md
+          else
+            echo "No results available" >> summary.md
+          fi
+          echo "" >> summary.md
+        done
+
+    - name: Upload summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-summary
+        path: summary.md
+
+    - name: Post summary to PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('summary.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
