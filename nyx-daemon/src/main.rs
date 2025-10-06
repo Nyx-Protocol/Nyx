@@ -1124,24 +1124,32 @@ fn is_authorized(state: &DaemonState, auth: Option<&str>) -> bool {
         Some(provided) => {
             // SECURITY ENHANCEMENT: Use constant-time comparison to prevent timing attacks
             // This prevents attackers from deducing token characters through timing analysis
-
+            
             let provided_bytes = provided.as_bytes();
             let expected_bytes = expected.as_bytes();
 
-            // Ensure both strings are compared in constant time regardless of length
-            let max_len = std::cmp::max(provided_bytes.len(), expected_bytes.len());
-            let mut result = 0u8;
-
-            // Always compare the full length to prevent early termination timing attacks
-            for i in 0..max_len {
-                let p_byte = provided_bytes.get(i).copied().unwrap_or(0);
-                let e_byte = expected_bytes.get(i).copied().unwrap_or(0);
-                result |= p_byte ^ e_byte;
+            // Early length check - lengths are not secret, so this is safe
+            // This optimization avoids unnecessary byte-by-byte comparison for mismatched lengths
+            if provided_bytes.len() != expected_bytes.len() {
+                #[cfg(feature = "telemetry")]
+                nyx_telemetry::record_counter("nyx_daemon_auth_length_mismatch", 1);
+                
+                warn!(
+                    provided_length = provided_bytes.len(),
+                    expected_length = expected_bytes.len(),
+                    "authorization failed: token length mismatch"
+                );
+                return false;
             }
 
-            // Additional length check in constant time
-            let length_match = provided_bytes.len() == expected_bytes.len();
-            let ok = result == 0 && length_match;
+            // Constant-time comparison for equal-length tokens
+            // Uses XOR to detect any byte differences without early exit
+            let mut result = 0u8;
+            for i in 0..provided_bytes.len() {
+                result |= provided_bytes[i] ^ expected_bytes[i];
+            }
+
+            let ok = result == 0;
 
             if !ok {
                 // Security audit log: Failed authentication attempt
