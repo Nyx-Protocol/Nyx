@@ -1,5 +1,4 @@
 ---- MODULE NyxTestingFramework ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Testing and Verification Framework                       *)
 (*                                                                          *)
@@ -20,11 +19,10 @@ LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 
 EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC, Reals,
+LOCAL INSTANCE NyxHelpers
+
         NyxNetworkLayer, NyxCryptography, NyxStreamManagement
 
-(****************************************************************************)
-(* Test Case Definition                                                     *)
-(****************************************************************************)
 
 \* Test case
 TestCase == [
@@ -117,9 +115,6 @@ ExecuteTestSuite(test_suite) ==
            success |-> FALSE
        ]
 
-(****************************************************************************)
-(* Property-Based Testing                                                   *)
-(****************************************************************************)
 
 \* Property specification
 Property == [
@@ -196,9 +191,6 @@ ShrinkCounterexample(property, counterexample) ==
                     IN Shrink(smallest)
     IN Shrink(counterexample)
 
-(****************************************************************************)
-(* Fuzzing and Random Testing                                               *)
-(****************************************************************************)
 
 \* Fuzzing configuration
 FuzzingConfig == [
@@ -281,9 +273,6 @@ AFL_Fuzz(initial_corpus, target, config) ==
         ]
     IN FuzzTarget(initial_state, target, config)
 
-(****************************************************************************)
-(* Mutation Testing                                                         *)
-(****************************************************************************)
 
 \* Mutation operator
 MutationOperator == [
@@ -367,9 +356,6 @@ MutationTesting(source_code, test_suite) ==
         results |-> results
     ]
 
-(****************************************************************************)
-(* Performance Testing                                                      *)
-(****************************************************************************)
 
 \* Performance test configuration
 PerformanceTestConfig == [
@@ -460,9 +446,6 @@ StressTest(test_function, initial_load, increment, max_load) ==
                           result |-> result]
     IN IncreaseLoad(initial_load)
 
-(****************************************************************************)
-(* Chaos Engineering                                                        *)
-(****************************************************************************)
 
 \* Chaos experiment
 ChaosExperiment == [
@@ -535,9 +518,6 @@ ChaosMonkey(system, config) ==
                  IN <<result>> \o RunExperiments(Tail(remaining))
     IN RunExperiments(experiments)
 
-(****************************************************************************)
-(* Test Coverage Analysis                                                   *)
-(****************************************************************************)
 
 \* Coverage type
 CoverageType == {"LINE", "BRANCH", "FUNCTION", "STATEMENT", "PATH", "CONDITION"}
@@ -573,9 +553,6 @@ IdentifyUntestedCode(coverage_data) ==
         prioritized == PrioritizeByComplexity(uncovered)
     IN prioritized
 
-(****************************************************************************)
-(* Testing Properties and Invariants                                        *)
-(****************************************************************************)
 
 \* Test determinism
 THEOREM TestDeterminism ==
