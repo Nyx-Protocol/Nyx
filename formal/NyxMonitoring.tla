@@ -308,12 +308,11 @@ StartSpan(tracer, operation_name, parent_span_id) ==
             start_time |-> CurrentTime,
             end_time |-> 0,
             duration |-> 0,
-            tags |-> [->],
+            tags |-> [x \in {} |-> 0],
             logs |-> <<>>,
             references |-> <<>>
         ]
-    IN [tracer EXCEPT
-           !.active_spans[span_id] = span]
+    IN [tracer EXCEPT !.active_spans = [tracer.active_spans EXCEPT ![span_id] = span]]
 
 \* Finish span
 FinishSpan(tracer, span_id) ==
@@ -631,10 +630,10 @@ CheckSLOCompliance(slo) ==
 
 \* Update error budget
 UpdateErrorBudget(slo) ==
-    LET total_budget == (100 - slo.target_percent) * slo.sli.total_events / 100
+    LET total_budget == ((100 - slo.target_percent) * slo.sli.total_events) / 100
         consumed == slo.sli.total_events - slo.sli.good_events
         consumed_percent == IF total_budget = 0 THEN 0 ELSE (consumed * 100) / total_budget
-    IN [slo EXCEPT
+    IN [slo EXCEPT 
            !.error_budget = total_budget - consumed,
            !.error_budget_consumed = consumed_percent]
 
@@ -726,11 +725,11 @@ CaptureProfileSample(profiler) ==
     THEN LET sample == [
              timestamp |-> CurrentTime,
              thread_id |-> CurrentThreadId,
-             stack_trace |-> GetStackTrace(),
-             cpu_time |-> GetCPUTime(),
-             wall_time |-> GetWallTime(),
-             memory_allocated |-> GetMemoryAllocated(),
-             locks_held |-> GetLocksHeld()
+             stack_trace |-> GetStackTrace,
+             cpu_time |-> GetCPUTime,
+             wall_time |-> GetWallTime,
+             memory_allocated |-> GetMemoryAllocated,
+             locks_held |-> GetLocksHeld
          ]
          IN [profiler EXCEPT
                 !.samples = Append(@, sample)]
