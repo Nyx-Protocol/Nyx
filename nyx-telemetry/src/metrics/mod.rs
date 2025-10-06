@@ -842,12 +842,19 @@ mod tests {
         // Wait for server to be ready
         sleep(Duration::from_millis(100)).await;
 
-        // Fetch metrics via HTTP
+        // Fetch metrics via HTTP using ureq (pure Rust, no C/C++ deps)
+        // Wrap synchronous ureq call in spawn_blocking for async test compatibility
         let url = format!("http://{}/metrics", guard.addr());
-        let resp = reqwest::get(&url).await.unwrap();
+        let url_clone = url.clone();
+        let resp = tokio::task::spawn_blocking(move || ureq::get(&url_clone).call())
+            .await
+            .expect("Task join failed")
+            .expect("HTTP request failed");
         assert_eq!(resp.status(), 200);
 
-        let body = resp.text().await.unwrap();
+        let body = resp
+            .into_string()
+            .expect("Failed to read response body");
         assert!(body.contains("nyx_handshake_success_total"));
         assert!(body.contains("nyx_cmix_batch_total"));
 
