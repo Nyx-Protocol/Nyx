@@ -1,5 +1,4 @@
 ---- MODULE NyxMobilityManagement ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Mobility Management and Handoff                          *)
 (*                                                                          *)
@@ -21,11 +20,10 @@ LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 
 EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC,
+LOCAL INSTANCE NyxHelpers
+
         NyxNetworkLayer, NyxStreamManagement
 
-(****************************************************************************)
-(* Mobile Node State                                                        *)
-(****************************************************************************)
 
 \* Network attachment point
 AttachmentPoint == [
@@ -96,9 +94,6 @@ InitMobileNode(node_id, home_network, home_address) ==
         handoff_history |-> <<>>
     ]
 
-(****************************************************************************)
-(* Attachment and Registration                                              *)
-(****************************************************************************)
 
 \* Discover attachment points
 DiscoverAttachments(mobile_state) ==
@@ -154,9 +149,6 @@ ReceiveBindingAck(mobile_state, ack_msg) ==
              !.mobility_binding.binding_lifetime = ack_msg.lifetime]
     ELSE mobile_state
 
-(****************************************************************************)
-(* Handoff Decision Making                                                  *)
-(****************************************************************************)
 
 \* Handoff trigger
 HandoffTrigger == [
@@ -215,9 +207,6 @@ PredictSignalDegradation(ap, mobile_state) ==
         time_to_threshold == EstimateTimeToThreshold(ap, recent_trend)
     IN time_to_threshold < PredictiveHandoffWindow
 
-(****************************************************************************)
-(* Handoff Execution                                                        *)
-(****************************************************************************)
 
 \* Handoff type
 HandoffType == {"HARD", "SOFT", "MAKE_BEFORE_BREAK", "BREAK_BEFORE_MAKE"}
@@ -300,9 +289,6 @@ SeamlessPathSwitch(mobile_state, connection_id, new_path) ==
                       ELSE mobile_state
     IN final_state
 
-(****************************************************************************)
-(* Connection Migration                                                     *)
-(****************************************************************************)
 
 \* Connection migration state
 MigrationState == [
@@ -393,9 +379,6 @@ CompleteMigration(mobile_state, migration) ==
     IN [cleaned_state EXCEPT
            !.handoff_state = "FINALIZING"]
 
-(****************************************************************************)
-(* Location Management                                                      *)
-(****************************************************************************)
 
 \* Location update protocol
 LocationUpdate == [
@@ -450,9 +433,6 @@ LookupLocation(cache, node_id) ==
     THEN cache.cache[node_id]
     ELSE NullLocation
 
-(****************************************************************************)
-(* Predictive Mobility                                                      *)
-(****************************************************************************)
 
 \* Mobility pattern
 MobilityPattern == [
@@ -498,9 +478,6 @@ PreemptiveHandoffPreparation(mobile_state, pattern) ==
        THEN PrepareHandoff(mobile_state, predicted_next, "SOFT")
        ELSE mobile_state
 
-(****************************************************************************)
-(* Quality-Based Handoff                                                    *)
-(****************************************************************************)
 
 \* Connection quality metrics
 ConnectionQuality == [
@@ -555,9 +532,6 @@ MultiCriteriaHandoffDecision(mobile_state, candidates) ==
        THEN best_candidate.attachment
        ELSE NullAttachment
 
-(****************************************************************************)
-(* Mobility Properties and Invariants                                       *)
-(****************************************************************************)
 
 \* Seamless handoff: No packet loss during handoff
 THEOREM SeamlessHandoff ==
