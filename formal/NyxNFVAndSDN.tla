@@ -470,8 +470,8 @@ ProcessPacketIn(controller, switch_id, packet) ==
        THEN ExecuteFlowActions(matching_flow, packet)
        ELSE LET 
                \* No flow found, consult applications
-               app_decisions == [app \in controller.applications |->
-                   app.handlers.packet_in(packet, controller)]
+               app_decisions == {PacketInHandler(app, packet, controller) : 
+                                 app \in controller.applications}
                
                \* Select highest priority decision
                decision == CHOOSE d \in app_decisions :
