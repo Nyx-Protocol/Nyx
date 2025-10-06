@@ -691,8 +691,11 @@ mod tests {
 
     #[test]
     fn test_power_state_low_battery() {
-        let mut config = ScreenOffConfig::default();
-        config.state_change_cooldown = Duration::ZERO; // Disable cooldown for testing
+        // Initialize config with no cooldown directly to avoid field_reassign_with_default lint
+        let config = ScreenOffConfig {
+            state_change_cooldown: Duration::ZERO, // Disable cooldown for testing
+            ..Default::default()
+        };
 
         let mut detector = ScreenOffDetector::new(config);
 
@@ -704,8 +707,11 @@ mod tests {
 
     #[test]
     fn test_power_state_critical_battery() {
-        let mut config = ScreenOffConfig::default();
-        config.state_change_cooldown = Duration::ZERO;
+        // Initialize config with no cooldown directly to avoid field_reassign_with_default lint
+        let config = ScreenOffConfig {
+            state_change_cooldown: Duration::ZERO,
+            ..Default::default()
+        };
 
         let mut detector = ScreenOffDetector::new(config);
 
@@ -717,8 +723,11 @@ mod tests {
 
     #[test]
     fn test_cover_traffic_ratio_updates() {
-        let mut config = ScreenOffConfig::default();
-        config.state_change_cooldown = Duration::ZERO;
+        // Initialize config with no cooldown directly to avoid field_reassign_with_default lint
+        let config = ScreenOffConfig {
+            state_change_cooldown: Duration::ZERO,
+            ..Default::default()
+        };
 
         let mut detector = ScreenOffDetector::new(config);
 
@@ -735,9 +744,11 @@ mod tests {
 
     #[test]
     fn test_app_background_state() {
-        // Create detector with zero cooldown for testing
-        let mut config = ScreenOffConfig::default();
-        config.state_change_cooldown = Duration::ZERO;
+        // Initialize config with zero cooldown directly to avoid field_reassign_with_default lint
+        let config = ScreenOffConfig {
+            state_change_cooldown: Duration::ZERO,
+            ..Default::default()
+        };
         let mut detector = ScreenOffDetector::new(config);
 
         // Verify initial state
@@ -793,8 +804,11 @@ mod tests {
     fn test_configuration_updates() {
         let mut detector = ScreenOffDetector::with_default_config();
 
-        let mut new_config = ScreenOffConfig::default();
-        new_config.screen_off_cover_ratio = 0.05;
+        // Initialize new config with custom screen_off_cover_ratio directly to avoid field_reassign_with_default lint
+        let new_config = ScreenOffConfig {
+            screen_off_cover_ratio: 0.05,
+            ..Default::default()
+        };
 
         detector.update_config(new_config);
         assert_eq!(detector.get_config().screen_off_cover_ratio, 0.05);
@@ -802,10 +816,16 @@ mod tests {
 
     #[test]
     fn test_battery_hysteresis() {
-        let mut config = ScreenOffConfig::default();
-        config.state_change_cooldown = Duration::ZERO;
-        config.battery_thresholds.low_level = 0.25;
-        config.battery_thresholds.hysteresis = 0.05;
+        // Initialize config with custom battery thresholds directly to avoid field_reassign_with_default lint
+        let config = ScreenOffConfig {
+            state_change_cooldown: Duration::ZERO,
+            battery_thresholds: BatteryThresholds {
+                low_level: 0.25,
+                hysteresis: 0.05,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
 
         let mut detector = ScreenOffDetector::new(config);
 
