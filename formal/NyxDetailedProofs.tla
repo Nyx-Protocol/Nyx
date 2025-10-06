@@ -1,4 +1,5 @@
 ---- MODULE NyxDetailedProofs ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Detailed TLAPS Proof Module                              *)
 (*                                                                          *)
