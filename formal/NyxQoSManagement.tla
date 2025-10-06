@@ -1,5 +1,4 @@
 ---- MODULE NyxQoSManagement ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Quality of Service Management                            *)
 (*                                                                          *)
@@ -16,12 +15,12 @@ LOCAL INSTANCE NyxHelpers
 (*   - Latency budgets and jitter control                                  *)
 (*   - Quality of Experience (QoE) metrics                                 *)
 (****************************************************************************)
-
-EXTENDS Naturals, Sequences, FiniteSets, Integers, Reals, TLC
-
 (****************************************************************************)
 (* Common Helper Operators                                                  *)
 (****************************************************************************)
+
+EXTENDS Naturals, Sequences, FiniteSets, Integers, Reals, TLC
+LOCAL INSTANCE NyxHelpers
 
 \* Minimum of a set
 MIN(S) == IF S = {} THEN 0 ELSE CHOOSE x \in S : \A y \in S : x <= y
@@ -53,9 +52,6 @@ Average(S) == IF S = {} THEN 0 ELSE Sum(S) / Cardinality(S)
 \* INSTANCE NyxNetworkLayer
 \* INSTANCE NyxStreamManagement
 
-(****************************************************************************)
-(* Traffic Classification                                                   *)
-(****************************************************************************)
 
 \* Traffic class definitions
 TrafficClass == {
@@ -109,9 +105,6 @@ MatchCriteria(criteria, packet) ==
     /\ (criteria.dst_port = 0 \/ criteria.dst_port = packet.dst_port)
     /\ (criteria.protocol = "*" \/ criteria.protocol = packet.protocol)
 
-(****************************************************************************)
-(* Service Level Agreement (SLA)                                            *)
-(****************************************************************************)
 
 \* SLA parameters
 SLAParams == [
@@ -194,9 +187,6 @@ RecordSLAViolation(monitor, sla_id, violation_type, measured, expected) ==
     IN [monitor EXCEPT 
            !.violations = Append(@, violation)]
 
-(****************************************************************************)
-(* Admission Control                                                        *)
-(****************************************************************************)
 
 \* Resource availability
 ResourceAvailability == [
@@ -257,9 +247,6 @@ AdmissionWithPreemption(request, current_flows, available_resources) ==
                                     !.available_buffer = @ + freed_buffer]
             IN CAC(request, new_available)
 
-(****************************************************************************)
-(* Resource Reservation                                                     *)
-(****************************************************************************)
 
 \* Resource reservation
 Reservation == [
@@ -311,9 +298,6 @@ ReleaseReservation(manager, flow_id) ==
                THEN [@[n] EXCEPT !.available_bandwidth = @ + released_bw]
                ELSE @[n]]]
 
-(****************************************************************************)
-(* Traffic Engineering                                                      *)
-(****************************************************************************)
 
 \* Traffic engineering objective
 TEObjective == {
@@ -396,9 +380,6 @@ SetupLSP(lsp, network_state) ==
              forwarding_entries |-> CreateForwardingEntries(lsp)]
        ELSE [success |-> FALSE, labels |-> <<>>, forwarding_entries |-> <<>>]
 
-(****************************************************************************)
-(* Bandwidth Management                                                     *)
-(****************************************************************************)
 
 \* Bandwidth allocation
 BandwidthAllocation == [
@@ -447,9 +428,6 @@ DynamicBandwidthAllocation(broker, demands) ==
            Min(demands[f] * allocation_ratio,
                broker.allocated[f].max_allowed)]
 
-(****************************************************************************)
-(* Latency Budget Management                                                *)
-(****************************************************************************)
 
 \* Latency budget
 LatencyBudget == [
@@ -499,9 +477,6 @@ AllocateLatencyBudget(total_budget, hop_count) ==
         ]
     IN [h \in 1..hop_count |-> components]
 
-(****************************************************************************)
-(* Jitter Control                                                           *)
-(****************************************************************************)
 
 \* Jitter buffer
 JitterBuffer == [
@@ -543,9 +518,6 @@ AdaptiveJitterBuffer(jbuffer, recent_jitter) ==
                            jbuffer.max_delay)
     IN [jbuffer EXCEPT !.target_delay = new_target]
 
-(****************************************************************************)
-(* Quality of Experience (QoE)                                              *)
-(****************************************************************************)
 
 \* QoE metrics
 QoEMetrics == [
