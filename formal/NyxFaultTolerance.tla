@@ -1,4 +1,5 @@
 ---- MODULE NyxFaultTolerance ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Fault Tolerance and Recovery Specification               *)
 (*                                                                          *)
