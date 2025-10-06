@@ -59,6 +59,10 @@ impl Ewma {
     ///
     /// # Arguments
     /// * `value` - The new observation to incorporate into the EWMA
+    ///
+    /// # Performance
+    /// Inlined for optimal performance in high-frequency update scenarios
+    #[inline]
     pub fn update(&mut self, value: f64) {
         self.value = Some(match self.value {
             Some(current) => self.alpha.mul_add(value, (1.0 - self.alpha) * current),
@@ -202,7 +206,18 @@ impl RateLimiter {
     /// # Error Handling
     /// - If time moves backwards, no tokens are added but operation continues
     /// - Gracefully handles very large time differences
+    ///
+    /// # Performance Optimizations
+    /// - Early return when bucket is at capacity to avoid unnecessary calculations
+    /// - Inlined for reduced call overhead in hot paths
+    /// - Uses const for nanosecond conversion factor (compiler optimization)
+    #[inline]
     fn refill(&mut self) {
+        // Early exit if bucket is already at capacity - avoid time syscall
+        if self.tokens >= self.capacity {
+            return;
+        }
+
         let now = Self::current_time_nanos_safe();
 
         // Handle backwards clock movement gracefully
@@ -213,18 +228,24 @@ impl RateLimiter {
         }
 
         let elapsed_nanos = now.saturating_sub(self.last_refill);
+        
+        // Early exit if no time has elapsed - avoid unnecessary calculations
+        if elapsed_nanos == 0 {
+            return;
+        }
+        
         self.last_refill = now;
 
-        if elapsed_nanos > 0 {
-            // Convert nanoseconds to seconds with high precision
-            let elapsed_secs = elapsed_nanos as f64 / 1_000_000_000.0;
+        // Convert nanoseconds to seconds using const for better optimization
+        // Use reciprocal multiplication instead of division for performance
+        const NANOS_TO_SECS_FACTOR: f64 = 1.0 / 1_000_000_000.0;
+        let elapsed_secs = (elapsed_nanos as f64) * NANOS_TO_SECS_FACTOR;
 
-            // Calculate tokens to add, using fused multiply-add for precision
-            let tokens_to_add = elapsed_secs * self.refill_rate;
+        // Calculate tokens to add, using fused multiply-add for precision
+        let tokens_to_add = elapsed_secs * self.refill_rate;
 
-            // Add tokens but cap at capacity
-            self.tokens = (self.tokens + tokens_to_add).min(self.capacity);
-        }
+        // Add tokens but cap at capacity
+        self.tokens = (self.tokens + tokens_to_add).min(self.capacity);
     }
 
     /// Attempts to consume one token from the bucket.
@@ -238,7 +259,17 @@ impl RateLimiter {
     ///
     /// # Performance
     /// This method is optimized for high-frequency calls and has minimal overhead.
+    /// Inlined for maximum performance in hot paths.
+    #[inline]
     pub fn allow(&mut self) -> bool {
+        // Fast path: check if token available without refilling
+        // This avoids syscall when bucket has tokens
+        if self.tokens >= 1.0 {
+            self.tokens -= 1.0;
+            return true;
+        }
+        
+        // Slow path: need to refill and check again
         self.refill();
 
         if self.tokens >= 1.0 {
