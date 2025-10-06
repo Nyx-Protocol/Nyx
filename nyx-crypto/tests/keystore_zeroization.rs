@@ -1,5 +1,7 @@
 //! Keystore Zeroization Tests
 
+#![allow(clippy::expect_used)] // Tests are allowed to use expect() for clear failure messages
+
 use nyx_crypto::kdf;
 
 #[test]
@@ -21,8 +23,8 @@ fn test_kdf_deterministic() {
     let mut out1 = [0u8; 32];
     let mut out2 = [0u8; 32];
 
-    kdf::hkdf_expand(&prk, info, &mut out1).unwrap();
-    kdf::hkdf_expand(&prk, info, &mut out2).unwrap();
+    kdf::hkdf_expand(&prk, info, &mut out1).expect("KDF expand should succeed for out1");
+    kdf::hkdf_expand(&prk, info, &mut out2).expect("KDF expand should succeed for out2");
 
     assert_eq!(out1, out2, "KDF should be deterministic");
 }
