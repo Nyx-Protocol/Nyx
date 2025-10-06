@@ -682,11 +682,10 @@ DetectConfigurationDrift(expected_config, actual_config) ==
 
 \* Compute drift score
 ComputeDriftScore(drifts) ==
-    LET weights == [
-            "ADD" |-> 1.0,
-            "REMOVE" |-> 2.0,
-            "MODIFY" |-> 0.5
-        ]
+    LET weights == [op \in {"ADD", "REMOVE", "MODIFY"} |->
+            CASE op = "ADD" -> 1.0
+              [] op = "REMOVE" -> 2.0
+              [] op = "MODIFY" -> 0.5]
         
         weighted_sum == Sum({weights[d.operation] : d \in drifts})
         max_score == Cardinality(drifts) * 2.0
