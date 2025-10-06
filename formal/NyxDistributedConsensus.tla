@@ -1,5 +1,10 @@
----- MODULE NyxDistributedConsensus ----
+---- MODULE NyxDis(*   - Distributed snapshots                                               *)
+(****************************************************************************)  
+
+EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC
 LOCAL INSTANCE NyxHelpers
+
+\* Paxos rolesnsensus ----
 (****************************************************************************)
 (* Nyx Protocol - Distributed Consensus and Coordination                   *)
 (*                                                                          *)
@@ -21,11 +26,10 @@ LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 
 EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC,
+LOCAL INSTANCE NyxHelpers
+
         NyxFaultTolerance, NyxNetworkLayer
 
-(****************************************************************************)
-(* Paxos Consensus                                                          *)
-(****************************************************************************)
 
 \* Paxos roles
 PaxosRole == {"PROPOSER", "ACCEPTOR", "LEARNER"}
@@ -98,9 +102,6 @@ ProposeNext(mp_state, value) ==
            !.instances[instance] = new_paxos,
            !.next_instance = @ + 1]
 
-(****************************************************************************)
-(* Raft Consensus                                                           *)
-(****************************************************************************)
 
 \* Raft node state
 RaftNodeState == {"FOLLOWER", "CANDIDATE", "LEADER"}
@@ -206,9 +207,6 @@ AdvanceCommitIndex(raft, all_nodes) ==
                Cardinality({node \in all_nodes : raft.match_index[node] >= n}) >= majority
     IN [raft EXCEPT !.commit_index = n]
 
-(****************************************************************************)
-(* Byzantine Fault Tolerant Consensus (PBFT)                                *)
-(****************************************************************************)
 
 \* PBFT phase
 PBFTPhase == {"PRE_PREPARE", "PREPARE", "COMMIT", "REPLY"}
@@ -308,9 +306,6 @@ CreateCheckpoint(pbft, sequence) ==
     [pbft EXCEPT
         !.stable_checkpoint = sequence]
 
-(****************************************************************************)
-(* Leader Election                                                          *)
-(****************************************************************************)
 
 \* Bully algorithm state
 BullyState == [
@@ -370,9 +365,6 @@ RingCompleteElection(state, participants) ==
            !.leader = leader,
            !.election_message.active = FALSE]
 
-(****************************************************************************)
-(* Distributed Locks                                                        *)
-(****************************************************************************)
 
 \* Distributed lock
 DistributedLock == [
@@ -450,9 +442,6 @@ CheckLockExpiry(manager, lock_id) ==
     THEN ReleaseDistributedLock(manager, lock_id, manager.locks[lock_id].holder)
     ELSE manager
 
-(****************************************************************************)
-(* Distributed Barriers                                                     *)
-(****************************************************************************)
 
 \* Distributed barrier
 DistributedBarrier == [
@@ -489,9 +478,6 @@ ResetBarrier(coordinator, barrier_id) ==
         !.barriers[barrier_id].arrived_participants = {},
         !.barriers[barrier_id].released = FALSE]
 
-(****************************************************************************)
-(* State Machine Replication                                                *)
-(****************************************************************************)
 
 \* State machine
 StateMachine == [
@@ -531,9 +517,6 @@ RestoreFromSnapshot(rsm, snapshot, snapshot_index) ==
         !.snapshot = snapshot,
         !.snapshot_index = snapshot_index]
 
-(****************************************************************************)
-(* Quorum Systems                                                           *)
-(****************************************************************************)
 
 \* Quorum system
 QuorumSystem == [
@@ -582,9 +565,6 @@ QuorumIntersection(qs, q1, q2) ==
     q1 \in qs.quorums /\ q2 \in qs.quorums =>
         q1 \intersect q2 # {}
 
-(****************************************************************************)
-(* Atomic Broadcast                                                         *)
-(****************************************************************************)
 
 \* Total order broadcast
 TotalOrderBroadcast == [
@@ -612,9 +592,6 @@ DeliverInOrder(tob, sequence, message, sender) ==
              !.sequence = sequence]
     ELSE tob
 
-(****************************************************************************)
-(* Distributed Snapshot (Chandy-Lamport)                                    *)
-(****************************************************************************)
 
 \* Snapshot state
 SnapshotState == [
@@ -651,9 +628,6 @@ SnapshotComplete(snapshot) ==
         /\ n \in DOMAIN snapshot.local_state
         /\ Cardinality(snapshot.markers_received[n]) = Cardinality(AllNeighbors(n))
 
-(****************************************************************************)
-(* Consensus Properties and Invariants                                      *)
-(****************************************************************************)
 
 \* Agreement: All correct processes decide on the same value
 THEOREM ConsensusAgreement ==
