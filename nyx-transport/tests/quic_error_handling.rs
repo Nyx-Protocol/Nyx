@@ -131,6 +131,8 @@ fn test_malformed_stream_frame_parsing() {
                 assert!(!fin); // FIN bit not set (frame_type & 0x01 == 0)
                 assert_eq!(consumed, 1 + 8 + 8 + 8 + 5); // header + data
             }
+            // panic! in test code is appropriate for test assertion failures
+            #[allow(clippy::panic)]
             _ => panic!("Expected STREAM frame"),
         }
     }
@@ -179,6 +181,8 @@ fn test_malformed_ack_frame_parsing() {
                 assert_eq!(ack_delay, 10);
                 assert_eq!(ack_ranges.len(), 0);
             }
+            // panic! in test code is appropriate for test assertion failures
+            #[allow(clippy::panic)]
             _ => panic!("Expected ACK frame"),
         }
     }
@@ -219,6 +223,8 @@ fn test_datagram_frame_edge_cases() {
                 assert_eq!(data.as_ref(), b"test payload");
                 assert_eq!(consumed, datagram_no_len.len());
             }
+            // panic! in test code is appropriate for test assertion failures
+            #[allow(clippy::panic)]
             _ => panic!("Expected DATAGRAM frame"),
         }
     }
@@ -236,6 +242,8 @@ fn test_datagram_frame_edge_cases() {
             QuicFrame::Datagram { data } => {
                 assert_eq!(data.as_ref(), b"hello");
             }
+            // panic! in test code is appropriate for test assertion failures
+            #[allow(clippy::panic)]
             _ => panic!("Expected DATAGRAM frame"),
         }
     }
