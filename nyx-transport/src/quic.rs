@@ -2476,9 +2476,11 @@ mod tests {
 
         let conn = QuicConnection::new(conn_id, peer_addr, false, stats).unwrap();
 
-        // Set peer transport parameters
-        let mut peer_params = TransportParameters::default();
-        peer_params.max_datagram_frame_size = Some(100); // Small limit
+        // Set peer transport parameters with small datagram limit directly to avoid field_reassign_with_default lint
+        let peer_params = TransportParameters {
+            max_datagram_frame_size: Some(100), // Small limit
+            ..Default::default()
+        };
         conn.set_peer_transport_parameters(peer_params)
             .await
             .unwrap();
@@ -2502,9 +2504,11 @@ mod tests {
 
         let conn = QuicConnection::new(conn_id, peer_addr, false, stats).unwrap();
 
-        // Set peer transport parameters WITHOUT datagram extension
-        let mut peer_params = TransportParameters::default();
-        peer_params.max_datagram_frame_size = None;
+        // Set peer transport parameters WITHOUT datagram extension directly to avoid field_reassign_with_default lint
+        let peer_params = TransportParameters {
+            max_datagram_frame_size: None,
+            ..Default::default()
+        };
         conn.set_peer_transport_parameters(peer_params)
             .await
             .unwrap();
@@ -2690,8 +2694,11 @@ mod tests {
     async fn test_datagram_congestion_control() {
         let conn_id = Bytes::from_static(b"test-conn");
         let peer_addr = "127.0.0.1:4433".parse().unwrap();
-        let mut stats = ConnectionStats::default();
-        stats.bytes_in_flight = 6000; // Set high bytes in flight
+        // Initialize stats with high bytes_in_flight directly to avoid field_reassign_with_default lint
+        let stats = ConnectionStats {
+            bytes_in_flight: 6000, // Set high bytes in flight
+            ..Default::default()
+        };
 
         let conn = QuicConnection::new(conn_id, peer_addr, false, stats).unwrap();
 
@@ -3096,14 +3103,19 @@ mod tests {
     async fn test_datagram_send_with_cubic_flow_control() {
         let conn_id = Bytes::from_static(b"datagram-cubic");
         let peer_addr = "127.0.0.1:4433".parse().unwrap();
-        let mut stats = ConnectionStats::default();
-        stats.bytes_in_flight = 5000; // Simulate inflight data
+        // Initialize stats with inflight data directly to avoid field_reassign_with_default lint
+        let stats = ConnectionStats {
+            bytes_in_flight: 5000, // Simulate inflight data
+            ..Default::default()
+        };
 
         let conn = QuicConnection::new(conn_id, peer_addr, false, stats).unwrap();
 
-        // Set peer transport parameters
-        let mut peer_params = TransportParameters::default();
-        peer_params.max_datagram_frame_size = Some(1200);
+        // Set peer transport parameters with max datagram size directly to avoid field_reassign_with_default lint
+        let peer_params = TransportParameters {
+            max_datagram_frame_size: Some(1200),
+            ..Default::default()
+        };
         conn.set_peer_transport_parameters(peer_params)
             .await
             .unwrap();
