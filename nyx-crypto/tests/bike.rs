@@ -127,7 +127,10 @@ fn test_bike_keygen_roundtrip() {
     let mut rng = thread_rng();
 
     // Generate two keypairs
+    // Using unwrap() in test code with #[ignore] is acceptable as these are future implementation tests
+    #[allow(clippy::expect_used)]
     let (pk1, sk1) = keygen(&mut rng).expect("keygen should succeed");
+    #[allow(clippy::expect_used)]
     let (pk2, sk2) = keygen(&mut rng).expect("keygen should succeed");
 
     // Verify keys have correct sizes
@@ -172,10 +175,14 @@ fn test_bike_encap_decap_roundtrip() {
     let mut rng = thread_rng();
 
     // Generate a keypair
+    // Using expect() in test code with #[ignore] is acceptable as these are future implementation tests
+    #[allow(clippy::expect_used)]
     let (pk, sk) = keygen(&mut rng).expect("keygen should succeed");
 
     // Encapsulate twice with the same public key
+    #[allow(clippy::expect_used)]
     let (ct1, ss1) = encapsulate(&pk, &mut rng).expect("encapsulate should succeed");
+    #[allow(clippy::expect_used)]
     let (ct2, ss2) = encapsulate(&pk, &mut rng).expect("encapsulate should succeed");
 
     // Verify ciphertexts are different (randomness)
@@ -188,7 +195,9 @@ fn test_bike_encap_decap_roundtrip() {
     assert_eq!(ss1.len(), sizes::SHARED_SECRET);
 
     // Decapsulate both ciphertexts
+    #[allow(clippy::expect_used)]
     let ss1_decap = decapsulate(&sk, &ct1).expect("decapsulate should succeed");
+    #[allow(clippy::expect_used)]
     let ss2_decap = decapsulate(&sk, &ct2).expect("decapsulate should succeed");
 
     // Verify shared secrets match
@@ -223,6 +232,8 @@ fn test_bike_invalid_inputs() {
     let mut rng = thread_rng();
 
     // Generate a valid keypair
+    // Using expect() in test code with #[ignore] is acceptable as these are future implementation tests
+    #[allow(clippy::expect_used)]
     let (_pk, sk) = keygen(&mut rng).expect("keygen should succeed");
 
     // Test with corrupted ciphertext (all zeros)
@@ -281,9 +292,12 @@ fn test_bike_timing_side_channels() {
     let mut rng = thread_rng();
 
     // Generate a keypair
+    // Using expect() in test code with #[ignore] is acceptable as these are future implementation tests
+    #[allow(clippy::expect_used)]
     let (pk, sk) = keygen(&mut rng).expect("keygen should succeed");
 
     // Generate valid ciphertext
+    #[allow(clippy::expect_used)]
     let (valid_ct, _ss) = encapsulate(&pk, &mut rng).expect("encapsulate should succeed");
 
     // Generate invalid ciphertext (all zeros)
@@ -349,6 +363,8 @@ fn test_bike_zeroization() {
     let mut rng = thread_rng();
 
     // Generate a keypair
+    // Using expect() in test code with #[ignore] is acceptable as these are future implementation tests
+    #[allow(clippy::expect_used)]
     let (pk, sk) = keygen(&mut rng).expect("keygen should succeed");
 
     // Make a copy of the secret key bytes before drop
@@ -368,6 +384,7 @@ fn test_bike_zeroization() {
     // In production, use proper memory analysis tools like Valgrind
 
     // For shared secrets, verify they implement Zeroize
+    #[allow(clippy::expect_used)]
     let (ct, ss) = encapsulate(&pk, &mut rng).expect("encapsulate should succeed");
 
     // Make a copy of shared secret
