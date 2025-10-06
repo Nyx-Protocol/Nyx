@@ -1,5 +1,4 @@
 ---- MODULE NyxFaultTolerance ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Fault Tolerance and Recovery Specification               *)
 (*                                                                          *)
@@ -24,6 +23,7 @@ LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 
 EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC
+LOCAL INSTANCE NyxHelpers
 
 CONSTANTS
     Nodes,                  \* Set of all nodes
@@ -45,9 +45,6 @@ ASSUME
     /\ Cardinality(ByzantineNodes) <= MaxFailures
     /\ MaxPathsPerRoute > 1
 
-(****************************************************************************)
-(* Helper Operators                                                         *)
-(****************************************************************************)
 
 \* Minimum of a set
 MIN(S) == CHOOSE x \in S : \A y \in S : x <= y
@@ -55,9 +52,6 @@ MIN(S) == CHOOSE x \in S : \A y \in S : x <= y
 \* Maximum of a set
 MAX(S) == CHOOSE x \in S : \A y \in S : x >= y
 
-(****************************************************************************)
-(* Failure Model                                                            *)
-(****************************************************************************)
 
 \* Types of failures
 FailureTypes == {
@@ -90,9 +84,6 @@ FailureDescriptor == [
     detection_time: Nat
 ]
 
-(****************************************************************************)
-(* Failure Detector (Heartbeat-based)                                       *)
-(****************************************************************************)
 
 \* Heartbeat message
 HeartbeatMessage == [
@@ -165,9 +156,6 @@ CheckTimeout(fd_state, current_time) ==
 AdaptiveTimeout(base_timeout, rtt_variance, loss_rate) ==
     base_timeout + (rtt_variance * 4) + (((loss_rate * base_timeout) \div 100))
 
-(****************************************************************************)
-(* Path Failover and Backup Management                                      *)
-(****************************************************************************)
 
 \* Path state
 PathState == {
@@ -261,9 +249,6 @@ EstimatePathQuality(latency, bandwidth, loss_rate) ==
         loss_score == 100 - loss_rate
     IN (latency_score + bandwidth_score + loss_score) \div 3
 
-(****************************************************************************)
-(* State Checkpointing and Recovery                                         *)
-(****************************************************************************)
 
 \* Checkpoint types
 CheckpointTypes == {
@@ -352,9 +337,6 @@ RecoverFromCheckpoint(cm, checkpoint_id) ==
         recovery_ops |-> recovery_logs
     ]
 
-(****************************************************************************)
-(* Byzantine Fault Tolerance                                                 *)
-(****************************************************************************)
 
 \* Byzantine agreement message
 ByzantineMessage == [
@@ -419,9 +401,6 @@ ValidByzantineAgreement(states) ==
                          (CHOOSE n \in Nodes : states[n] = s) \notin ByzantineNodes}
     IN \A s1, s2 \in honest_states : s1.decided_value = s2.decided_value
 
-(****************************************************************************)
-(* Network Partition Handling                                               *)
-(****************************************************************************)
 
 \* Network partition
 NetworkPartition == SUBSET Nodes
@@ -465,9 +444,6 @@ MergePartitions(partition1, partition2) ==
 PreventSplitBrain(partition, total_nodes) ==
     Cardinality(partition.members) > Cardinality(total_nodes) \div 2
 
-(****************************************************************************)
-(* Graceful Degradation                                                     *)
-(****************************************************************************)
 
 \* Service levels
 ServiceLevels == {
@@ -506,9 +482,6 @@ IsFeatureAvailable(feature, current_level) ==
     [] feature = "ANALYTICS" -> current_level = "FULL"
     [] feature = "BASIC_ROUTING" -> current_level \in {"FULL", "DEGRADED", "MINIMAL"}
 
-(****************************************************************************)
-(* Retry and Backoff Strategies                                             *)
-(****************************************************************************)
 
 \* Retry state
 RetryState == [
@@ -580,9 +553,6 @@ UpdateCircuitBreaker(cb, success, current_time) ==
             !.last_state_change = current_time
         ]
 
-(****************************************************************************)
-(* State Variables                                                          *)
-(****************************************************************************)
 
 VARIABLES
     \* Node states
@@ -628,9 +598,6 @@ fault_vars == <<node_state, failures, failure_detectors,
                 circuit_breakers, total_failures, total_recoveries,
                 total_failovers, mean_recovery_time, current_time>>
 
-(****************************************************************************)
-(* Initial State                                                            *)
-(****************************************************************************)
 
 FaultToleranceInit ==
     /\ node_state = [n \in Nodes |-> "HEALTHY"]
@@ -669,9 +636,6 @@ FaultToleranceInit ==
     /\ mean_recovery_time = 0
     /\ current_time = 0
 
-(****************************************************************************)
-(* Actions                                                                  *)
-(****************************************************************************)
 
 \* Node fails
 NodeFails(n, failure_type) ==
@@ -806,9 +770,6 @@ Tick ==
                   total_failures, total_recoveries, total_failovers,
                   mean_recovery_time>>
 
-(****************************************************************************)
-(* Safety Properties                                                        *)
-(****************************************************************************)
 
 FaultToleranceTypeOK ==
     /\ node_state \in [Nodes -> NodeStates]
@@ -842,9 +803,6 @@ RecoveryConsistency ==
         \E cp \in DOMAIN checkpoint_managers[n].checkpoints :
             checkpoint_managers[n].checkpoints[cp].node = n
 
-(****************************************************************************)
-(* Liveness Properties                                                      *)
-(****************************************************************************)
 
 \* Failed nodes eventually recover or are replaced
 EventualRecovery ==
@@ -863,9 +821,6 @@ SystemProgress ==
     total_failures <= MaxFailures =>
     []<>(service_level \in {"FULL", "DEGRADED"})
 
-(****************************************************************************)
-(* Specification                                                            *)
-(****************************************************************************)
 
 FaultToleranceNext ==
     \/ \E n \in Nodes, ft \in FailureTypes : NodeFails(n, ft)
@@ -886,9 +841,6 @@ FaultToleranceFairSpec ==
     /\ \A n, m \in Nodes : WF_fault_vars(PerformFailover(n, m))
     /\ WF_fault_vars(Tick)
 
-(****************************************************************************)
-(* Theorems                                                                 *)
-(****************************************************************************)
 
 THEOREM FaultToleranceTypeCorrect == FaultToleranceSpec => []FaultToleranceTypeOK
 THEOREM BoundedFailuresHolds == FaultToleranceSpec => []BoundedFailures
