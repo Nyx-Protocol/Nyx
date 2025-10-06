@@ -699,7 +699,7 @@ THEOREM OffloadingOptimality ==
 \* Edge resource availability
 THEOREM EdgeResourceAvailability ==
     \A edge \in EdgeNodes :
-        SUM allocated_resources <= edge.capacity
+        Sum(allocated_resources) <= edge.capacity
 
 \* MEC latency bound
 THEOREM MECLatencyBound ==
