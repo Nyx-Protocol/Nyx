@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
-use tokio::sync::RwLock;
+use tokio::sync::RwLock as TokioRwLock; // Async RwLock for async contexts
 use tracing::{debug, info, warn};
 
 /// Configuration gossip errors
@@ -382,11 +382,11 @@ pub struct ConfigGossipManager {
     /// Local node ID
     node_id: String,
 
-    /// Current configuration state (std::sync for synchronous access)
-    current_config: Arc<StdRwLock<Option<SignedConfig>>>,
+    /// Current configuration state (tokio::sync::RwLock for async access)
+    current_config: Arc<TokioRwLock<Option<SignedConfig>>>,
 
-    /// DHT storage for config distribution (std::sync for synchronous access)
-    dht_storage: Arc<StdRwLock<DhtStorage>>,
+    /// DHT storage for config distribution (tokio::sync::RwLock for async access)
+    dht_storage: Arc<TokioRwLock<DhtStorage>>,
 
     /// Conflict resolution strategy
     conflict_resolution: ConflictResolution,
@@ -394,8 +394,8 @@ pub struct ConfigGossipManager {
     /// Configuration topic key
     topic_key: StorageKey,
 
-    /// Statistics (std::sync for synchronous access)
-    stats: Arc<StdRwLock<GossipStats>>,
+    /// Statistics (tokio::sync::RwLock for async access)
+    stats: Arc<TokioRwLock<GossipStats>>,
 
     /// Ed25519 signing key for this node (secret key)
     ///
@@ -412,7 +412,7 @@ pub struct ConfigGossipManager {
     /// - Public keys should be distributed through secure out-of-band channel
     /// - Consider implementing X.509 certificate chain validation for production
     /// - Implement key revocation mechanism for compromised keys
-    known_keys: Arc<RwLock<HashMap<String, VerifyingKey>>>,
+    known_keys: Arc<TokioRwLock<HashMap<String, VerifyingKey>>>,
 }
 
 /// Gossip statistics
@@ -440,16 +440,16 @@ impl ConfigGossipManager {
     /// - Register this node's public key with other nodes through secure channel
     pub fn new(
         node_id: String,
-        dht_storage: Arc<RwLock<DhtStorage>>,
+        dht_storage: Arc<TokioRwLock<DhtStorage>>,
         signing_key: SigningKey,
     ) -> Self {
         Self {
             node_id: node_id.clone(),
-            current_config: Arc::new(StdRwLock::new(None)),
+            current_config: Arc::new(TokioRwLock::new(None)),
             dht_storage,
             conflict_resolution: ConflictResolution::LastWriterWins,
             topic_key: StorageKey::from_bytes(b"nyx/config/gossip"),
-            stats: Arc::new(StdRwLock::new(GossipStats::default())),
+            stats: Arc::new(TokioRwLock::new(GossipStats::default())),
             signing_key,
             known_keys: Arc::new(TokioRwLock::new(HashMap::new())),
         }
@@ -518,8 +518,8 @@ impl ConfigGossipManager {
         // Validate before publishing
         self.validate_config(&signed_config)?;
 
-        // Store in DHT
-        self.store_config_in_dht(&signed_config)?;
+        // Store in DHT (await async operation)
+        self.store_config_in_dht(&signed_config).await?;
 
         // Update local state
         {
@@ -750,14 +750,14 @@ impl ConfigGossipManager {
     }
 
     /// Store config in DHT for propagation
-    fn store_config_in_dht(&self, config: &SignedConfig) -> Result<(), ConfigGossipError> {
+    async fn store_config_in_dht(&self, config: &SignedConfig) -> Result<(), ConfigGossipError> {
         // Serialize config
         let serialized =
             serde_json::to_vec(config).map_err(|e| ConfigGossipError::SerializationError {
                 reason: format!("JSON serialization failed: {}", e),
             })?;
 
-        // Store in DHT
+        // Store in DHT (await async lock acquisition)
         let mut dht = self.dht_storage.write().await;
         dht.put(
             self.topic_key.clone(),
@@ -771,8 +771,8 @@ impl ConfigGossipManager {
     }
 
     /// Fetch the latest config from DHT
-    pub fn fetch_from_dht(&self) -> Result<Option<SignedConfig>, ConfigGossipError> {
-        let mut dht = self.dht_storage.write().unwrap();
+    pub async fn fetch_from_dht(&self) -> Result<Option<SignedConfig>, ConfigGossipError> {
+        let mut dht = self.dht_storage.write().await;
 
         match dht.get(&self.topic_key) {
             Some(value) => {
