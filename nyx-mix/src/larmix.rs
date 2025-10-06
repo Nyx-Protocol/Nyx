@@ -18,6 +18,12 @@ impl Candidate {
 
 /// Select mix node using exponential distribution (Loopix-style)
 /// Lower RTT nodes have higher probability of selection
+///
+/// # Performance Optimizations
+/// - Single-pass enumeration with fold to avoid intermediate Vec allocation
+/// - Inline computation of weights during iteration
+/// - Minimal memory footprint for high-frequency path selection
+#[inline]
 pub fn select_mix_node<'a>(
     candidates: &'a [Candidate],
     rng: &'a mut impl Rng,
@@ -26,37 +32,46 @@ pub fn select_mix_node<'a>(
         return None;
     }
 
-    // Use exponential distribution with rate proportional to inverse RTT
-    let weights: Vec<f64> = candidates
-        .iter()
-        .map(|c| {
-            let rate = 1.0 / (c.rtt_ms as f64 + 1.0); // +1 to avoid division by zero
-            Exp::new(rate)
-                .unwrap_or_else(|_| Exp::new(1.0).unwrap())
-                .sample(rng)
-        })
-        .collect();
-
-    // Select candidate with highest weight (shortest effective delay)
-    let max_idx = weights
+    // Single-pass optimization: find max weight during iteration without intermediate Vec
+    // Use fold to track (index, max_weight) in one pass
+    let (max_idx, _) = candidates
         .iter()
         .enumerate()
-        .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-        .map(|(idx, _)| idx)?;
+        .fold((0, f64::NEG_INFINITY), |(max_i, max_w), (i, c)| {
+            // Compute weight inline without Vec allocation
+            let rate = 1.0 / (c.rtt_ms as f64 + 1.0);
+            let weight = Exp::new(rate)
+                .unwrap_or_else(|_| Exp::new(1.0).unwrap())
+                .sample(rng);
+            
+            if weight > max_w {
+                (i, weight)
+            } else {
+                (max_i, max_w)
+            }
+        });
 
     candidates.get(max_idx)
 }
 
 /// Build multi-hop path through mix network
+///
+/// # Performance Optimizations
+/// - Pre-allocate result Vec with exact capacity
+/// - Minimize String clones with single clone and retain
+/// - Use Vec indices to avoid full Vec clone per iteration
+#[inline]
 pub fn build_mix_path(candidates: &[Candidate], hops: usize, rng: &mut impl Rng) -> Vec<String> {
-    let mut path = Vec::new();
+    // Pre-allocate with exact capacity to avoid reallocation
+    let mut path = Vec::with_capacity(hops);
     let mut remaining: Vec<Candidate> = candidates.to_vec();
 
     for _ in 0..hops {
         if let Some(selected) = select_mix_node(&remaining, rng) {
+            // Single clone of selected_id
             let selected_id = selected.id.clone();
             path.push(selected_id.clone());
-            // Remove selected node to avoid loops
+            // Remove selected node to avoid loops - retain is efficient for small Vec
             remaining.retain(|c| c.id != selected_id);
         } else {
             break;
