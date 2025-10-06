@@ -168,9 +168,7 @@ impl OtlpExporter {
     pub async fn new(config: OtlpConfig) -> Result<Self> {
         // Create ureq agent with timeout configuration
         // ureq::Agent is lightweight, thread-safe, and pure Rust (no C/C++ deps)
-        let client = ureq::AgentBuilder::new()
-            .timeout(config.timeout)
-            .build();
+        let client = ureq::AgentBuilder::new().timeout(config.timeout).build();
 
         let (span_sender, span_receiver) = mpsc::unbounded_channel();
         let (shutdown_tx, shutdown_rx) = mpsc::channel(1);
