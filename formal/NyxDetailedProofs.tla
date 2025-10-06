@@ -1,5 +1,4 @@
 ---- MODULE NyxDetailedProofs ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Detailed TLAPS Proof Module                              *)
 (*                                                                          *)
@@ -14,13 +13,8 @@ LOCAL INSTANCE NyxHelpers
 (*   - Byzantine fault tolerance proofs                                    *)
 (****************************************************************************)
 
-EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC,
-        NyxCryptography, NyxNetworkLayer, NyxStreamManagement,
-        NyxFaultTolerance, NyxSecurityProperties, NyxProtocolIntegration
-
-(****************************************************************************)
-(* Auxiliary Lemmas and Definitions                                         *)
-(****************************************************************************)
+EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC
+LOCAL INSTANCE NyxHelpers
 
 \* Lemma: Finite set cardinality bounds
 LEMMA FiniteSetBound ==
@@ -51,9 +45,6 @@ LEMMA SetTransitivity ==
     PROVE x \in T
 PROOF OBVIOUS
 
-(****************************************************************************)
-(* Cryptographic Security Proofs                                            *)
-(****************************************************************************)
 
 \* Theorem: HKDF expands key material deterministically
 THEOREM HKDFExpansionDeterministic ==
@@ -244,9 +235,6 @@ PROOF
   <2> QED BY <2>2, <2>3, <2>4, <2>5, <2>6, <2>7
 <1> QED BY <1>2
 
-(****************************************************************************)
-(* Network Layer Correctness Proofs                                         *)
-(****************************************************************************)
 
 \* Theorem: Packet fragmentation is reversible
 THEOREM FragmentationReversible ==
@@ -359,9 +347,6 @@ PROOF
   BY DEF WFQ_Schedule
 <1> QED BY <1>3
 
-(****************************************************************************)
-(* Stream Management Correctness Proofs                                     *)
-(****************************************************************************)
 
 \* Theorem: Stream state machine is valid
 THEOREM StreamStateMachineValid ==
@@ -403,9 +388,6 @@ THEOREM DRRFairness ==
                Len(scheduled[s]) <= quantum[s] + MaxPacketSize
 PROOF BY DEF DRR_Schedule
 
-(****************************************************************************)
-(* Fault Tolerance Proofs                                                   *)
-(****************************************************************************)
 
 \* Theorem: Failure detector eventually detects failures
 THEOREM FailureDetectorCompleteness ==
@@ -450,9 +432,6 @@ THEOREM CircuitBreakerPreventsC ascade ==
     PROVE AllowRequest(cb) = FALSE
 PROOF BY DEF AllowRequest, IsValidCircuitBreaker
 
-(****************************************************************************)
-(* Security Property Proofs                                                 *)
-(****************************************************************************)
 
 \* Theorem: Sender anonymity in mix network
 THEOREM SenderAnonymityTheorem ==
