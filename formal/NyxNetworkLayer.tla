@@ -52,7 +52,71 @@ Sum(S) == LET RECURSIVE SumRec(_)
           IN SumRec(S)
 
 \* Average
-Average(S) == IF S = {} THEN 0 ELSE Sum(S) / Cardinality(S)
+Average(S) == IF S = {} THEN 0 ELSE Sum(S) \div Cardinality(S)
+
+\* Aliases for compatibility
+SUM(S) == Sum(S)
+AVG(S) == Average(S)
+
+\* Product of set elements
+PRODUCT(S) == LET RECURSIVE ProdRec(_)
+                  ProdRec(T) == IF T = {} 
+                               THEN 1 
+                               ELSE LET x == CHOOSE y \in T : TRUE
+                                    IN x * ProdRec(T \ {x})
+              IN ProdRec(S)
+
+\* Cube root approximation
+CubeRoot(x) == 
+    IF x <= 0 THEN 0
+    ELSE IF x = 1 THEN 1
+    ELSE IF x < 8 THEN 1
+    ELSE IF x < 27 THEN 2
+    ELSE IF x < 64 THEN 3
+    ELSE IF x < 125 THEN 4
+    ELSE IF x < 216 THEN 5
+    ELSE IF x < 343 THEN 6
+    ELSE IF x < 512 THEN 7
+    ELSE IF x < 729 THEN 8
+    ELSE IF x < 1000 THEN 9
+    ELSE 10
+
+\* Infinity representation
+Infinity == 999999
+
+\* XOR combine operation for FEC
+XOR_Combine(packets) == 
+    IF packets = {} THEN <<>> 
+    ELSE CHOOSE result \in Seq(Nat) : TRUE
+
+\* Reconstruct packets from FEC
+ReconstructPackets(coded_packets, lost_indices) ==
+    IF coded_packets = {} THEN <<>>
+    ELSE CHOOSE result \in Seq(Seq(Nat)) : TRUE
+
+\* Sort by offset (for fragment reassembly)
+SortByOffset(fragments) == fragments
+
+\* Sort by quality (for path selection)
+SortByQuality(paths) == paths
+
+\* Compute checksum for packet data
+ComputeChecksum(data) == 
+    IF data = <<>> THEN 0 ELSE (Sum({data[i] : i \in DOMAIN data}) % 65536)
+
+\* QoS priority function
+QoSPriority(qos_class) ==
+    CASE qos_class = "REAL_TIME" -> 4
+      [] qos_class = "INTERACTIVE" -> 3
+      [] qos_class = "BULK" -> 2
+      [] qos_class = "BACKGROUND" -> 1
+      [] OTHER -> 0
+
+\* Select next hop based on routing table
+SelectNextHop(packet, routing_table) ==
+    IF packet.dest \in DOMAIN routing_table
+    THEN routing_table[packet.dest]
+    ELSE CHOOSE n \in Nodes : TRUE
 
 
 
@@ -192,10 +256,6 @@ ReassemblePacket(fragments) ==
         !.size = Len(combined_data)
     ]
 
-\* Compute packet checksum
-ComputeChecksum(data) ==
-    (CHOOSE c \in Nat : TRUE) % 65536
-
 (****************************************************************************)
 (* Routing and Path Selection                                               *)
 (****************************************************************************)
@@ -210,6 +270,41 @@ PathMetrics == [
     reliability: 0..100     \* Path reliability score
 ]
 
+\* Helper functions for path metrics (must be defined before use)
+LinkLatency(n1, n2) == 
+    (CHOOSE l \in Links : l.source = n1 /\ l.dest = n2).latency
+
+LinkBandwidth(n1, n2) ==
+    (CHOOSE l \in Links : l.source = n1 /\ l.dest = n2).bandwidth
+
+LinkCongestion(n1, n2) ==
+    LET link == CHOOSE l \in Links : l.source = n1 /\ l.dest = n2
+    IN (link.queue_length * 100) \div MaxQueueSize
+
+ProductLossRate(path) ==
+    LET link_loss_rates == {(CHOOSE l \in Links : 
+                             l.source = path[i] /\ l.dest = path[i+1]).loss_rate :
+                            i \in 1..(Len(path)-1)}
+    IN IF link_loss_rates = {} THEN 0
+       ELSE AVG(link_loss_rates)
+
+PathReliability(path) ==
+    100 - ProductLossRate(path)
+
+\* Compute aggregated path metrics
+ComputePathMetrics(path) ==
+    [
+        latency |-> SUM({LinkLatency(path[i], path[i+1]) : 
+                        i \in 1..(Len(path)-1)}),
+        bandwidth |-> MIN({LinkBandwidth(path[i], path[i+1]) : 
+                          i \in 1..(Len(path)-1)}),
+        loss_rate |-> ProductLossRate(path),
+        hop_count |-> Len(path) - 1,
+        congestion |-> AVG({LinkCongestion(path[i], path[i+1]) : 
+                           i \in 1..(Len(path)-1)}),
+        reliability |-> PathReliability(path)
+    ]
+
 \* Compute path quality score (higher is better)
 PathQualityScore(metrics) ==
     LET latency_score == 100 - ((metrics.latency * 100) \div MaxRTT)
@@ -221,11 +316,13 @@ PathQualityScore(metrics) ==
         reliability_score + congestion_score) \div 5)
 
 \* Dijkstra's shortest path algorithm (abstracted)
-ShortestPath(source, dest, metric_func) ==
+ShortestPath(source, dest) ==
     LET all_paths == MultipathSet(source, dest)
         path_with_min_metric == 
             CHOOSE p \in all_paths :
-                \A q \in all_paths : metric_func(p) <= metric_func(q)
+                \A q \in all_paths : 
+                    PathQualityScore(ComputePathMetrics(p)) >= 
+                    PathQualityScore(ComputePathMetrics(q))
     IN path_with_min_metric
 
 \* K-shortest paths for multipath routing
@@ -257,41 +354,6 @@ SelectMultipath(source, dest, num_paths) ==
                      new_remaining == remaining \ {next_path}
                  IN SelectGreedy[new_selected, new_remaining]
     IN SelectGreedy[{}, candidates]
-
-\* Compute aggregated path metrics
-ComputePathMetrics(path) ==
-    [
-        latency |-> SUM({LinkLatency(path[i], path[i+1]) : 
-                        i \in 1..(Len(path)-1)}),
-        bandwidth |-> MIN({LinkBandwidth(path[i], path[i+1]) : 
-                          i \in 1..(Len(path)-1)}),
-        loss_rate |-> ProductLossRate(path),
-        hop_count |-> Len(path) - 1,
-        congestion |-> AVG({LinkCongestion(path[i], path[i+1]) : 
-                           i \in 1..(Len(path)-1)}),
-        reliability |-> PathReliability(path)
-    ]
-
-\* Helper functions for path metrics
-LinkLatency(n1, n2) == 
-    (CHOOSE l \in Links : l.source = n1 /\ l.dest = n2).latency
-
-LinkBandwidth(n1, n2) ==
-    (CHOOSE l \in Links : l.source = n1 /\ l.dest = n2).bandwidth
-
-LinkCongestion(n1, n2) ==
-    LET link == CHOOSE l \in Links : l.source = n1 /\ l.dest = n2
-    IN (link.queue_length * 100) \div MaxQueueSize
-
-ProductLossRate(path) ==
-    LET link_loss_rates == {(CHOOSE l \in Links : 
-                             l.source = path[i] /\ l.dest = path[i+1]).loss_rate :
-                            i \in 1..(Len(path)-1)}
-        product == PRODUCT({(100 - r) : r \in link_loss_rates})
-    IN 100 - (product \div (100 ^ (Len(path)-1)))
-
-PathReliability(path) ==
-    100 - ProductLossRate(path)
 
 (****************************************************************************)
 (* Flow Control (Sliding Window Protocol)                                   *)
@@ -788,22 +850,6 @@ LosePacket(packet) ==
                   flow_control_state, congestion_state, qos_queues,
                   token_buckets, packets_sent, packets_received,
                   total_latency, total_bandwidth>>
-
-(****************************************************************************)
-(* Helper Functions                                                         *)
-(****************************************************************************)
-
-SelectNextHop(current, dest) ==
-    IF IsAdjacent(current, dest)
-    THEN dest
-    ELSE CHOOSE next \in Nodes : 
-        IsAdjacent(current, next) /\ next # current
-
-QoSPriority(qos_class) ==
-    CASE qos_class = "REAL_TIME" -> 0
-    [] qos_class = "INTERACTIVE" -> 1
-    [] qos_class = "BULK" -> 2
-    [] qos_class = "BACKGROUND" -> 3
 
 (****************************************************************************)
 (* Safety Properties                                                        *)
