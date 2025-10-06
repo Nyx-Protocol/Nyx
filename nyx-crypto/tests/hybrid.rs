@@ -1,5 +1,6 @@
 #![cfg(feature = "hybrid")]
 #![allow(missing_docs, clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+//! Hybrid cryptography test module
 
 use nyx_crypto::hybrid::{handshake, KyberStaticKeypair, X25519StaticKeypair};
 use nyx_crypto::kyber;
