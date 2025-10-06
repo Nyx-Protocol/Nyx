@@ -1,5 +1,4 @@
 ---- MODULE NyxSecurityAudit ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Security Audit and Compliance                            *)
 (*                                                                          *)
@@ -21,11 +20,10 @@ LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 
 EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC,
+LOCAL INSTANCE NyxHelpers
+
         NyxCryptography, NyxMonitoring
 
-(****************************************************************************)
-(* Security Event Logging                                                   *)
-(****************************************************************************)
 
 \* Security event types
 SecurityEventType == {
@@ -129,9 +127,6 @@ CorrelateEvents(siem, correlation_window) ==
         policy_violations |-> policy_violations
     ]
 
-(****************************************************************************)
-(* Vulnerability Management                                                 *)
-(****************************************************************************)
 
 \* Vulnerability
 Vulnerability == [
@@ -236,9 +231,6 @@ ComputePriority(vuln, context) ==
         impact_score == ComputeImpactScore(vuln, context)
     IN severity_score * exploit_multiplier * exposure_score * impact_score
 
-(****************************************************************************)
-(* Penetration Testing                                                      *)
-(****************************************************************************)
 
 \* Penetration test scenario
 PenetrationTestScenario == [
@@ -309,9 +301,6 @@ RedTeamExercise == [
     blue_team_notifications : BOOLEAN
 ]
 
-(****************************************************************************)
-(* Compliance Checking                                                      *)
-(****************************************************************************)
 
 \* Compliance framework
 ComplianceFramework == {
@@ -463,9 +452,6 @@ GDPR_Checks == {
      >>]
 }
 
-(****************************************************************************)
-(* Access Control Auditing                                                  *)
-(****************************************************************************)
 
 \* Access control policy
 AccessControlPolicy == [
@@ -517,9 +503,6 @@ AuditAccessControl(policies, access_logs) ==
         total_accesses |-> Cardinality(access_logs)
     ]
 
-(****************************************************************************)
-(* Cryptographic Verification                                               *)
-(****************************************************************************)
 
 \* Cryptographic verification test
 CryptoVerificationTest == [
@@ -560,9 +543,6 @@ VerifyCryptography(implementation) ==
         test_results |-> results
     ]
 
-(****************************************************************************)
-(* Threat Intelligence Integration                                          *)
-(****************************************************************************)
 
 \* Threat indicator
 ThreatIndicator == [
@@ -605,9 +585,6 @@ CheckThreatIntelligence(event, threat_feeds) ==
         highest_threat |-> highest_threat
     ]
 
-(****************************************************************************)
-(* Incident Response                                                        *)
-(****************************************************************************)
 
 \* Security incident
 SecurityIncident == [
@@ -664,9 +641,6 @@ ExecuteIncidentResponse(incident, playbook) ==
            !.status = IF response_result.success THEN "RECOVERED" ELSE @,
            !.response_actions = @ \o response_result.actions_taken]
 
-(****************************************************************************)
-(* Security Metrics and KPIs                                                *)
-(****************************************************************************)
 
 \* Security metrics
 SecurityMetrics == [
@@ -715,9 +689,6 @@ ComputeSecurityMetrics(security_data, period) ==
         ]
     ]
 
-(****************************************************************************)
-(* Security Audit Properties and Invariants                                 *)
-(****************************************************************************)
 
 \* Audit completeness
 THEOREM AuditCompleteness ==
