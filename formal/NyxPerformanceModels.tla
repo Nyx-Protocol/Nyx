@@ -1,4 +1,5 @@
 ---- MODULE NyxPerformanceModels ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Performance Evaluation and Analysis Models               *)
 (*                                                                          *)
