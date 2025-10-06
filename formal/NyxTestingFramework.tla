@@ -1,4 +1,5 @@
 ---- MODULE NyxTestingFramework ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Testing and Verification Framework                       *)
 (*                                                                          *)
