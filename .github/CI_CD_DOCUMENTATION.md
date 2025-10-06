@@ -37,6 +37,28 @@ This document describes the comprehensive CI/CD automation pipeline for the NyxN
 - Comprehensive test execution with retry logic
 - Smart caching with Swatinem/rust-cache
 
+### 1.1. cli-daemon-ci.yml - CLI and Daemon Specialized CI
+
+**Triggers**: Pushes/PRs to main/develop affecting nyx-cli, nyx-daemon, or dependencies
+
+**Jobs**:
+- `build-and-test`: Cross-platform build and unit tests (Linux, Windows, macOS) (45 min)
+- `integration-tests`: End-to-end integration tests with daemon startup and CLI commands (30 min)
+- `benchmarks`: Performance benchmarking with result artifacts (45 min)
+- `clippy-daemon-cli`: Static analysis specifically for daemon and CLI (20 min)
+- `security-audit`: Security audit and unsafe code detection (15 min)
+- `coverage`: Code coverage for daemon and CLI with Codecov integration (30 min)
+- `docs`: Documentation build and validation (20 min)
+- `ci-success`: Summary job
+
+**Key Features**:
+- Automated daemon startup and CLI command testing
+- Platform-specific IPC testing (Named Pipe on Windows, Unix Socket on Unix)
+- Performance regression detection
+- PR comment with benchmark results
+- Zero unsafe code enforcement
+- Comprehensive end-to-end validation
+
 ### 2. security.yml - Security Audit and SBOM
 
 **Triggers**: All pushes, PRs, weekly scheduled scan (Monday 00:00 UTC)
@@ -126,6 +148,50 @@ This document describes the comprehensive CI/CD automation pipeline for the NyxN
 ### 6. release.yml - Release Automation
 
 **Triggers**: Version tags (v*.*.*), manual dispatch
+
+### 6.1. cli-daemon-release.yml - CLI and Daemon Release Automation
+
+**Triggers**: Tags matching `cli-v*.*.*` or `daemon-v*.*.*`, manual dispatch
+
+**Jobs**:
+- `prepare`: Extract version and component information (15 min)
+- `build-binaries`: Cross-compile binaries for all platforms (90 min per platform)
+  - Linux x86_64 and aarch64
+  - Windows x86_64
+  - macOS x86_64 and aarch64 (Apple Silicon)
+- `create-release`: Generate release notes and publish GitHub Release (15 min)
+
+**Key Features**:
+- Cross-platform binary compilation
+- Automated archive creation (tar.gz for Unix, zip for Windows)
+- SHA256 checksum generation for all artifacts
+- Comprehensive release notes with installation instructions
+- Pre-release detection based on version string
+- Binary stripping for smaller artifacts
+- Support for component-specific releases (CLI only, Daemon only, or both)
+
+### 6.2. docker.yml - Docker Image Build and Publish
+
+**Triggers**: Main branch pushes, PRs, releases, manual dispatch
+
+**Jobs**:
+- `build-and-test`: Build Docker image and run basic tests (45 min)
+  - Container startup validation
+  - Process health checks
+  - Trivy vulnerability scanning
+- `build-and-push`: Multi-architecture build and push to GHCR (90 min)
+  - linux/amd64 and linux/arm64 support
+  - Automated tagging (latest, version, SHA, branch)
+  - Layer caching for faster builds
+- `update-docs`: Update documentation with new image versions (15 min)
+
+**Key Features**:
+- Multi-architecture Docker images (amd64, arm64)
+- GitHub Container Registry integration
+- Automated vulnerability scanning with Trivy
+- SARIF upload for security tab integration
+- Smart layer caching with GitHub Actions cache
+- Automated documentation updates on release
 
 **Jobs**:
 - `prepare-release`: Version validation and metadata preparation (15 min)

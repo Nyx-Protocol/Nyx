@@ -29,7 +29,7 @@ fonts:
   
   <div class="flex gap-4 mt-8 text-sm opacity-60">
     <div class="flex items-center gap-2">
-      <carbon:shield-security class="text-lg"/>
+      <carbon:security class="text-lg"/>
       <span>Post-Quantum Secure</span>
     </div>
     <div class="flex items-center gap-2">
@@ -50,18 +50,83 @@ fonts:
 <div class="abs-br m-6 flex gap-2">
   <a href="https://github.com/SeleniaProject/NyxNet" target="_blank" alt="GitHub"
     class="text-xl slidev-icon-btn opacity-50 !border-none !hover:text-white">
-    <carbon-logo-github />
+    <carbon:logo-github />
   </a>
 </div>
 
 <style>
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 700;
-}
-
+/* グローバルスタイル - 完璧にフィット */
 .slidev-layout {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-size: 0.7rem !important;
+  line-height: 1.3 !important;
+  padding: 0.8rem 1.5rem !important;
 }
+
+h1 { 
+  font-size: 1.4rem !important; 
+  margin-bottom: 0.2rem !important;
+  font-weight: 700;
+  line-height: 1.1 !important;
+}
+
+h2 { 
+  font-size: 1rem !important; 
+  margin-bottom: 0.2rem !important;
+  font-weight: 700;
+  line-height: 1.1 !important;
+}
+
+h3 { 
+  font-size: 0.9rem !important; 
+  margin-bottom: 0.15rem !important;
+  font-weight: 700;
+  line-height: 1.1 !important;
+}
+
+h4, h5, h6 {
+  font-weight: 700;
+  margin-bottom: 0.15rem !important;
+  font-size: 0.8rem !important;
+}
+
+p {
+  margin-bottom: 0.2rem !important;
+  line-height: 1.3 !important;
+}
+
+ul, ol {
+  margin-top: 0.2rem !important;
+  margin-bottom: 0.2rem !important;
+  padding-left: 1.2rem !important;
+}
+
+li {
+  margin-bottom: 0.1rem !important;
+  line-height: 1.3 !important;
+}
+
+code {
+  font-size: 0.65rem !important;
+  padding: 0.1rem 0.3rem !important;
+}
+
+.mt-2 { margin-top: 0.2rem !important; }
+.mt-3 { margin-top: 0.3rem !important; }
+.mt-4 { margin-top: 0.4rem !important; }
+.mt-5 { margin-top: 0.5rem !important; }
+.mt-6 { margin-top: 0.6rem !important; }
+.mt-8 { margin-top: 0.8rem !important; }
+.mt-12 { margin-top: 1rem !important; }
+.mb-2 { margin-bottom: 0.2rem !important; }
+.mb-3 { margin-bottom: 0.3rem !important; }
+.mb-4 { margin-bottom: 0.4rem !important; }
+.mb-6 { margin-bottom: 0.6rem !important; }
+.gap-4 { gap: 0.4rem !important; }
+.gap-6 { gap: 0.6rem !important; }
+.gap-8 { gap: 0.8rem !important; }
+.p-4 { padding: 0.4rem !important; }
+.p-6 { padding: 0.6rem !important; }
 </style>
 
 ---
@@ -71,33 +136,30 @@ class: text-center
 
 # <span class="text-gradient">Why NyxNet?</span>
 
-<div class="grid grid-cols-3 gap-8 mt-12 px-8">
+<div class="grid grid-cols-3 gap-6 mt-6 px-4">
 
 <div v-click class="problem-card">
   <div class="icon-wrapper mb-4">
     <carbon:warning-alt class="text-5xl text-red-400"/>
   </div>
-  <h3 class="text-xl font-bold mb-3">🔐 量子コンピュータ脅威</h3>
-  <p class="text-sm opacity-80">既存の暗号は2030年代に破られる可能性</p>
-  <div class="mt-4 text-xs opacity-60">RSA, ECDSA → 危険</div>
+  <h3 class="text-xl font-bold mb-2">🔐 量子脅威</h3>
+  <p class="text-sm opacity-80">2030年代に既存暗号が危険</p>
 </div>
 
 <div v-click class="problem-card">
   <div class="icon-wrapper mb-4">
     <carbon:hourglass class="text-5xl text-yellow-400"/>
   </div>
-  <h3 class="text-xl font-bold mb-3">🐌 Torの性能限界</h3>
-  <p class="text-sm opacity-80">レイテンシ1.2秒、リアルタイム通信不可</p>
-  <div class="mt-4 text-xs opacity-60">ビデオ通話、ゲーム不可</div>
+  <h3 class="text-xl font-bold mb-2">🐌 Tor遅い</h3>
+  <p class="text-sm opacity-80">レイテンシ1.2秒</p>
 </div>
 
 <div v-click class="problem-card">
   <div class="icon-wrapper mb-4">
     <carbon:mobile class="text-5xl text-blue-400"/>
   </div>
-  <h3 class="text-xl font-bold mb-3">📱 モバイル時代</h3>
-  <p class="text-sm opacity-80">スマホでも使える匿名通信が必要</p>
-  <div class="mt-4 text-xs opacity-60">バッテリー消費が課題</div>
+  <h3 class="text-xl font-bold mb-2">📱 モバイル対応</h3>
+  <p class="text-sm opacity-80">スマホで使える匿名通信</p>
 </div>
 
 </div>
@@ -127,7 +189,7 @@ class: text-center
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  padding: 2rem;
+  padding: 1.2rem;
   transition: all 0.3s ease;
 }
 
@@ -148,7 +210,7 @@ class: text-center
 .solution-banner {
   display: inline-flex;
   align-items: center;
-  padding: 1rem 3rem;
+  padding: 0.6rem 2rem;
   background: rgba(16, 185, 129, 0.1);
   border: 2px solid rgba(16, 185, 129, 0.3);
   border-radius: 50px;
@@ -159,43 +221,66 @@ class: text-center
 layout: two-cols
 ---
 
-# NyxNet とは
+# <span class="text-gradient">NyxNet とは</span>
 
-Pure Rust製の次世代匿名通信ネットワークスタック
+<div class="subtitle mb-4">Pure Rust製の次世代匿名通信ネットワークスタック</div>
 
-## 3つの核心技術
+## 🔐 核心技術
 
 <v-clicks>
 
-### 🛡️ 量子耐性暗号
-- **ML-KEM-768** (NIST標準)
-- X25519とのハイブリッド設計
-- 2030年以降も安全
+<div class="feature-box mb-4">
+  <div class="flex items-center mb-2">
+    <carbon:security class="text-2xl text-purple-400 mr-3"/>
+    <span class="font-bold text-lg">量子耐性暗号</span>
+  </div>
+  <ul class="ml-6 text-sm space-y-0 opacity-90">
+    <li>ML-KEM-768 (NIST)</li>
+    <li>X25519ハイブリッド</li>
+  </ul>
+</div>
 
-### ⚡ 高性能トランスポート
-- **QUIC + UDP** ベース
-- マルチパス対応
-- 適応的FEC（Forward Error Correction）
+<div class="feature-box mb-4">
+  <div class="flex items-center mb-2">
+    <carbon:lightning class="text-2xl text-yellow-400 mr-3"/>
+    <span class="font-bold text-lg">高性能トランスポート</span>
+  </div>
+  <ul class="ml-6 text-sm space-y-0 opacity-90">
+    <li>QUIC + UDP</li>
+    <li>マルチパス対応</li>
+  </ul>
+</div>
 
-### 🧅 Sphinxミックスネットワーク
-- 3ホップ匿名化
-- トラフィック分析耐性
-- カバートラフィック生成
+<div class="feature-box mb-4">
+  <div class="flex items-center mb-2">
+    <carbon:network-3 class="text-2xl text-blue-400 mr-3"/>
+    <span class="font-bold text-lg">Sphinxミックスネットワーク</span>
+  </div>
+  <ul class="ml-6 text-sm space-y-0 opacity-90">
+    <li>3ホップ匿名化</li>
+    <li>トラフィック分析耐性</li>
+  </ul>
+</div>
 
 </v-clicks>
 
 ::right::
 
-<div class="ml-4 mt-20">
+<div class="ml-6">
 
-```mermaid
+<div class="arch-title mb-4">
+  <carbon:diagram class="inline-block mr-2 text-blue-400"/>
+  <span class="font-bold text-lg">システムアーキテクチャ</span>
+</div>
+
+```mermaid {scale: 0.4}
 graph TB
-    A[Application]
-    B[nyx-sdk]
-    C[nyx-daemon]
-    D[nyx-mix]
-    E[nyx-crypto]
-    F[nyx-transport]
+    A[Application<br/>アプリケーション]
+    B[nyx-sdk<br/>SDK]
+    C[nyx-daemon<br/>デーモン]
+    D[nyx-mix<br/>ミキシング]
+    E[nyx-crypto<br/>暗号化]
+    F[nyx-transport<br/>トランスポート]
     
     A --> B
     B --> C
@@ -203,26 +288,115 @@ graph TB
     D --> E
     D --> F
     
-    style E fill:#f96,stroke:#333
-    style D fill:#9cf,stroke:#333
-    style F fill:#9f6,stroke:#333
+    style E fill:#a78bfa,stroke:#7c3aed,stroke-width:3px,color:#fff
+    style D fill:#60a5fa,stroke:#2563eb,stroke-width:3px,color:#fff
+    style F fill:#34d399,stroke:#10b981,stroke-width:3px,color:#fff
+    style A fill:#f472b6,stroke:#ec4899,stroke-width:3px,color:#fff
+    style B fill:#fbbf24,stroke:#f59e0b,stroke-width:3px,color:#fff
+    style C fill:#fb923c,stroke:#ea580c,stroke-width:3px,color:#fff
 ```
 
+<div class="stats-grid mt-8">
+  <div class="stat-card">
+    <div class="stat-value">12</div>
+    <div class="stat-label">モジュール</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">85K+</div>
+    <div class="stat-label">コード行数</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">400+</div>
+    <div class="stat-label">テスト</div>
+  </div>
 </div>
+
+</div>
+
+<style>
+.subtitle {
+  font-size: 0.95rem;
+  opacity: 0.75;
+  font-weight: 500;
+}
+
+.feature-box {
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 4px solid rgba(167, 139, 250, 0.6);
+  padding: 0.6rem;
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feature-box:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-left-color: rgba(167, 139, 250, 1);
+  transform: translateX(6px);
+  box-shadow: 0 4px 12px rgba(167, 139, 250, 0.2);
+}
+
+.highlight {
+  color: #a78bfa;
+  font-weight: 700;
+}
+
+.arch-title {
+  color: #60a5fa;
+  font-size: 1.05rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 1rem 0.5rem;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(167, 139, 250, 0.15));
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(96, 165, 250, 0.6);
+  box-shadow: 0 8px 16px rgba(96, 165, 250, 0.2);
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+</style>
 
 ---
 layout: default
 ---
 
-# System Architecture
+# <span class="text-gradient">System Architecture</span>
 
-<div class="mt-4">
+<div class="arch-subtitle mb-4">レイヤー化された12モジュール構成</div>
 
-```mermaid {scale: 0.8}
+<div class="mt-2">
+
+```mermaid {scale: 0.4}
 graph TB
     subgraph "Application Layer"
-        APP[Web Browsers]
-        MOBILE[Mobile Apps]
+        APP[🌐 Web Browsers]
+        MOBILE[📱 Mobile Apps]
     end
     
     subgraph "SDK Layer"
@@ -266,54 +440,133 @@ graph TB
     MIX --> FEC
     MIX --> CRYPTO
     TRANSPORT --> CORE
+    
+    style APP fill:#f472b6,stroke:#ec4899,stroke-width:2px,color:#fff
+    style MOBILE fill:#f472b6,stroke:#ec4899,stroke-width:2px,color:#fff
+    style SDK fill:#fbbf24,stroke:#f59e0b,stroke-width:2px,color:#fff
+    style FFI fill:#fbbf24,stroke:#f59e0b,stroke-width:2px,color:#fff
+    style WASM fill:#fbbf24,stroke:#f59e0b,stroke-width:2px,color:#fff
+    style SOCKS fill:#fb923c,stroke:#ea580c,stroke-width:2px,color:#fff
+    style HTTP fill:#fb923c,stroke:#ea580c,stroke-width:2px,color:#fff
+    style DAEMON fill:#60a5fa,stroke:#2563eb,stroke-width:2px,color:#fff
+    style CLI fill:#60a5fa,stroke:#2563eb,stroke-width:2px,color:#fff
+    style STREAM fill:#34d399,stroke:#10b981,stroke-width:2px,color:#fff
+    style MIX fill:#34d399,stroke:#10b981,stroke-width:2px,color:#fff
+    style TRANSPORT fill:#34d399,stroke:#10b981,stroke-width:2px,color:#fff
+    style FEC fill:#34d399,stroke:#10b981,stroke-width:2px,color:#fff
+    style CRYPTO fill:#a78bfa,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style CORE fill:#a78bfa,stroke:#7c3aed,stroke-width:2px,color:#fff
 ```
 
 </div>
 
-<div class="text-center mt-4 text-sm">
-<strong>12モジュール構成</strong> | Pure Rust実装 | ゼロC/C++依存
+<div class="arch-footer">
+  <div class="arch-badge">
+    <carbon:cube class="inline-block mr-1"/>
+    <strong>12モジュール構成</strong>
+  </div>
+  <div class="arch-badge">
+    <carbon:code class="inline-block mr-1"/>
+    <strong>Pure Rust実装</strong>
+  </div>
+  <div class="arch-badge">
+    <carbon:security class="inline-block mr-1"/>
+    <strong>ゼロC/C++依存</strong>
+  </div>
 </div>
+
+<style>
+.arch-subtitle {
+  text-align: center;
+  font-size: 0.95rem;
+  opacity: 0.7;
+  font-weight: 500;
+}
+
+.arch-footer {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.arch-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1.25rem;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(167, 139, 250, 0.1));
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.arch-badge:hover {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.2), rgba(167, 139, 250, 0.2));
+  border-color: rgba(96, 165, 250, 0.5);
+  transform: translateY(-2px);
+}
+</style>
 
 ---
 layout: two-cols
 ---
 
-# 工夫した点 ①
-## ハイブリッド量子耐性暗号
+# <span class="text-gradient">工夫した点 ①</span>
+## 🔐 ハイブリッド量子耐性暗号
 
 <v-clicks>
 
-### なぜハイブリッド？
+<div class="info-box mb-3">
+  <div class="info-title">
+    <carbon:help class="inline-block mr-2 text-blue-400"/>
+    なぜハイブリッド？
+  </div>
+  <ul class="info-list">
+    <li>ML-KEM-768: 量子耐性</li>
+    <li>X25519: 実績あり</li>
+  </ul>
+</div>
 
-- **ML-KEM-768**: 量子コンピュータ耐性
-- **X25519**: 現在実績のある暗号
-- 両方を組み合わせて最大の安全性
+<div class="info-box mb-4">
+  <div class="info-title">
+    <carbon:warning-alt class="inline-block mr-2 text-yellow-400"/>
+    実装の難しさ
+  </div>
+  <ul class="info-list">
+    <li>鍵サイズ: 1216バイト</li>
+    <li>タイミング攻撃対策</li>
+    <li>メモリゼロ化</li>
+  </ul>
+</div>
 
-### 実装の難しさ
-
-- 鍵サイズ: 1216バイト（通常の32倍）
-- タイミング攻撃対策
-- メモリ安全性（Rust）
-- ゼロ化（Drop時に秘密鍵消去）
-
-### 性能
-
-- ハンドシェイク: **2.5ms**
-- スループット: 500 Mbps
-- メモリ: 約50MB/接続
+<div class="perf-box">
+  <div class="perf-title">
+    <carbon:dashboard class="inline-block mr-2 text-green-400"/>
+    性能
+  </div>
+  <div class="perf-grid">
+    <div>ハンドシェイク</div><div class="perf-value">2.5ms</div>
+    <div>スループット</div><div class="perf-value">500Mbps</div>
+  </div>
+</div>
 
 </v-clicks>
 
 ::right::
 
-<div class="ml-4 mt-8">
+<div class="ml-4 mt-2">
 
-### ハンドシェイクフロー
+<div class="section-title mb-2">
+  <carbon:flow class="inline-block mr-2 text-purple-400"/>
+  フロー
+</div>
 
-```mermaid
+```mermaid {scale: 0.4}
 sequenceDiagram
-    participant C as Client
-    participant S as Server
+    participant C as 🖥️ Client
+    participant S as 🖥️ Server
     
     C->>C: ML-KEM-768鍵生成<br/>X25519鍵生成
     C->>S: 公開鍵送信 (1216 bytes)
@@ -325,10 +578,13 @@ sequenceDiagram
     C->>C: ML-KEMデカプセル化<br/>X25519 DH
     C->>C: HKDF鍵導出
     
-    Note over C,S: 共有秘密確立 (32 bytes)
+    Note over C,S: ✅ 共有秘密確立 (32 bytes)
 ```
 
-### コードサイズ
+<div class="section-title mb-3 mt-6">
+  <carbon:code class="inline-block mr-2 text-blue-400"/>
+  コード例
+</div>
 
 ```rust
 // nyx-crypto/src/hybrid_handshake.rs
@@ -338,83 +594,202 @@ pub struct HybridPublicKey {
 }
 ```
 
-<div class="text-xs mt-4 text-gray-400">
-801行の実装 + 300以上のテスト
+<div class="code-stats">
+  <carbon:chart-line class="inline-block mr-1"/>
+  <strong>801行</strong>の実装 + <strong>300以上</strong>のテスト
 </div>
 
 </div>
+
+<style>
+.info-box {
+  background: rgba(96, 165, 250, 0.08);
+  border-left: 4px solid rgba(96, 165, 250, 0.5);
+  padding: 0.875rem;
+  border-radius: 10px;
+}
+
+.info-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.info-list {
+  list-style: none;
+  padding-left: 0;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+.info-list li {
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.info-list li::before {
+  content: "▹";
+  position: absolute;
+  left: 0.5rem;
+  color: #60a5fa;
+}
+
+.tech-term {
+  color: #a78bfa;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+}
+
+.emphasis {
+  color: #34d399;
+  font-weight: 700;
+}
+
+.perf-box {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.05));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.6rem;
+  border-radius: 10px;
+}
+
+.perf-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.perf-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.perf-value {
+  color: #34d399;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+}
+
+.section-title {
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.code-stats {
+  background: rgba(96, 165, 250, 0.1);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+</style>
 
 ---
 layout: default
 ---
 
-# 工夫した点 ②
-## Sphinxオニオンルーティング
+# <span class="text-gradient">工夫した点 ②</span>
+## 🧅 Sphinxオニオンルーティング
 
-<div class="grid grid-cols-2 gap-8 mt-4">
+<div class="grid grid-cols-2 gap-6 mt-3">
 
 <div>
 
-### Sphinxプロトコル
+<div class="protocol-section">
+  <div class="protocol-header">
+    <carbon:layers class="inline-block mr-2 text-purple-400"/>
+    <span class="font-bold">Sphinxプロトコル</span>
+  </div>
 
 <v-clicks>
 
-- **3ホップ匿名化**: 各ノードは次のホップしか知らない
-- **レイヤー暗号化**: ChaCha20Poly1305で多重暗号化
-- **ブラインディング鍵**: 各ホップで鍵を変換
-- **リプレイ保護**: Bloomフィルタ + タイムスタンプ
+  <div class="protocol-item">
+    <carbon:network-4 class="inline-block mr-2 text-blue-400"/>
+    <strong>3ホップ匿名化</strong>
+  </div>
+  <div class="protocol-item">
+    <carbon:locked class="inline-block mr-2 text-green-400"/>
+    <strong>多重暗号化</strong>
+  </div>
+  <div class="protocol-item">
+    <carbon:security class="inline-block mr-2 text-red-400"/>
+    <strong>リプレイ保護</strong>
+  </div>
 
 </v-clicks>
+</div>
 
-### 実装の工夫
+<div class="impl-section mt-4">
+  <div class="impl-header">
+    <carbon:tools class="inline-block mr-2 text-orange-400"/>
+    <span class="font-bold">実装の工夫</span>
+  </div>
 
 <v-clicks>
 
-- **定数時間比較**: タイミング攻撃対策
-- **パケット固定長**: トラフィック分析対策
-- **カバートラフィック**: Poisson分布でダミー生成
-- **メモリ安全**: `#![forbid(unsafe_code)]`
+  <div class="impl-item">✓ 定数時間比較</div>
+  <div class="impl-item">✓ パケット固定長</div>
+  <div class="impl-item">✓ メモリ安全</div>
 
 </v-clicks>
+</div>
 
-### 性能
-
-- パケット処理: **150μs** / packet
-- スループット: 400 packets/sec
-- 実装: 650行（nyx-mix/src/sphinx.rs）
+<div class="perf-box-sphinx mt-4">
+  <carbon:dashboard class="inline-block mr-2 text-green-400"/>
+  <strong>性能:</strong> 
+  <span class="perf-highlight">150μs</span>/packet · 
+  <span class="perf-highlight">400</span> packets/sec · 
+  <span class="perf-highlight">650行</span>実装
+</div>
 
 </div>
 
 <div>
 
-### 通信フロー
+<div class="flow-title mb-3">
+  <carbon:flow class="inline-block mr-2 text-blue-400"/>
+  <strong>通信フロー</strong>
+</div>
 
-```mermaid
+```mermaid {scale: 0.5}
 sequenceDiagram
-    participant A as Alice
-    participant M1 as Mix 1
-    participant M2 as Mix 2
-    participant M3 as Mix 3
-    participant B as Bob
+    participant A as 👤 Alice
+    participant M1 as 🔀 Mix 1
+    participant M2 as 🔀 Mix 2
+    participant M3 as 🔀 Mix 3
+    participant B as 👤 Bob
     
-    Note over A: Sphinx暗号化<br/>(3層)
+    Note over A: 🔐 Sphinx暗号化<br/>(3層)
     A->>M1: [Layer 3,2,1]
     
-    Note over M1: Layer 3復号
+    Note over M1: 🔓 Layer 3復号
     M1->>M2: [Layer 2,1]
     
-    Note over M2: Layer 2復号
+    Note over M2: 🔓 Layer 2復号
     M2->>M3: [Layer 1]
     
-    Note over M3: Layer 1復号
-    M3->>B: Plaintext
+    Note over M3: 🔓 Layer 1復号
+    M3->>B: ✅ Plaintext
     
     Note over A,B: 各ノードは次のホップのみ知る
 ```
 
-### パケット構造
+<div class="packet-title mt-6 mb-3">
+  <carbon:document class="inline-block mr-2 text-purple-400"/>
+  <strong>パケット構造</strong>
+</div>
 
-```
+<div class="packet-structure">
+<pre class="packet-pre">
 ┌─────────────────────────────┐
 │ Version (1 byte)            │
 ├─────────────────────────────┤
@@ -426,75 +801,185 @@ sequenceDiagram
 ├─────────────────────────────┤
 │ Payload (1250 bytes)        │
 └─────────────────────────────┘
-Total: ~1500 bytes (固定長)
-```
-
+</pre>
+<div class="packet-total">Total: <span class="highlight-green">~1500 bytes</span> (固定長)</div>
 </div>
 
 </div>
+
+</div>
+
+<style>
+.protocol-section, .impl-section {
+  background: rgba(96, 165, 250, 0.08);
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.protocol-header, .impl-header, .flow-title, .packet-title {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.protocol-item, .impl-item {
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  margin: 0.4rem 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  line-height: 1.5;
+}
+
+.perf-box-sphinx {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(52, 211, 153, 0.08));
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 0.875rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.perf-highlight {
+  color: #34d399;
+  font-weight: 800;
+  font-family: 'Fira Code', monospace;
+}
+
+.code-highlight {
+  background: rgba(167, 139, 250, 0.2);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.8rem;
+}
+
+.packet-structure {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.packet-pre {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: #a78bfa;
+  margin: 0;
+}
+
+.packet-total {
+  text-align: center;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.highlight-green {
+  color: #34d399;
+  font-weight: 800;
+}
+</style>
 
 ---
 layout: default
 ---
 
-# 工夫した点 ③
-## マルチパスQUICトランスポート
+# <span class="text-gradient">工夫した点 ③</span>
+## 🛰️ マルチパスQUICトランスポート
 
-<div class="grid grid-cols-2 gap-8 mt-4">
+<div class="grid grid-cols-2 gap-6 mt-3">
 
 <div>
 
-### マルチパス設計
+<div class="multipath-section">
+  <div class="section-header">
+    <carbon:network-3 class="inline-block mr-2 text-blue-400"/>
+    <span class="font-bold">マルチパス設計</span>
+  </div>
 
 <v-clicks>
 
-- **複数経路同時利用**: Wi-Fi + 4G/5G
-- **自動フェイルオーバー**: 100ms以内
-- **帯域幅集約**: 単一経路の2倍
-- **RTT測定**: 定期的なPing/Pong
+  <div class="feature-item">
+    <carbon:wifi class="inline-block mr-2 text-green-400"/>
+    <strong>複数経路同時利用</strong>
+  </div>
+  <div class="feature-item">
+    <carbon:restart class="inline-block mr-2 text-yellow-400"/>
+    <strong>自動フェイルオーバー</strong>
+  </div>
+  <div class="feature-item">
+    <carbon:chart-area class="inline-block mr-2 text-purple-400"/>
+    <strong>帯域幅集約</strong>
+  </div>
 
 </v-clicks>
+</div>
 
-### スケジューリング
+<div class="algo-section mt-4">
+  <div class="section-header">
+    <carbon:result class="inline-block mr-2 text-purple-400"/>
+    <span class="font-bold">スケジューリング</span>
+  </div>
 
 <v-clicks>
 
-**WeightedRTT Algorithm**
-
-$$
-weight_i = \frac{1}{RTT_i}
-$$
-
-低レイテンシの経路を優先的に選択
+  <div class="algo-box">
+    <div class="algo-title">WeightedRTT Algorithm</div>
+    <div class="algo-formula">
+      $$weight_i = \frac{1}{RTT_i}$$
+    </div>
+    <div class="algo-desc">
+      低レイテンシの経路を優先的に選択
+    </div>
+  </div>
 
 </v-clicks>
+</div>
 
-### 実測性能
-
-- 2経路スループット: **165 MB/s**
-- フェイルオーバー時間: **< 100ms**
-- RTT測定オーバーヘッド: < 1% CPU
+<div class="perf-metrics mt-4">
+  <div class="metric-header">
+    <carbon:dashboard class="inline-block mr-2 text-green-400"/>
+    <strong>実測性能</strong>
+  </div>
+  <div class="metric-grid">
+    <div>2経路スループット</div>
+    <div class="metric-value">165 MB/s</div>
+    <div>フェイルオーバー</div>
+    <div class="metric-value">&lt; 100ms</div>
+    <div>測定オーバーヘッド</div>
+    <div class="metric-value">&lt; 1% CPU</div>
+  </div>
+</div>
 
 </div>
 
 <div>
 
-### マルチパス動作
+<div class="diagram-title mb-3">
+  <carbon:flow class="inline-block mr-2 text-blue-400"/>
+  <strong>マルチパス動作</strong>
+</div>
 
-```mermaid
+```mermaid {scale: 0.5}
 graph LR
     subgraph "Client"
-        APP[Application]
-        MPM[Multipath Manager]
+        APP[📱 Application]
+        MPM[🔀 Multipath<br/>Manager]
     end
     
     subgraph "Paths"
-        P1[Path 1<br/>Wi-Fi]
-        P2[Path 2<br/>4G/5G]
+        P1[📡 Path 1<br/>Wi-Fi]
+        P2[📶 Path 2<br/>4G/5G]
     end
     
     subgraph "Server"
-        SRV[Server]
+        SRV[🖥️ Server]
     end
     
     APP --> MPM
@@ -503,311 +988,987 @@ graph LR
     P1 --> SRV
     P2 --> SRV
     
-    style P1 fill:#9f6,stroke:#333
-    style P2 fill:#fc6,stroke:#333
+    style P1 fill:#34d399,stroke:#10b981,stroke-width:3px,color:#fff
+    style P2 fill:#fbbf24,stroke:#f59e0b,stroke-width:3px,color:#fff
+    style APP fill:#60a5fa,stroke:#2563eb,stroke-width:3px,color:#fff
+    style MPM fill:#a78bfa,stroke:#7c3aed,stroke-width:3px,color:#fff
+    style SRV fill:#f472b6,stroke:#ec4899,stroke-width:3px,color:#fff
 ```
 
-### パケットヘッダ拡張
+<div class="code-title mt-6 mb-3">
+  <carbon:code class="inline-block mr-2 text-purple-400"/>
+  <strong>パケットヘッダ拡張</strong>
+</div>
 
+<div class="code-box">
 ```rust
 pub struct ExtendedHeader {
-    connection_id: ConnectionId,  // 12 bytes
-    frame_type: u8,                // 1 byte
-    path_id: u8,        // NEW! マルチパス識別
-    sequence: u16,                 // 2 bytes
-    length: u16,                   // 2 bytes
+    connection_id: ConnectionId, // 12 bytes
+    frame_type: u8,               // 1 byte
+    path_id: u8,    // ✨ NEW! マルチパス識別
+    sequence: u16,                // 2 bytes
+    length: u16,                  // 2 bytes
 }
 ```
+</div>
 
-<div class="text-xs mt-4 text-gray-400">
-nyx-transport/src/multipath.rs (450行)
+<div class="code-meta">
+  <carbon:document class="inline-block mr-1"/>
+  <code>nyx-transport/src/multipath.rs</code> · <strong>450行</strong>
 </div>
 
 </div>
 
 </div>
+
+<style>
+.multipath-section, .algo-section, .perf-metrics {
+  background: rgba(96, 165, 250, 0.08);
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.section-header, .diagram-title, .code-title {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.feature-item {
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  margin: 0.4rem 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.algo-box {
+  background: rgba(167, 139, 250, 0.1);
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.algo-title {
+  font-weight: 700;
+  color: #a78bfa;
+  margin-bottom: 0.5rem;
+  font-family: 'Fira Code', monospace;
+}
+
+.algo-formula {
+  text-align: center;
+  font-size: 1.25rem;
+  margin: 0.75rem 0;
+}
+
+.algo-desc {
+  font-size: 0.85rem;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.metric-header {
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+.metric-value {
+  color: #34d399;
+  font-weight: 800;
+  font-family: 'Fira Code', monospace;
+}
+
+.code-box {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.code-meta {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+}
+</style>
 
 ---
 layout: default
 ---
 
-# Performance Comparison
+# <span class="text-gradient">Performance Comparison</span>
+## 📊 NyxNet vs Tor
 
-<div class="grid grid-cols-2 gap-8 mt-4">
-
-<div>
-
-## レイテンシ比較
-
-実際のネットワーク環境での推定値
-
-| 環境 | NyxNet | Tor | 改善率 |
-|------|--------|-----|--------|
-| **LAN** | ~20ms | 1224ms | **60x** |
-| **Regional** | ~80ms | 1224ms | **15x** |
-| **Global** | ~250ms | 1224ms | **5x** |
-
-<div class="mt-4">
-
-```mermaid
-graph LR
-    A[Tor: 1224ms] -->|60x faster| B[NyxNet LAN: 20ms]
-    A -->|15x faster| C[NyxNet Regional: 80ms]
-    A -->|5x faster| D[NyxNet Global: 250ms]
-    
-    style B fill:#9f6
-    style C fill:#9f6
-    style D fill:#9f6
-    style A fill:#f96
-```
-
-</div>
-
-### 測定方法
-
-- **Tor**: 実際のTorネットワーク経由（実測）
-- **NyxNet**: 暗号化処理（実測）+ ネットワーク遅延（推定）
-
-</div>
+<div class="grid grid-cols-2 gap-6 mt-3">
 
 <div>
 
-## スループット比較
+<div class="perf-section">
+  <div class="perf-header">
+    <carbon:time class="inline-block mr-2 text-blue-400"/>
+    <span class="font-bold text-lg">レイテンシ比較</span>
+  </div>
+  <div class="perf-subtitle">実際のネットワーク環境での推定値</div>
 
-| 環境 | NyxNet | Tor |
-|------|--------|-----|
-| **暗号化のみ** | 100.74 MB/s | - |
-| **LAN** | ~80 MB/s | 39.3 MB/s |
-| **Regional** | ~50 MB/s | 39.3 MB/s |
+  <div class="comparison-table mt-4">
+    <div class="table-row header-row">
+      <div>環境</div><div>NyxNet</div><div>Tor</div><div>改善率</div>
+    </div>
+    <div class="table-row data-row highlight-row">
+      <div>🏢 LAN</div>
+      <div class="nyx-value">~20ms</div>
+      <div class="tor-value">1224ms</div>
+      <div class="improve-value">60x</div>
+    </div>
+    <div class="table-row data-row">
+      <div>🌐 Regional</div>
+      <div class="nyx-value">~80ms</div>
+      <div class="tor-value">1224ms</div>
+      <div class="improve-value">15x</div>
+    </div>
+    <div class="table-row data-row">
+      <div>🌍 Global</div>
+      <div class="nyx-value">~250ms</div>
+      <div class="tor-value">1224ms</div>
+      <div class="improve-value">5x</div>
+    </div>
+  </div>
 
-### なぜNyxNetが速いか
+  <div class="visual-comparison mt-4">
+    <div class="compare-bar tor-bar">
+      <span class="bar-label">Tor</span>
+      <div class="bar-fill tor-fill" style="width: 100%">1224ms</div>
+    </div>
+    <div class="compare-bar nyx-bar">
+      <span class="bar-label">NyxNet LAN</span>
+      <div class="bar-fill nyx-fill" style="width: 1.6%">20ms</div>
+    </div>
+  </div>
+
+  <div class="method-box mt-4">
+    <carbon:information class="inline-block mr-2 text-yellow-400"/>
+    <strong>測定方法</strong>
+    <ul class="method-list">
+      <li><strong>Tor</strong>: 実際のTorネットワーク経由（実測）</li>
+      <li><strong>NyxNet</strong>: 暗号化処理（実測）+ ネットワーク遅延（推定）</li>
+    </ul>
+  </div>
+
+</div>
+
+</div>
+
+<div>
+
+<div class="throughput-section">
+  <div class="perf-header">
+    <carbon:cloud-upload class="inline-block mr-2 text-green-400"/>
+    <span class="font-bold text-lg">スループット比較</span>
+  </div>
+
+  <div class="throughput-table mt-4">
+    <div class="table-row header-row">
+      <div>環境</div><div>NyxNet</div><div>Tor</div>
+    </div>
+    <div class="table-row data-row">
+      <div>⚡ 暗号化のみ</div>
+      <div class="nyx-value">100.74 MB/s</div>
+      <div class="tor-value">-</div>
+    </div>
+    <div class="table-row data-row highlight-row">
+      <div>🏢 LAN</div>
+      <div class="nyx-value">~80 MB/s</div>
+      <div class="tor-value">39.3 MB/s</div>
+    </div>
+    <div class="table-row data-row">
+      <div>🌐 Regional</div>
+      <div class="nyx-value">~50 MB/s</div>
+      <div class="tor-value">39.3 MB/s</div>
+    </div>
+  </div>
+
+  <div class="reason-box mt-4">
+    <div class="reason-title">
+      <carbon:lightning class="inline-block mr-2 text-yellow-400"/>
+      <strong>なぜNyxNetが速いか</strong>
+    </div>
 
 <v-clicks>
 
-1. **UDP vs TCP**
-   - Torは3-way handshake必要
-   - NyxNetは即座に送信開始
+    <div class="reason-item">
+      <span class="reason-number">1</span>
+      <div class="reason-content">
+        <strong>UDP vs TCP</strong>
+        <div class="reason-detail">Torは3-way handshake必要 → NyxNetは即座に送信開始</div>
+      </div>
+    </div>
 
-2. **暗号化方式**
-   - Tor: 3層の多重暗号化
-   - NyxNet: 最適化されたChaCha20Poly1305
+    <div class="reason-item">
+      <span class="reason-number">2</span>
+      <div class="reason-content">
+        <strong>暗号化方式</strong>
+        <div class="reason-detail">最適化されたChaCha20Poly1305</div>
+      </div>
+    </div>
 
-3. **トランスポート最適化**
-   - マルチパス（複数経路同時利用）
-   - 適応的FEC（パケットロス対策）
+    <div class="reason-item">
+      <span class="reason-number">3</span>
+      <div class="reason-content">
+        <strong>トランスポート最適化</strong>
+        <div class="reason-detail">マルチパス + 適応的FEC</div>
+      </div>
+    </div>
 
-4. **実装言語**
-   - Tor: C（メモリ管理オーバーヘッド）
-   - NyxNet: Rust（ゼロコスト抽象化）
+    <div class="reason-item">
+      <span class="reason-number">4</span>
+      <div class="reason-content">
+        <strong>実装言語</strong>
+        <div class="reason-detail">Rust（ゼロコスト抽象化）</div>
+      </div>
+    </div>
 
 </v-clicks>
 
+  </div>
+
+</div>
+
 </div>
 
 </div>
 
-<div class="text-center mt-4 text-xs text-gray-400">
-注: NyxNetの数値は暗号化処理の実測値とネットワーク遅延の合理的な推定値に基づく
+<div class="disclaimer">
+  <carbon:warning-alt class="inline-block mr-1"/>
+  注: NyxNetの数値は暗号化処理の実測値とネットワーク遅延の合理的な推定値に基づく
 </div>
+
+<style>
+.perf-section, .throughput-section {
+  background: rgba(96, 165, 250, 0.08);
+  padding: 1.25rem;
+  border-radius: 14px;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.perf-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.perf-subtitle {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-bottom: 0.5rem;
+}
+
+.comparison-table, .throughput-table {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 0.8fr;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.throughput-table .table-row {
+  grid-template-columns: 1.5fr 1fr 1fr;
+}
+
+.header-row {
+  background: rgba(96, 165, 250, 0.2);
+  font-weight: 700;
+}
+
+.data-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.highlight-row {
+  background: rgba(52, 211, 153, 0.08);
+}
+
+.nyx-value {
+  color: #34d399;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+}
+
+.tor-value {
+  color: #ef4444;
+  font-weight: 600;
+  font-family: 'Fira Code', monospace;
+}
+
+.improve-value {
+  color: #fbbf24;
+  font-weight: 800;
+  font-family: 'Fira Code', monospace;
+}
+
+.visual-comparison {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+.compare-bar {
+  margin: 0.5rem 0;
+}
+
+.bar-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.bar-fill {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+}
+
+.tor-fill {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.nyx-fill {
+  background: linear-gradient(90deg, #34d399, #10b981);
+}
+
+.method-box {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.method-list {
+  margin-top: 0.5rem;
+  margin-left: 1.5rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.reason-box {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+.reason-title {
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.reason-item {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.reason-number {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.reason-content {
+  flex: 1;
+  font-size: 0.8rem;
+}
+
+.reason-content strong {
+  display: block;
+  margin-bottom: 0.125rem;
+  color: #60a5fa;
+}
+
+.reason-detail {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.disclaimer {
+  text-align: center;
+  margin-top: 1.5rem;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+</style>
 
 ---
 layout: default
 ---
 
-# Technology Stack
+# <span class="text-gradient">Technology Stack</span>
+## ☁️ 技術スタックと品質保証
 
-<div class="grid grid-cols-2 gap-8 mt-4">
-
-<div>
-
-## プロジェクト統計
-
-<v-clicks>
-
-- **総コード行数**: 85,000+ 行
-- **プログラミング言語**: Rust (主), Go (プロキシ)
-- **モジュール数**: 12クレート
-- **テストケース**: 400+ 個
-  - ユニットテスト: 300+
-  - 統合テスト: 50+
-  - プロパティテスト: 30+
-  - ベンチマーク: 15+
-
-</v-clicks>
-
-## 主要技術
-
-<v-clicks>
-
-- **暗号**: ml-kem, x25519-dalek, chacha20poly1305
-- **非同期**: Tokio 1.37
-- **通信**: gRPC (tonic), UDP (socket2)
-- **形式検証**: TLA+ (15+ 仕様)
-- **CI/CD**: GitHub Actions (18 ワークフロー)
-
-</v-clicks>
-
-</div>
+<div class="grid grid-cols-2 gap-6 mt-3">
 
 <div>
 
-## モジュール構成
-
-```
-nyx-core          # 基本型・設定管理
-nyx-crypto        # 暗号プリミティブ (801行)
-nyx-transport     # QUICトランスポート
-nyx-mix           # Sphinxルーティング (650行)
-nyx-stream        # ストリーム管理
-nyx-fec           # Reed-Solomon FEC
-nyx-daemon        # gRPC制御プレーン
-nyx-control       # DHT・ゴシップ
-nyx-sdk           # クライアントSDK
-nyx-cli           # CLI管理ツール
-nyx-http-proxy    # SOCKS5/HTTP (Go)
-nyx-mobile-ffi    # iOS/Android FFI
-```
-
-## 品質保証
+<div class="stats-section">
+  <div class="stats-header">
+    <carbon:analytics class="inline-block mr-2 text-blue-400"/>
+    <span class="font-bold text-lg">プロジェクト統計</span>
+  </div>
 
 <v-clicks>
 
-- **メモリ安全**: `#![forbid(unsafe_code)]`
-- **カバレッジ**: 高いテストカバレッジ
-- **形式検証**: TLA+でプロトコル検証
-- **ファジング**: libFuzzer連続実行
-- **セキュリティ監査**: cargo-audit自動実行
+  <div class="stat-item-large">
+    <carbon:code class="stat-icon text-green-400"/>
+    <div class="stat-content">
+      <div class="stat-label">コード</div>
+      <div class="stat-value-large">85K+</div>
+    </div>
+  </div>
+
+  <div class="stat-item-large">
+    <carbon:cube class="stat-icon text-purple-400"/>
+    <div class="stat-content">
+      <div class="stat-label">モジュール</div>
+      <div class="stat-value-large">12</div>
+    </div>
+  </div>
+
+  <div class="stat-item-large">
+    <carbon:analytics class="stat-icon text-yellow-400"/>
+    <div class="stat-content">
+      <div class="stat-label">テスト</div>
+      <div class="stat-value-large">400+</div>
+    </div>
+  </div>
+
+</v-clicks>
+
+</div>
+
+<div class="tech-section mt-4">
+  <div class="tech-header">
+    <carbon:categories class="inline-block mr-2 text-green-400"/>
+    <span class="font-bold text-lg">主要技術</span>
+  </div>
+
+<v-clicks>
+
+  <div class="tech-category">
+    <carbon:locked class="inline-block mr-2 text-purple-400"/>
+    <strong>暗号:</strong> ML-KEM · X25519
+  </div>
+
+  <div class="tech-category">
+    <carbon:repeat class="inline-block mr-2 text-blue-400"/>
+    <strong>非同期:</strong> Tokio
+  </div>
+
+  <div class="tech-category">
+    <carbon:checkmark class="inline-block mr-2 text-yellow-400"/>
+    <strong>検証:</strong> TLA+
+  </div>
 
 </v-clicks>
 
 </div>
 
 </div>
+
+<div>
+
+<div class="modules-section">
+  <div class="modules-header">
+    <carbon:list class="inline-block mr-2 text-blue-400"/>
+    <span class="font-bold text-lg">モジュール構成</span>
+  </div>
+
+  <div class="modules-tree">
+```
+nyx-core        # 基本型
+nyx-crypto      # 暗号
+nyx-transport   # QUIC
+nyx-mix         # Sphinx
+nyx-stream      # ストリーム
+nyx-daemon      # gRPC
+nyx-sdk         # SDK
+nyx-cli         # CLI
+```
+  </div>
+</div>
+
+<div class="quality-section mt-4">
+  <div class="quality-header">
+    <carbon:security class="inline-block mr-2 text-red-400"/>
+    <span class="font-bold text-lg">品質保証</span>
+  </div>
+
+<v-clicks>
+
+  <div class="quality-item">
+    <carbon:locked class="quality-icon text-purple-400"/>
+    <div class="quality-content">
+      <strong>メモリ安全</strong>
+      <code class="quality-code">#![forbid(unsafe_code)]</code>
+    </div>
+  </div>
+
+  <div class="quality-item">
+    <carbon:rule class="quality-icon text-blue-400"/>
+    <div class="quality-content">
+      <strong>形式検証</strong>
+      <span class="quality-desc">TLA+</span>
+    </div>
+  </div>
+
+  <div class="quality-item">
+    <carbon:warning-hex class="quality-icon text-yellow-400"/>
+    <div class="quality-content">
+      <strong>ファジング</strong>
+      <span class="quality-desc">libFuzzer</span>
+    </div>
+  </div>
+
+</v-clicks>
+
+</div>
+
+</div>
+
+</div>
+
+<style>
+.stats-section, .tech-section, .modules-section, .quality-section {
+  background: rgba(96, 165, 250, 0.08);
+  padding: 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.25);
+}
+
+.stats-header, .tech-header, .modules-header, .quality-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.stat-item-large {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem;
+  margin: 0.3rem 0;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(167, 139, 250, 0.1));
+  border-radius: 10px;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.stat-icon {
+  font-size: 2rem;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-bottom: 0.125rem;
+}
+
+.stat-value-large {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: 'Fira Code', monospace;
+}
+
+.test-breakdown {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  padding: 0.875rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.test-list {
+  margin-top: 0.5rem;
+  margin-left: 1.75rem;
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.tech-category {
+  padding: 0.625rem 0.875rem;
+  margin: 0.4rem 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+}
+
+.modules-tree {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: 10px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.8rem;
+  line-height: 1.8;
+  overflow-x: auto;
+}
+
+.module-name {
+  color: #60a5fa;
+  font-weight: 700;
+}
+
+.module-desc {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.module-size {
+  color: #34d399;
+  font-weight: 600;
+}
+
+.module-lang {
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.quality-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem;
+  margin: 0.3rem 0;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.quality-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.quality-content {
+  flex: 1;
+}
+
+.quality-code {
+  background: rgba(167, 139, 250, 0.2);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.75rem;
+  margin-left: 0.5rem;
+}
+
+.quality-desc {
+  opacity: 0.8;
+  font-size: 0.8rem;
+  margin-left: 0.5rem;
+}
+</style>
 
 ---
 layout: default
 ---
 
-# 実装完成度
+# <span class="text-gradient">実装完成度</span>
+## ✅ Production Ready
 
-<div class="grid grid-cols-3 gap-4 mt-4">
+<div class="grid grid-cols-2 gap-4 mt-4">
 
 <div>
 
-## Core Features
-
-- ✅ ポスト量子暗号 (ML-KEM-768)
-- ✅ Sphinxオニオンルーティング
-- ✅ QUIC Transport
-- ✅ Forward Error Correction
-- ✅ gRPC API (20+ RPCs)
-- ✅ リプレイ攻撃保護
-
-## Advanced Features
-
-- ✅ マルチパスルーティング
-- ✅ カバートラフィック
-- ✅ NAT Traversal (ICE Lite)
-- ✅ 設定ホットリロード
-- ✅ 国際化 (i18n)
-
+<div class="feature-category">
+  <div class="category-header core-header">
+    <carbon:cube class="inline-block mr-2"/>
+    <strong>Core</strong>
+  </div>
+  <div class="feature-list">
+    <div class="feature-item-complete">✅ ML-KEM-768</div>
+    <div class="feature-item-complete">✅ Sphinx Routing</div>
+    <div class="feature-item-complete">✅ QUIC Transport</div>
+  </div>
 </div>
 
-<div>
-
-## Full Features
-
-- ✅ cMix統合 (VDF)
-- ✅ プラグインフレームワーク
-- ✅ Low Power Mode (モバイル)
-- ✅ OpenTelemetry統合
-- ✅ Kubernetes対応
-
-## Proxy Features
-
-- ✅ SOCKS5 Proxy (RFC 1928)
-- ✅ HTTP CONNECT
-- ✅ Pure Go TLS
-- ✅ ブラウザ統合
-
-## Platform Support
-
-- ✅ Linux / Windows / macOS
-- ✅ iOS / Android (FFI)
-- ✅ WebAssembly (WASM)
-- ✅ Docker / Kubernetes
+<div class="feature-category mt-3">
+  <div class="category-header advanced-header">
+    <carbon:rocket class="inline-block mr-2"/>
+    <strong>Advanced</strong>
+  </div>
+  <div class="feature-list">
+    <div class="feature-item-complete">✅ Multipath</div>
+    <div class="feature-item-complete">✅ cMix VDF</div>
+    <div class="feature-item-complete">✅ NAT Traversal</div>
+  </div>
+</div>
 
 </div>
 
 <div>
 
-## Documentation
+<div class="feature-category">
+  <div class="category-header platform-header">
+    <carbon:cloud class="inline-block mr-2"/>
+    <strong>Platform</strong>
+  </div>
+  <div class="feature-list">
+    <div class="feature-item-complete">✅ Linux/Win/Mac</div>
+    <div class="feature-item-complete">✅ iOS/Android</div>
+    <div class="feature-item-complete">✅ WASM/Docker</div>
+  </div>
+</div>
 
-- ✅ API Reference
-- ✅ Architecture Docs
-- ✅ Developer Guide
-- ✅ Deployment Guide
-- ✅ Performance Report
-
-## Monitoring
-
-- ✅ Prometheus メトリクス
-- ✅ OpenTelemetry トレーシング
-- ✅ Grafana ダッシュボード
-- ✅ ヘルスチェック
-
-## Development Tools
-
-- ✅ Makefile ビルドタスク
-- ✅ Helm Charts
-- ✅ Docker Compose
-- ✅ CI/CD パイプライン
-
+<div class="feature-category mt-3">
+  <div class="category-header monitor-header">
+    <carbon:analytics class="inline-block mr-2"/>
+    <strong>Monitoring</strong>
+  </div>
+  <div class="feature-list">
+    <div class="feature-item-complete">✅ Prometheus</div>
+    <div class="feature-item-complete">✅ OpenTelemetry</div>
+    <div class="feature-item-complete">✅ Grafana</div>
+  </div>
 </div>
 
 </div>
 
-<div class="text-center mt-8">
-<h2 class="text-2xl font-bold text-green-400">✅ Production Ready</h2>
-<p class="text-sm text-gray-400">すべての主要機能を実装・テスト完了</p>
 </div>
+
+<style>
+.feature-category {
+  background: rgba(96, 165, 250, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.category-header {
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+}
+
+.core-header {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.3), rgba(124, 58, 237, 0.2));
+}
+
+.advanced-header {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.3), rgba(37, 99, 235, 0.2));
+}
+
+.full-header {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.3), rgba(16, 185, 129, 0.2));
+}
+
+.proxy-header {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.2));
+}
+
+.platform-header {
+  background: linear-gradient(135deg, rgba(244, 114, 182, 0.3), rgba(236, 72, 153, 0.2));
+}
+
+.docs-header {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.3), rgba(37, 99, 235, 0.2));
+}
+
+.monitor-header {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.3), rgba(16, 185, 129, 0.2));
+}
+
+.dev-header {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.3), rgba(234, 88, 12, 0.2));
+}
+
+.feature-list {
+  padding: 0.75rem 1rem;
+}
+
+.feature-item-complete {
+  font-size: 0.8rem;
+  padding: 0.375rem 0;
+  line-height: 1.5;
+  opacity: 0.95;
+}
+
+.production-banner {
+  margin-top: 2rem;
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(16, 185, 129, 0.1));
+  border: 2px solid rgba(52, 211, 153, 0.4);
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: 0 8px 24px rgba(52, 211, 153, 0.15);
+}
+
+.banner-icon {
+  font-size: 3rem;
+  color: #34d399;
+  flex-shrink: 0;
+}
+
+.banner-content {
+  flex: 1;
+  text-align: center;
+}
+
+.banner-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #34d399, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.25rem;
+}
+
+.banner-subtitle {
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+</style>
 
 ---
 layout: image-right
 image: https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800
 ---
 
-# Use Cases
+# <span class="text-gradient">Use Cases</span>
+## 🎯 誰がどう使うか
 
-<div class="mt-8">
-
-## 誰がどう使うか
+<div class="mt-4">
 
 <v-clicks>
 
-### 🎤 ジャーナリスト
-- 情報源の保護
-- 検閲回避
-- 安全な通信路
+<div class="usecase-box journalist">
+  <div class="usecase-icon">🎤</div>
+  <div class="usecase-content">
+    <div class="usecase-title">ジャーナリスト</div>
+    <div class="usecase-items">
+      <div>✓ 情報源保護・検閲回避</div>
+    </div>
+  </div>
+</div>
 
-### 🏢 企業
-- 量子時代への備え
-- 機密通信の保護
-- グローバル拠点間通信
+<div class="usecase-box enterprise">
+  <div class="usecase-icon">🏢</div>
+  <div class="usecase-content">
+    <div class="usecase-title">企業</div>
+    <div class="usecase-items">
+      <div>✓ 量子耐性・機密通信</div>
+    </div>
+  </div>
+</div>
 
-### 👥 一般市民
-- プライバシー保護
-- 政府監視からの自由
-- 安全なメッセージング
-
-### 💻 開発者
-- SDK提供（Rust, WASM, FFI）
-- オープンソース
-- 拡張可能アーキテクチャ
+<div class="usecase-box developer">
+  <div class="usecase-icon">💻</div>
+  <div class="usecase-content">
+    <div class="usecase-title">開発者</div>
+    <div class="usecase-items">
+      <div>✓ SDK (Rust/WASM/FFI)</div>
+    </div>
+  </div>
+</div>
 
 </v-clicks>
 
 </div>
+
+<style>
+.usecase-box {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.6rem;
+  margin: 0.5rem 0;
+  background: rgba(96, 165, 250, 0.08);
+  border-left: 4px solid rgba(96, 165, 250, 0.5);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.usecase-box:hover {
+  background: rgba(96, 165, 250, 0.15);
+  transform: translateX(6px);
+  border-left-color: rgba(96, 165, 250, 1);
+}
+
+.usecase-box.journalist { border-left-color: rgba(244, 114, 182, 0.5); }
+.usecase-box.enterprise { border-left-color: rgba(96, 165, 250, 0.5); }
+.usecase-box.citizen { border-left-color: rgba(52, 211, 153, 0.5); }
+.usecase-box.developer { border-left-color: rgba(167, 139, 250, 0.5); }
+
+.usecase-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.usecase-content {
+  flex: 1;
+}
+
+.usecase-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: #60a5fa;
+}
+
+.usecase-items {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  opacity: 0.9;
+}
+</style>
 
 ---
 layout: default
@@ -815,77 +1976,45 @@ layout: default
 
 # Demo Screenshots
 
-<div class="grid grid-cols-2 gap-8 mt-4">
+<div class="grid grid-cols-2 gap-4 mt-3">
 
 <div>
 
-### CLI - ノード起動
+### CLI
 
 ```bash
 $ nyx-daemon --config nyx.toml
-
-[INFO] NyxNet Daemon v1.0.0
-[INFO] Loading configuration...
-[INFO] Initializing crypto module...
 [INFO] ML-KEM-768 keypair generated
-[INFO] Starting gRPC server on [::]:50051
-[INFO] DHT bootstrap complete (42 peers)
-[INFO] Mix network ready (3-hop routing)
-✅ Daemon started successfully
+[INFO] gRPC on [::]:50051
+[INFO] DHT: 42 peers
+✅ Started
 ```
-
-### CLI - ステータス確認
 
 ```bash
 $ nyx-cli status
-
-NyxNet Status
-─────────────────────────────────
-Daemon:        Running
-Peers:         42 active
-Streams:       5 active
-Mix Routes:    3-hop configured
-Crypto:        ML-KEM-768 + X25519
-Transport:     QUIC Multipath (2 paths)
-Memory:        48.2 MB
-CPU:           2.1%
+Daemon:   Running
+Peers:    42 active
+Crypto:   ML-KEM-768
+Memory:   48MB
 ```
 
 </div>
 
 <div>
 
-### ブラウザ統合
+### Proxy & Monitoring
 
 ```bash
-# SOCKS5プロキシ起動
 $ nyx-http-proxy --socks-port 9050
-
-[INFO] SOCKS5 proxy started on :9050
-[INFO] HTTP CONNECT proxy on :8080
-[INFO] Connected to nyx-daemon
-✅ Ready for connections
+[INFO] SOCKS5 on :9050
+✅ Ready
 ```
-
-**Firefox設定**:
-- SOCKS Host: `localhost`
-- Port: `9050`
-- SOCKS v5を選択
-- DNS over SOCKSを有効化
-
-### Grafana Dashboard
 
 ```bash
-$ docker-compose -f docker-compose.grafana.yml up
-
-✅ Prometheus: http://localhost:9090
-✅ Grafana: http://localhost:3000
-✅ Jaeger: http://localhost:16686
+$ docker-compose -f grafana.yml up
+✅ Prometheus: :9090
+✅ Grafana: :3000
 ```
-
-- リアルタイムメトリクス
-- トレーシング可視化
-- パフォーマンス監視
 
 </div>
 
@@ -895,53 +2024,180 @@ $ docker-compose -f docker-compose.grafana.yml up
 layout: default
 ---
 
-# 競合比較
+# <span class="text-gradient">競合比較</span>
+## 📊 NyxNet vs 他の匿名化技術
 
-<div class="mt-4">
+<div class="comparison-wrapper">
 
-| 機能 | Tor | VPN | I2P | **NyxNet** |
-|------|-----|-----|-----|-----------|
-| **ポスト量子暗号** | ❌ | ❌ | ❌ | ✅ ML-KEM-768 |
-| **匿名性** | ✅ 3-hop | ❌ 単一サーバー | ✅ Garlic | ✅ Sphinx 3-hop |
-| **レイテンシ (LAN)** | 1224ms | ~10ms | ~500ms | **~20ms** |
-| **スループット** | 39 MB/s | 100+ MB/s | ~20 MB/s | **80 MB/s** |
-| **マルチパス** | ❌ | ❌ | ❌ | ✅ |
-| **モバイル最適化** | ⚠️ 限定的 | ✅ | ❌ | ✅ Low Power Mode |
-| **形式検証** | ⚠️ 部分的 | ❌ | ❌ | ✅ TLA+ |
-| **実装言語** | C (unsafe) | 様々 | Java | **Rust (safe)** |
-| **トランスポート** | TCP | TCP/UDP | TCP/UDP | **QUIC/UDP** |
-| **FEC** | ❌ | ❌ | ❌ | ✅ Reed-Solomon |
+  <div class="comparison-table-modern">
+    <div class="table-header-row">
+      <div class="header-cell">機能</div>
+      <div class="header-cell">Tor</div>
+      <div class="header-cell">VPN</div>
+      <div class="header-cell">I2P</div>
+      <div class="header-cell nyx-header">NyxNet</div>
+    </div>
+    
+    <div class="table-data-row">
+      <div class="feature-cell"><carbon:locked class="inline mr-1"/>量子耐性</div>
+      <div class="value-cell bad">❌</div>
+      <div class="value-cell bad">❌</div>
+      <div class="value-cell bad">❌</div>
+      <div class="value-cell good"><strong>✅</strong></div>
+    </div>
+    
+    <div class="table-data-row highlight">
+      <div class="feature-cell"><carbon:time class="inline mr-1"/>レイテンシ</div>
+      <div class="value-cell bad">1224ms</div>
+      <div class="value-cell medium">10ms</div>
+      <div class="value-cell medium">500ms</div>
+      <div class="value-cell excellent"><strong>20ms</strong></div>
+    </div>
+    
+    <div class="table-data-row">
+      <div class="feature-cell"><carbon:cloud-upload class="inline mr-1"/>速度</div>
+      <div class="value-cell medium">39 MB/s</div>
+      <div class="value-cell good">100+ MB/s</div>
+      <div class="value-cell bad">20 MB/s</div>
+      <div class="value-cell good"><strong>80 MB/s</strong></div>
+    </div>
+    
+    <div class="table-data-row">
+      <div class="feature-cell"><carbon:network-3 class="inline mr-1"/>マルチパス</div>
+      <div class="value-cell bad">❌</div>
+      <div class="value-cell bad">❌</div>
+      <div class="value-cell bad">❌</div>
+      <div class="value-cell good"><strong>✅</strong></div>
+    </div>
+  </div>
 
 </div>
 
-<div class="mt-8">
+<style>
+.comparison-wrapper {
+  margin-top: 1rem;
+}
 
-## NyxNetの独自性
+.comparison-table-modern {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+}
 
-<div class="grid grid-cols-3 gap-4 mt-4">
+.table-header-row, .table-data-row {
+  display: grid;
+  grid-template-columns: 1.8fr repeat(4, 1fr);
+  gap: 0.4rem;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.75rem;
+}
 
-<v-clicks>
+.table-header-row {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.3), rgba(167, 139, 250, 0.3));
+  font-weight: 700;
+}
 
-<div class="p-4 bg-green-900 bg-opacity-30 rounded">
-<h3 class="font-bold">🛡️ 量子時代への備え</h3>
-<p class="text-sm">NIST標準化済みML-KEM-768を採用した唯一の匿名化ネットワーク</p>
-</div>
+.nyx-header {
+  color: #34d399;
+  font-size: 0.95rem;
+}
 
-<div class="p-4 bg-blue-900 bg-opacity-30 rounded">
-<h3 class="font-bold">⚡ 実用的な性能</h3>
-<p class="text-sm">Torの5-60倍高速、リアルタイム通信が可能</p>
-</div>
+.table-data-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
 
-<div class="p-4 bg-purple-900 bg-opacity-30 rounded">
-<h3 class="font-bold">🔬 形式検証済み</h3>
-<p class="text-sm">TLA+による数学的正当性の証明</p>
-</div>
+.table-data-row.highlight {
+  background: rgba(52, 211, 153, 0.1);
+}
 
-</v-clicks>
+.feature-cell {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
 
-</div>
+.value-cell {
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fira Code', monospace;
+}
 
-</div>
+.value-cell.good { color: #34d399; }
+.value-cell.bad { color: #ef4444; opacity: 0.7; }
+.value-cell.medium { color: #fbbf24; }
+.value-cell.excellent { 
+  color: #34d399; 
+  font-weight: 800;
+  background: rgba(52, 211, 153, 0.15);
+  border-radius: 6px;
+  padding: 0.25rem;
+}
+
+.uniqueness-section {
+  margin-top: 2.5rem;
+  padding: 1.5rem;
+  background: rgba(96, 165, 250, 0.05);
+  border-radius: 14px;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.uniqueness-title {
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.uniqueness-card {
+  padding: 1.5rem;
+  border-radius: 14px;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.uniqueness-card.quantum {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.15), rgba(16, 185, 129, 0.1));
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.uniqueness-card.performance {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(37, 99, 235, 0.1));
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.uniqueness-card.verification {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.15), rgba(124, 58, 237, 0.1));
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
+.uniqueness-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.card-icon {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+}
+
+.card-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: #60a5fa;
+}
+
+.card-desc {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+</style>
 
 ---
 layout: default
@@ -949,31 +2205,28 @@ layout: default
 
 # 開発で得た学び
 
-<div class="grid grid-cols-2 gap-8 mt-4">
+<div class="grid grid-cols-2 gap-4 mt-3">
 
 <div>
 
-## 技術的チャレンジ
+## 💡 技術的チャレンジ
 
 <v-clicks>
 
 ### 1. 非同期Rust
-- Tokioの深い理解
-- ライフタイム管理
-- エラー伝搬パターン
-- 並行処理の最適化
+- **Tokio Runtime**: 複雑な並行処理の設計
+- **ライフタイム管理**: 所有権システムとの格闘
+- **パフォーマンス**: ゼロコスト抽象化の実現
 
-### 2. 暗号理論の実装
-- NIST標準の理解
-- タイミング攻撃対策
-- 定数時間比較
-- メモリゼロ化
+### 2. 暗号実装
+- **ML-KEM-768**: NIST標準の正確な実装
+- **タイミング攻撃**: 定数時間アルゴリズム
+- **メモリ安全**: `zeroize`による秘密鍵の確実な消去
 
-### 3. ネットワークプロトコル設計
-- Sphinxパケットフォーマット
-- マルチパススケジューリング
-- リプレイ攻撃保護
-- NAT Traversal
+### 3. プロトコル設計
+- **Sphinx**: 玉ねぎルーティングの実装
+- **マルチパス**: 経路選択アルゴリズム
+- **FEC**: Forward Error Correctionによる信頼性向上
 
 </v-clicks>
 
@@ -981,30 +2234,25 @@ layout: default
 
 <div>
 
-## プロジェクト管理
+## 🎯 プロジェクト管理
 
 <v-clicks>
 
-### 大規模プロジェクトの設計
-- 12モジュールの依存関係管理
-- APIの一貫性維持
-- バージョニング戦略
+### 大規模アーキテクチャ
+- **モジュール分割**: 12クレート構成
+- **依存関係**: 循環依存の回避
+- **API設計**: 一貫性と使いやすさの両立
 
-### テスト駆動開発
-- 400以上のテストケース
-- プロパティベーステスト
-- ベンチマーク継続実行
+### 品質保証
+- **テスト戦略**: Unit/Integration/E2E
+- **TDD実践**: 400+テストケース
+- **Property Testing**: `proptest`による網羅的検証
+- **Fuzzing**: `libFuzzer`で脆弱性発見
 
-### ドキュメント整備
-- 包括的なREADME
-- API Reference
-- Architecture Document
-- 形式仕様（TLA+）
-
-### CI/CDパイプライン
-- 18のGitHub Actionsワークフロー
-- 自動テスト・リント・監査
-- マルチプラットフォームビルド
+### ドキュメンテーション
+- **コード文書**: `rustdoc`による自動生成
+- **設計書**: Architecture Decision Records
+- **形式仕様**: TLA+による正当性証明
 
 </v-clicks>
 
@@ -1018,32 +2266,33 @@ layout: default
 
 # 今後の展望
 
-<div class="grid grid-cols-2 gap-8 mt-4">
+<div class="grid grid-cols-2 gap-4 mt-3">
 
 <div>
 
-## Version 2.0 の計画
+## 🚀 Version 2.0 の計画
 
 <v-clicks>
 
-### 技術的改善
+### 暗号技術の強化
 
-- **量子署名**: SPHINCS+の統合
-- **より高速なFEC**: Fountain Codesの実装
-- **P2P DHT**: Kademliaの完全実装
-- **ブリッジノード**: 検閲対策の強化
+- **SPHINCS+**: 量子耐性デジタル署名
+- **Dilithium**: より高速な署名方式
+- **Hybrid署名**: 移行期の互換性確保
 
-### スケーラビリティ
+### ネットワーク機能
 
-- **ノード自動発見**: mDNS/DNS-SD
-- **負荷分散**: より高度なルーティング
-- **キャッシング**: コンテンツ配信最適化
+- **Fountain Codes**: より効率的なFEC
+- **Kademlia DHT**: 完全分散型ノード発見
+- **ブリッジノード**: 検閲回避の強化
+- **リレー選択**: 機械学習による最適化
 
-### ユーザビリティ
+### ユーザー体験
 
-- **GUIアプリ**: Tauri製デスクトップアプリ
-- **モバイルアプリ**: React Native統合
-- **ブラウザ拡張**: Chrome/Firefox Extension
+- **Tauri GUI**: クロスプラットフォームアプリ
+- **モバイルアプリ**: iOS/Android ネイティブ
+- **ブラウザ拡張**: ワンクリック接続
+- **設定ウィザード**: 初心者向けガイド
 
 </v-clicks>
 
@@ -1051,34 +2300,30 @@ layout: default
 
 <div>
 
-## 実世界への展開
+## 🌍 実世界への展開
 
 <v-clicks>
 
 ### セキュリティ監査
 
-- 外部専門家によるコードレビュー
-- ペネトレーションテスト
-- 暗号実装の検証
+- **専門家レビュー**: Trail of Bits等に依頼
+- **暗号実装**: 数学的正当性の検証
+- **ペネトレーション**: 実環境での攻撃シミュレーション
+- **継続監視**: 脆弱性の早期発見
 
 ### コミュニティ構築
 
-- オープンソース公開
-- ドキュメント整備
-- コントリビューター募集
-- バグバウンティプログラム
-
-### 実証実験
-
-- テストネットワーク構築
-- 大学・研究機関との協力
-- 実環境でのパフォーマンス測定
+- **オープンソース**: GitHub完全公開
+- **開発者支援**: Discord/Matrix コミュニティ
+- **バグバウンティ**: 報奨金プログラム
+- **ドキュメント**: 多言語対応
 
 ### 社会実装
 
-- NGO・ジャーナリスト団体との連携
-- 検閲国での利用支援
-- プライバシー教育活動
+- **NGO連携**: ジャーナリスト・活動家支援
+- **教育活動**: プライバシー啓発
+- **実証実験**: 大学・研究機関との協力
+- **検閲国支援**: 安全な通信手段の提供
 
 </v-clicks>
 
@@ -1091,32 +2336,42 @@ layout: center
 class: text-center
 ---
 
-# まとめ
+# <span class="text-gradient-rainbow">まとめ</span>
 
-<div class="mt-8">
+<div class="mt-4">
 
-## 3つの核心メッセージ
-
-<div class="grid grid-cols-3 gap-8 mt-12">
+<div class="grid grid-cols-3 gap-6 mt-6 px-6">
 
 <v-clicks>
 
-<div class="p-6 bg-red-900 bg-opacity-30 rounded-lg">
-<h3 class="text-2xl font-bold mb-4">🛡️</h3>
-<h3 class="font-bold text-xl mb-2">世界最高水準</h3>
-<p class="text-sm">NIST標準化済みML-KEM-768<br/>量子耐性匿名通信</p>
+<div class="summary-card quantum-card">
+  <div class="card-emoji">🛡️</div>
+  <div class="card-title">量子耐性</div>
+  <div class="card-divider"></div>
+  <div class="card-content">
+    NIST<br/>
+    <strong class="highlight-text">ML-KEM-768</strong>
+  </div>
 </div>
 
-<div class="p-6 bg-green-900 bg-opacity-30 rounded-lg">
-<h3 class="text-2xl font-bold mb-4">⚡</h3>
-<h3 class="font-bold text-xl mb-2">実用的な性能</h3>
-<p class="text-sm">Torの5-60倍高速<br/>リアルタイム通信可能</p>
+<div class="summary-card performance-card">
+  <div class="card-emoji">⚡</div>
+  <div class="card-title">高速</div>
+  <div class="card-divider"></div>
+  <div class="card-content">
+    Tor<strong class="highlight-text">5-60倍</strong><br/>
+    リアルタイム対応
+  </div>
 </div>
 
-<div class="p-6 bg-blue-900 bg-opacity-30 rounded-lg">
-<h3 class="text-2xl font-bold mb-4">🔬</h3>
-<h3 class="font-bold text-xl mb-2">本格的な実装</h3>
-<p class="text-sm">85,000行のコード<br/>形式検証・400テスト</p>
+<div class="summary-card implementation-card">
+  <div class="card-emoji">🔬</div>
+  <div class="card-title">本格実装</div>
+  <div class="card-divider"></div>
+  <div class="card-content">
+    <strong class="highlight-text">85K行</strong><br/>
+    TLA+検証済
+  </div>
 </div>
 
 </v-clicks>
@@ -1125,61 +2380,453 @@ class: text-center
 
 </div>
 
+<style>
+.text-gradient-rainbow {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 3rem;
+  font-weight: 800;
+}
+
+.summary-subtitle {
+  font-size: 1.25rem;
+  opacity: 0.8;
+  margin-top: 1rem;
+}
+
+.summary-card {
+  position: relative;
+  padding: 2.5rem 2rem;
+  border-radius: 20px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  border: 2px solid transparent;
+}
+
+.summary-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  filter: blur(20px);
+  opacity: 0;
+  transition: opacity 0.4s;
+  z-index: -1;
+}
+
+.summary-card:hover::before {
+  opacity: 0.5;
+}
+
+.quantum-card {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(16, 185, 129, 0.1));
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+.performance-card {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.2), rgba(37, 99, 235, 0.1));
+  border-color: rgba(96, 165, 250, 0.4);
+}
+
+.implementation-card {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(124, 58, 237, 0.1));
+  border-color: rgba(167, 139, 250, 0.4);
+}
+
+.summary-card:hover {
+  transform: translateY(-12px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.quantum-card:hover { border-color: rgba(52, 211, 153, 0.8); }
+.performance-card:hover { border-color: rgba(96, 165, 250, 0.8); }
+.implementation-card:hover { border-color: rgba(167, 139, 250, 0.8); }
+
+.card-glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+
+.summary-card:hover .card-glow {
+  opacity: 0.3;
+}
+
+.quantum-glow {
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.8) 0%, transparent 70%);
+}
+
+.performance-glow {
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.8) 0%, transparent 70%);
+}
+
+.implementation-glow {
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.8) 0%, transparent 70%);
+}
+
+.card-emoji {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.card-title {
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #fff, rgba(255, 255, 255, 0.7));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.card-divider {
+  width: 60px;
+  height: 3px;
+  margin: 0.5rem auto;
+  border-radius: 2px;
+}
+
+.quantum-card .card-divider { background: linear-gradient(90deg, #34d399, #10b981); }
+.performance-card .card-divider { background: linear-gradient(90deg, #60a5fa, #2563eb); }
+.implementation-card .card-divider { background: linear-gradient(90deg, #a78bfa, #7c3aed); }
+
+.card-content {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  opacity: 0.95;
+}
+
+.highlight-text {
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+.quantum-card .highlight-text { color: #34d399; }
+.performance-card .highlight-text { color: #60a5fa; }
+.implementation-card .highlight-text { color: #a78bfa; }
+</style>
+
 ---
 layout: center
 class: text-center
 ---
 
-# NyxNet
-## Post-Quantum Anonymous Network
+<div class="final-slide">
 
-<div class="mt-12 grid grid-cols-2 gap-8">
+<div class="final-logo">
+  <div class="logo-glow"></div>
+  <div class="logo-text">NyxNet</div>
+  <div class="logo-subtitle">Post-Quantum Anonymous Network</div>
+</div>
 
-<div>
+<div class="grid grid-cols-2 gap-12 mt-12 px-12">
 
-### 📚 Documentation
+<div class="info-section">
 
-- **GitHub**: github.com/SeleniaProject/NyxNet
-- **Docs**: docs.selenia-project.org
-- **Spec**: Nyx Protocol v1.0
+  <div class="section-title">
+    <carbon:document class="inline-block mr-2 text-blue-400"/>
+    <strong>Links</strong>
+  </div>
+  
+  <div class="link-list">
+    <div class="link-item">
+      <carbon:logo-github class="inline-block mr-2 text-white"/>
+      github.com/SeleniaProject/NyxNet
+    </div>
+  </div>
 
-### 🔗 Links
+  <div class="qr-section">
+    <div class="qr-wrapper">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com/SeleniaProject/NyxNet" alt="QR Code" class="qr-code">
+    </div>
+  </div>
 
-```
-https://github.com/SeleniaProject/NyxNet
-```
+</div>
 
-<div class="mt-4">
-<img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com/SeleniaProject/NyxNet" alt="QR Code" class="inline-block">
+<div class="stats-section">
+
+  <div class="section-title">
+    <carbon:chart-line class="inline-block mr-2 text-green-400"/>
+    <strong>Stats</strong>
+  </div>
+  
+  <div class="stat-grid">
+    <div class="stat-box">
+      <carbon:code class="stat-icon text-blue-400"/>
+      <div class="stat-value">85K+</div>
+      <div class="stat-label">Code</div>
+    </div>
+    <div class="stat-box">
+      <carbon:cube class="stat-icon text-purple-400"/>
+      <div class="stat-value">12</div>
+      <div class="stat-label">Modules</div>
+    </div>
+    <div class="stat-box">
+      <carbon:analytics class="stat-icon text-green-400"/>
+      <div class="stat-value">400+</div>
+      <div class="stat-label">Tests</div>
+    </div>
+  </div>
+
+  <div class="tech-tags">
+    <span class="tech-tag rust">Rust</span>
+    <span class="tech-tag go">Go</span>
+    <span class="tech-tag tla">TLA+</span>
+  </div>
+
 </div>
 
 </div>
 
-<div>
-
-### 📊 Project Stats
-
-- **Code**: 85,000+ lines
-- **Modules**: 12 crates
-- **Tests**: 400+ cases
-- **Docs**: Comprehensive
-- **License**: MIT OR Apache-2.0
-
-### 🛠️ Tech Stack
-
-- Rust (主要実装)
-- Go (HTTPプロキシ)
-- TLA+ (形式検証)
-- Docker/Kubernetes
-
+<div class="thank-you">
+  <div class="thank-text">Thank you!</div>
+  <div class="questions-text">
+    <carbon:help class="inline-block mr-2"/>
+    Questions?
+  </div>
 </div>
 
 </div>
 
-<div class="mt-12">
-<p class="text-2xl font-bold">Thank you!</p>
-<p class="text-sm text-gray-400 mt-2">Questions?</p>
-</div>
+<style>
+.final-slide {
+  padding: 2rem 0;
+}
+
+.final-logo {
+  position: relative;
+  padding: 2rem 0;
+}
+
+.logo-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.3) 0%, transparent 70%);
+  animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+.logo-text {
+  font-size: 3rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.3rem;
+  position: relative;
+  z-index: 1;
+}
+
+.logo-subtitle {
+  font-size: 1rem;
+  opacity: 0.8;
+  font-weight: 600;
+}
+
+.info-section, .stats-section {
+  text-align: left;
+  background: rgba(96, 165, 250, 0.05);
+  padding: 1.2rem;
+  border-radius: 16px;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.section-title {
+  font-size: 1.15rem;
+  margin-bottom: 0.6rem;
+  display: flex;
+  align-items: center;
+  color: #60a5fa;
+}
+
+.link-list {
+  margin-bottom: 1.5rem;
+}
+
+.link-item {
+  padding: 0.625rem 0;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.qr-section {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+}
+
+.qr-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.qr-wrapper {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 10px;
+  margin: 0 auto;
+  width: fit-content;
+}
+
+.qr-code {
+  display: block;
+  width: 150px;
+  height: 150px;
+}
+
+.qr-link {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  font-family: 'Fira Code', monospace;
+  opacity: 0.8;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-box {
+  text-align: center;
+  padding: 1.25rem 0.75rem;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(167, 139, 250, 0.1));
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  transition: all 0.3s ease;
+}
+
+.stat-box:hover {
+  transform: translateY(-4px);
+  border-color: rgba(96, 165, 250, 0.6);
+}
+
+.stat-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-family: 'Fira Code', monospace;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+.tech-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tech-tag {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 2px solid;
+  transition: all 0.3s ease;
+}
+
+.tech-tag:hover {
+  transform: translateY(-2px);
+}
+
+.tech-tag.rust {
+  background: rgba(222, 165, 132, 0.2);
+  border-color: rgba(222, 165, 132, 0.5);
+  color: #dea584;
+}
+
+.tech-tag.go {
+  background: rgba(0, 173, 216, 0.2);
+  border-color: rgba(0, 173, 216, 0.5);
+  color: #00add8;
+}
+
+.tech-tag.tla {
+  background: rgba(167, 139, 250, 0.2);
+  border-color: rgba(167, 139, 250, 0.5);
+  color: #a78bfa;
+}
+
+.tech-tag.docker, .tech-tag.k8s {
+  background: rgba(96, 165, 250, 0.2);
+  border-color: rgba(96, 165, 250, 0.5);
+  color: #60a5fa;
+}
+
+.license-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.625rem 1.25rem;
+  background: rgba(52, 211, 153, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #34d399;
+}
+
+.thank-you {
+  margin-top: 3rem;
+  padding: 2rem;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(167, 139, 250, 0.1));
+  border-radius: 20px;
+  border: 2px solid rgba(96, 165, 250, 0.3);
+}
+
+.thank-text {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.75rem;
+}
+
+.questions-text {
+  font-size: 1.15rem;
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+</style>
 
 ---
 layout: end

@@ -39,6 +39,8 @@ experimental-all = [
  simd = ["dep:simd-json"]
  telemetry = []
 os_sandbox = ["nyx-core/os_sandbox"]
+# Test-only feature for config gossip module tests
+config-gossip-tests = []
 
 [dependencies]
 async-trait = "0.1"

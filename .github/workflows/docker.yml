@@ -1,0 +1,227 @@
+name: Docker Build and Publish
+
+# Build and publish nyx-daemon Docker images to GitHub Container Registry
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'nyx-daemon/**'
+      - 'nyx-core/**'
+      - 'nyx-stream/**'
+      - 'nyx-crypto/**'
+      - 'nyx-transport/**'
+      - 'nyx-mix/**'
+      - 'nyx-fec/**'
+      - 'nyx-telemetry/**'
+      - 'nyx-control/**'
+      - 'Dockerfile'
+      - '.github/workflows/docker.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'nyx-daemon/**'
+      - 'Dockerfile'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/nyx-daemon
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ==================== Build and Test Docker Image ====================
+  
+  build-and-test:
+    name: Build and Test Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            RUST_VERSION=1.75
+      
+      - name: Test Docker image
+        run: |
+          # Get the first tag for testing
+          TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          
+          # Run container in background
+          docker run -d --name nyx-daemon-test \
+            -e RUST_LOG=info \
+            $TAG
+          
+          # Wait for startup
+          sleep 5
+          
+          # Check if container is running
+          docker ps | grep nyx-daemon-test
+          
+          # Check logs
+          docker logs nyx-daemon-test
+          
+          # Verify process is running
+          docker exec nyx-daemon-test ps aux | grep nyx-daemon
+          
+          # Stop container
+          docker stop nyx-daemon-test
+          docker rm nyx-daemon-test
+          
+          echo "✅ Docker image test passed"
+      
+      - name: Scan for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.tags }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ==================== Multi-architecture Build and Push ====================
+  
+  build-and-push:
+    name: Build and Push Multi-arch Images
+    runs-on: ubuntu-latest
+    needs: [build-and-test]
+    if: github.event_name != 'pull_request'
+    timeout-minutes: 90
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Build and push multi-arch images
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            RUST_VERSION=1.75
+      
+      - name: Create release summary
+        run: |
+          echo "## 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Tags" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Platforms" >> $GITHUB_STEP_SUMMARY
+          echo "- linux/amd64" >> $GITHUB_STEP_SUMMARY
+          echo "- linux/arm64" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull Command" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # ==================== Update Documentation ====================
+  
+  update-docs:
+    name: Update Documentation
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Update Docker instructions
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          
+          # Update README with latest Docker image info
+          sed -i "s|ghcr.io/.*/nyx-daemon:.*|ghcr.io/${{ github.repository }}/nyx-daemon:${VERSION}|g" README.md
+          
+          echo "Updated Docker image version in README"
+      
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add README.md
+          git commit -m "docs: Update Docker image version to ${{ github.event.release.tag_name }}" || echo "No changes to commit"
+          git push || echo "No changes to push"

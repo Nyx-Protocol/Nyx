@@ -192,19 +192,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - goos: linux
+          - target: linux-amd64
+            goos: linux
             goarch: amd64
             artifact_name: nyx-http-proxy-linux-amd64
-          - goos: linux
+          - target: linux-arm64
+            goos: linux
             goarch: arm64
             artifact_name: nyx-http-proxy-linux-arm64
-          - goos: darwin
+          - target: darwin-amd64
+            goos: darwin
             goarch: amd64
             artifact_name: nyx-http-proxy-darwin-amd64
-          - goos: darwin
+          - target: darwin-arm64
+            goos: darwin
             goarch: arm64
             artifact_name: nyx-http-proxy-darwin-arm64
-          - goos: windows
+          - target: windows-amd64
+            goos: windows
             goarch: amd64
             artifact_name: nyx-http-proxy-windows-amd64
     defaults:
@@ -340,6 +345,7 @@ jobs:
     name: Release Success
     runs-on: ubuntu-latest
     needs:
+      - prepare-release
       - create-release
     steps:
       - name: Generate release summary
