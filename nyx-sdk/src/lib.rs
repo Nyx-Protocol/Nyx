@@ -3,16 +3,22 @@
 
 //! # Nyx SDK
 //!
-//! Application-facing SDK for building applications that integrate with the Nyx anonymity network.
+//! Production-ready SDK for building applications that integrate with the Nyx anonymity network.
 //!
 //! ## Features
 //!
 //! - **Pure Rust**: Zero C/C++ dependencies, fully memory-safe
 //! - **Async/Await**: Built on Tokio for high-performance async I/O
 //! - **Type-Safe**: Strong type system prevents common errors
-//! - **Rich Errors**: Comprehensive error handling with context
+//! - **Rich Errors**: Comprehensive error handling with context and categorization
 //! - **Stream API**: High-level stream abstraction with statistics and metadata
 //! - **Daemon Client**: JSON-RPC client for daemon control
+//! - **Connection Management**: Connection pooling, health checks, and auto-reconnection
+//! - **Middleware System**: Pluggable request/response interceptors
+//! - **Rate Limiting**: Token bucket rate limiter with configurable policies
+//! - **Retry Logic**: Automatic retry with exponential backoff
+//! - **Configuration**: Environment-based and profile-based configuration
+//! - **Telemetry**: Built-in metrics collection and structured logging
 //! - **Cross-Platform**: Works on Unix and Windows
 //!
 //! ## Quick Start
