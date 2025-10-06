@@ -21,6 +21,7 @@
 (****************************************************************************)
 
 EXTENDS Naturals, Sequences, FiniteSets, TLC
+LOCAL INSTANCE NyxHelpers
 
 CONSTANTS 
     Nodes,              \* Set of all nodes in the network
