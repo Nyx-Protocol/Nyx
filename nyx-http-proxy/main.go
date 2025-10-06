@@ -151,6 +151,11 @@ func (ps *ProxyServer) Start(ctx context.Context) error {
 	<-ps.shutdown
 	ps.wg.Wait()
 
+	// Close Mix Bridge connection
+	if ps.mixBridge != nil {
+		ps.mixBridge.Close()
+	}
+
 	return nil
 }
 
