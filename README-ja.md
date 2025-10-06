@@ -5,6 +5,11 @@
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![Go](https://img.shields.io/badge/go-1.21%2B-00ADD8.svg)](https://go.dev/)
 
+[![Main CI](https://github.com/SeleniaProject/NyxNet/actions/workflows/main.yml/badge.svg)](https://github.com/SeleniaProject/NyxNet/actions/workflows/main.yml)
+[![Security Audit](https://github.com/SeleniaProject/NyxNet/actions/workflows/security.yml/badge.svg)](https://github.com/SeleniaProject/NyxNet/actions/workflows/security.yml)
+[![Formal Verification](https://github.com/SeleniaProject/NyxNet/actions/workflows/formal-verification.yml/badge.svg)](https://github.com/SeleniaProject/NyxNet/actions/workflows/formal-verification.yml)
+[![Coverage](https://github.com/SeleniaProject/NyxNet/actions/workflows/coverage.yml/badge.svg)](https://github.com/SeleniaProject/NyxNet/actions/workflows/coverage.yml)
+
 **NyxNet** は、ピュアRustで書かれたプライバシーファースト、ポスト量子セキュアなネットワークスタックです。量子耐性暗号を組み込んだミックスネットワークアーキテクチャを使用して、匿名通信を提供します。量子コンピュータの脅威時代に対応した設計となっています。
 
 [English README is here](README.md)

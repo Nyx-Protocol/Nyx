@@ -5,6 +5,11 @@
 [![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
 [![Go](https://img.shields.io/badge/go-1.21%2B-00ADD8.svg)](https://go.dev/)
 
+[![Main CI](https://github.com/SeleniaProject/NyxNet/actions/workflows/main.yml/badge.svg)](https://github.com/SeleniaProject/NyxNet/actions/workflows/main.yml)
+[![Security Audit](https://github.com/SeleniaProject/NyxNet/actions/workflows/security.yml/badge.svg)](https://github.com/SeleniaProject/NyxNet/actions/workflows/security.yml)
+[![Formal Verification](https://github.com/SeleniaProject/NyxNet/actions/workflows/formal-verification.yml/badge.svg)](https://github.com/SeleniaProject/NyxNet/actions/workflows/formal-verification.yml)
+[![Coverage](https://github.com/SeleniaProject/NyxNet/actions/workflows/coverage.yml/badge.svg)](https://github.com/SeleniaProject/NyxNet/actions/workflows/coverage.yml)
+
 **NyxNet** is a privacy-first, post-quantum secure network stack written in pure Rust. It provides anonymous communication using mix network architecture with built-in quantum-resistant cryptography, designed for the era of quantum computing threats.
 
 [日本語版 README はこちら](README-ja.md)
