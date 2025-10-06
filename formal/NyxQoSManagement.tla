@@ -1,4 +1,5 @@
 ---- MODULE NyxQoSManagement ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Quality of Service Management                            *)
 (*                                                                          *)
