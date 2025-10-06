@@ -89,10 +89,15 @@ XOR_Combine(packets) ==
     IF packets = {} THEN <<>> 
     ELSE CHOOSE result \in Seq(Nat) : TRUE
 
-\* Reconstruct packets from FEC
-ReconstructPackets(coded_packets, lost_indices) ==
-    IF coded_packets = {} THEN <<>>
-    ELSE CHOOSE result \in Seq(Seq(Nat)) : TRUE
+\* Select subset for FEC encoding
+SelectSubset(data_packets, index) ==
+    IF index > Len(data_packets) THEN {}
+    ELSE {i \in 1..Len(data_packets) : (i % (index + 1)) = 0}
+
+\* Reconstruct packets from FEC (simplified)
+ReconstructPackets(received_packets, fec_packets, missing_count) ==
+    IF missing_count = 0 THEN received_packets
+    ELSE CHOOSE result \in Seq(Seq(Nat)) : Len(result) = missing_count
 
 \* Sort by offset (for fragment reassembly)
 SortByOffset(fragments) == fragments
@@ -111,12 +116,6 @@ QoSPriority(qos_class) ==
       [] qos_class = "BULK" -> 2
       [] qos_class = "BACKGROUND" -> 1
       [] OTHER -> 0
-
-\* Select next hop based on routing table
-SelectNextHop(packet, routing_table) ==
-    IF packet.dest \in DOMAIN routing_table
-    THEN routing_table[packet.dest]
-    ELSE CHOOSE n \in Nodes : TRUE
 
 
 
@@ -160,6 +159,12 @@ LinkStructure == [
 
 \* Network topology as adjacency relation
 IsAdjacent(n1, n2) == \E l \in Links : l.source = n1 /\ l.dest = n2
+
+\* Select next hop based on routing table (moved after CONSTANTS)
+SelectNextHop(packet, routing_table) ==
+    IF packet.dest \in DOMAIN routing_table
+    THEN routing_table[packet.dest]
+    ELSE CHOOSE n \in Nodes : TRUE
 
 \* Path: sequence of nodes
 ValidPath(path) ==
