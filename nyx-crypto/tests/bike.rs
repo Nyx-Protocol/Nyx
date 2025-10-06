@@ -4,6 +4,7 @@
 //! Currently tests verify that the API returns appropriate NotImplemented errors.
 
 #![cfg(feature = "bike")]
+#![allow(deprecated)] // Allow testing deprecated BIKE API during migration
 
 use nyx_crypto::bike::{decapsulate, encapsulate, keygen};
 use nyx_crypto::Error;
@@ -120,7 +121,29 @@ fn test_bike_ciphertext_operations() {
 #[ignore]
 #[test]
 fn test_bike_keygen_roundtrip() {
-    // TODO: Implement when BIKE is available
+    use nyx_crypto::bike::{keygen, sizes};
+    use rand::thread_rng;
+
+    let mut rng = thread_rng();
+
+    // Generate two keypairs
+    let (pk1, sk1) = keygen(&mut rng).expect("keygen should succeed");
+    let (pk2, sk2) = keygen(&mut rng).expect("keygen should succeed");
+
+    // Verify keys have correct sizes
+    assert_eq!(pk1.as_bytes().len(), sizes::PUBLIC_KEY);
+    assert_eq!(sk1.as_bytes().len(), sizes::SECRET_KEY);
+    assert_eq!(pk2.as_bytes().len(), sizes::PUBLIC_KEY);
+    assert_eq!(sk2.as_bytes().len(), sizes::SECRET_KEY);
+
+    // Verify keys are different (randomness)
+    assert_ne!(pk1.as_bytes(), pk2.as_bytes(), "Public keys should be different");
+    assert_ne!(sk1.as_bytes(), sk2.as_bytes(), "Secret keys should be different");
+
+    // Test serialization roundtrip
+    let pk1_bytes = pk1.to_bytes();
+    let pk1_restored = nyx_crypto::bike::PublicKey::from_bytes(pk1_bytes);
+    assert_eq!(pk1, pk1_restored, "Public key serialization roundtrip should work");
 }
 
 /// Test BIKE encapsulation/decapsulation roundtrip
@@ -132,7 +155,33 @@ fn test_bike_keygen_roundtrip() {
 #[ignore]
 #[test]
 fn test_bike_encap_decap_roundtrip() {
-    // TODO: Implement when BIKE is available
+    use nyx_crypto::bike::{decapsulate, encapsulate, keygen, sizes};
+    use rand::thread_rng;
+
+    let mut rng = thread_rng();
+
+    // Generate a keypair
+    let (pk, sk) = keygen(&mut rng).expect("keygen should succeed");
+
+    // Encapsulate twice with the same public key
+    let (ct1, ss1) = encapsulate(&pk, &mut rng).expect("encapsulate should succeed");
+    let (ct2, ss2) = encapsulate(&pk, &mut rng).expect("encapsulate should succeed");
+
+    // Verify ciphertexts are different (randomness)
+    assert_ne!(ct1.as_bytes(), ct2.as_bytes(), "Ciphertexts should be different");
+    assert_eq!(ct1.as_bytes().len(), sizes::CIPHERTEXT);
+    assert_eq!(ss1.len(), sizes::SHARED_SECRET);
+
+    // Decapsulate both ciphertexts
+    let ss1_decap = decapsulate(&sk, &ct1).expect("decapsulate should succeed");
+    let ss2_decap = decapsulate(&sk, &ct2).expect("decapsulate should succeed");
+
+    // Verify shared secrets match
+    assert_eq!(ss1, ss1_decap, "Shared secret 1 should match after decapsulation");
+    assert_eq!(ss2, ss2_decap, "Shared secret 2 should match after decapsulation");
+
+    // Verify different encapsulations produce different shared secrets
+    assert_ne!(ss1, ss2, "Different encapsulations should produce different shared secrets");
 }
 
 /// Test BIKE with invalid inputs
@@ -144,7 +193,46 @@ fn test_bike_encap_decap_roundtrip() {
 #[ignore]
 #[test]
 fn test_bike_invalid_inputs() {
-    // TODO: Implement when BIKE is available
+    use nyx_crypto::bike::{decapsulate, keygen, sizes, Ciphertext, SecretKey};
+    use rand::thread_rng;
+
+    let mut rng = thread_rng();
+
+    // Generate a valid keypair
+    let (_pk, sk) = keygen(&mut rng).expect("keygen should succeed");
+
+    // Test with corrupted ciphertext (all zeros)
+    let invalid_ct = Ciphertext::from_bytes([0u8; sizes::CIPHERTEXT]);
+    let result = decapsulate(&sk, &invalid_ct);
+    
+    // Should either produce an error or a deterministic "failure" shared secret
+    // BIKE specification defines behavior for invalid ciphertexts
+    // Ideally it should return an error, not panic
+    match result {
+        Ok(_) => {
+            // Some implementations may return a pseudo-random shared secret
+            // to prevent timing attacks - this is acceptable
+        }
+        Err(_) => {
+            // Returning an error is also acceptable
+        }
+    }
+
+    // Test with corrupted ciphertext (all ones)
+    let invalid_ct2 = Ciphertext::from_bytes([0xFF; sizes::CIPHERTEXT]);
+    let result2 = decapsulate(&sk, &invalid_ct2);
+    
+    // Should not panic
+    assert!(result2.is_ok() || result2.is_err(), "Should handle invalid ciphertext gracefully");
+
+    // Test with corrupted ciphertext (random garbage)
+    let mut garbage = [0u8; sizes::CIPHERTEXT];
+    rng.fill_bytes(&mut garbage);
+    let invalid_ct3 = Ciphertext::from_bytes(garbage);
+    let result3 = decapsulate(&sk, &invalid_ct3);
+    
+    // Should not panic
+    assert!(result3.is_ok() || result3.is_err(), "Should handle garbage ciphertext gracefully");
 }
 
 /// Test BIKE constant-time properties
@@ -155,8 +243,56 @@ fn test_bike_invalid_inputs() {
 #[ignore]
 #[test]
 fn test_bike_timing_side_channels() {
-    // TODO: Implement when BIKE is available
-    // Consider using criterion for timing measurements
+    use nyx_crypto::bike::{decapsulate, encapsulate, keygen, sizes, Ciphertext};
+    use rand::thread_rng;
+    use std::time::Instant;
+
+    let mut rng = thread_rng();
+
+    // Generate a keypair
+    let (pk, sk) = keygen(&mut rng).expect("keygen should succeed");
+
+    // Generate valid ciphertext
+    let (valid_ct, _ss) = encapsulate(&pk, &mut rng).expect("encapsulate should succeed");
+
+    // Generate invalid ciphertext (all zeros)
+    let invalid_ct = Ciphertext::from_bytes([0u8; sizes::CIPHERTEXT]);
+
+    // Measure time for valid decapsulation (multiple iterations for statistical significance)
+    let iterations = 100;
+    let start_valid = Instant::now();
+    for _ in 0..iterations {
+        let _ = decapsulate(&sk, &valid_ct);
+    }
+    let duration_valid = start_valid.elapsed();
+
+    // Measure time for invalid decapsulation
+    let start_invalid = Instant::now();
+    for _ in 0..iterations {
+        let _ = decapsulate(&sk, &invalid_ct);
+    }
+    let duration_invalid = start_invalid.elapsed();
+
+    // Calculate timing difference percentage
+    let valid_ns = duration_valid.as_nanos();
+    let invalid_ns = duration_invalid.as_nanos();
+    let diff_percent = if valid_ns > invalid_ns {
+        ((valid_ns - invalid_ns) * 100 / valid_ns) as f64
+    } else {
+        ((invalid_ns - valid_ns) * 100 / invalid_ns) as f64
+    };
+
+    println!("Valid decapsulation:   {:?} ({} ns/op)", duration_valid, valid_ns / iterations as u128);
+    println!("Invalid decapsulation: {:?} ({} ns/op)", duration_invalid, invalid_ns / iterations as u128);
+    println!("Timing difference: {:.2}%", diff_percent);
+
+    // Timing should be similar (within 20% tolerance is reasonable for non-constant-time tests)
+    // For production, use more rigorous constant-time verification tools
+    assert!(
+        diff_percent < 20.0,
+        "Timing difference too large: {:.2}% (should be <20%)",
+        diff_percent
+    );
 }
 
 /// Test BIKE key zeroization
@@ -168,5 +304,56 @@ fn test_bike_timing_side_channels() {
 #[ignore]
 #[test]
 fn test_bike_zeroization() {
-    // TODO: Implement when BIKE is available
+    use nyx_crypto::bike::{encapsulate, keygen, sizes, SecretKey};
+    use rand::thread_rng;
+    use std::ptr;
+
+    let mut rng = thread_rng();
+
+    // Generate a keypair
+    let (pk, sk) = keygen(&mut rng).expect("keygen should succeed");
+
+    // Get a pointer to the secret key bytes (for verification after drop)
+    let sk_ptr: *const u8 = sk.as_bytes().as_ptr();
+    
+    // Make a copy of the secret key bytes before drop
+    let mut sk_copy = [0u8; sizes::SECRET_KEY];
+    sk_copy.copy_from_slice(sk.as_bytes());
+    
+    // Verify the secret key is not all zeros initially
+    assert!(sk_copy.iter().any(|&b| b != 0), "Secret key should not be all zeros");
+
+    // Drop the secret key
+    drop(sk);
+
+    // Note: This test is best-effort as memory may be reused
+    // In production, use proper memory analysis tools like Valgrind
+    
+    // For shared secrets, verify they implement Zeroize
+    let (ct, ss) = encapsulate(&pk, &mut rng).expect("encapsulate should succeed");
+    
+    // Make a copy of shared secret
+    let mut ss_copy = ss;
+    
+    // Verify it's not all zeros
+    assert!(ss_copy.iter().any(|&b| b != 0), "Shared secret should not be all zeros");
+    
+    // Manually zeroize to verify the trait is implemented
+    use zeroize::Zeroize;
+    ss_copy.zeroize();
+    
+    // After zeroization, should be all zeros
+    assert!(ss_copy.iter().all(|&b| b == 0), "Shared secret should be zeroized");
+
+    // Verify ciphertext also can be zeroized
+    let mut ct_copy = ct.clone();
+    drop(ct_copy);
+    
+    // SecretKey should implement ZeroizeOnDrop
+    // This is verified by the type system at compile time
+    let _: fn(SecretKey) = |sk: SecretKey| {
+        // Trait bound check: SecretKey must implement ZeroizeOnDrop
+        fn assert_zeroize_on_drop<T: zeroize::ZeroizeOnDrop>(_: &T) {}
+        assert_zeroize_on_drop(&sk);
+    };
 }

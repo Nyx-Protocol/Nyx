@@ -22,6 +22,18 @@ use thiserror::Error;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 
+/// Ed25519 signature byte length as defined in RFC 8032
+/// This is a fixed constant for all Ed25519 signatures
+const ED25519_SIGNATURE_LENGTH: usize = 64;
+
+/// DHT topic key for configuration gossip protocol
+/// All configuration updates are published/subscribed under this key
+const CONFIG_GOSSIP_TOPIC: &[u8] = b"nyx/config/gossip";
+
+/// Initial configuration version number for new deployments
+/// Monotonically incremented for each configuration update
+const INITIAL_CONFIG_VERSION: u64 = 1;
+
 /// Configuration gossip errors
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ConfigGossipError {
@@ -78,35 +90,64 @@ impl VectorClock {
         }
     }
 
-    /// Check if this clock happens-before the other
+    /// Check if this clock happens-before the other using Lamport's causality relation
     ///
-    /// Returns:
+    /// This implements the standard vector clock comparison algorithm:
+    /// - VC1 < VC2 (happens-before): ∀i(VC1[i] ≤ VC2[i]) ∧ ∃j(VC1[j] < VC2[j])
+    /// - VC1 > VC2 (happens-after): ∀i(VC1[i] ≥ VC2[i]) ∧ ∃j(VC1[j] > VC2[j])
+    /// - Otherwise: concurrent (no causal relationship)
+    ///
+    /// # Returns
     /// - `Some(true)` if self < other (all components ≤, at least one <)
-    /// - `Some(false)` if self > other
-    /// - `None` if concurrent (neither < nor >)
+    /// - `Some(false)` if self > other (all components ≥, at least one >)
+    /// - `None` if concurrent (neither < nor >, implies conflicting updates)
+    ///
+    /// # Algorithm Complexity
+    /// Time: O(n) where n = |nodes in both clocks|
+    /// Space: O(n) for collecting unique node IDs
     pub fn happens_before(&self, other: &VectorClock) -> Option<bool> {
-        let mut less = false;
-        let mut greater = false;
+        #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+        enum Ordering {
+            AllEqual,         // All components equal so far
+            StrictlyLess,     // Self < Other (some less, none greater)
+            StrictlyGreater,  // Self > Other (some greater, none less)
+            Concurrent,       // Incomparable (both less and greater exist)
+        }
 
-        // Collect all node IDs from both clocks
+        // Collect union of all node IDs from both vector clocks
+        // This ensures we compare all dimensions, treating missing entries as 0
         let mut all_nodes = self.clocks.keys().collect::<std::collections::HashSet<_>>();
         all_nodes.extend(other.clocks.keys());
 
-        for node in all_nodes {
+        // Determine causality by comparing all components pairwise
+        let causality = all_nodes.iter().fold(Ordering::AllEqual, |state, &node| {
             let self_val = self.clocks.get(node).copied().unwrap_or(0);
             let other_val = other.clocks.get(node).copied().unwrap_or(0);
 
-            if self_val < other_val {
-                less = true;
-            } else if self_val > other_val {
-                greater = true;
+            match (state, self_val.cmp(&other_val)) {
+                // Early termination: if already concurrent, stay concurrent
+                (Ordering::Concurrent, _) => Ordering::Concurrent,
+                
+                // Equal component maintains current ordering state
+                (current, std::cmp::Ordering::Equal) => current,
+                
+                // Found less component: check compatibility with current state
+                (Ordering::AllEqual, std::cmp::Ordering::Less) => Ordering::StrictlyLess,
+                (Ordering::StrictlyLess, std::cmp::Ordering::Less) => Ordering::StrictlyLess,
+                (Ordering::StrictlyGreater, std::cmp::Ordering::Less) => Ordering::Concurrent,
+                
+                // Found greater component: check compatibility with current state
+                (Ordering::AllEqual, std::cmp::Ordering::Greater) => Ordering::StrictlyGreater,
+                (Ordering::StrictlyGreater, std::cmp::Ordering::Greater) => Ordering::StrictlyGreater,
+                (Ordering::StrictlyLess, std::cmp::Ordering::Greater) => Ordering::Concurrent,
             }
-        }
+        });
 
-        match (less, greater) {
-            (true, false) => Some(true),  // self < other
-            (false, true) => Some(false), // self > other
-            _ => None,                    // concurrent or equal
+        // Map internal ordering to standard Option<bool> causality result
+        match causality {
+            Ordering::StrictlyLess => Some(true),     // self happens-before other
+            Ordering::StrictlyGreater => Some(false), // other happens-before self
+            Ordering::AllEqual | Ordering::Concurrent => None, // no causal order
         }
     }
 
@@ -217,11 +258,12 @@ impl SignedConfig {
             &self.originator,
         );
 
-        // Parse signature from stored bytes (must be exactly 64 bytes)
-        if self.signature.len() != 64 {
+        // Parse signature from stored bytes (RFC 8032: Ed25519 signatures are exactly 64 bytes)
+        if self.signature.len() != ED25519_SIGNATURE_LENGTH {
             warn!(
-                "Invalid signature length: {} bytes (expected 64) for config version {}",
+                "SECURITY: Invalid Ed25519 signature length: {} bytes (expected {}) for config version {}",
                 self.signature.len(),
+                ED25519_SIGNATURE_LENGTH,
                 self.version
             );
             return Err(ConfigGossipError::InvalidSignature {
@@ -229,7 +271,7 @@ impl SignedConfig {
             });
         }
 
-        let mut sig_bytes = [0u8; 64];
+        let mut sig_bytes = [0u8; ED25519_SIGNATURE_LENGTH];
         sig_bytes.copy_from_slice(&self.signature);
         let signature = Signature::from_bytes(&sig_bytes);
 
@@ -447,7 +489,7 @@ impl ConfigGossipManager {
             current_config: Arc::new(RwLock::new(None)),
             dht_storage,
             conflict_resolution: ConflictResolution::LastWriterWins,
-            topic_key: StorageKey::from_bytes(b"nyx/config/gossip"),
+            topic_key: StorageKey::from_bytes(CONFIG_GOSSIP_TOPIC),
             stats: Arc::new(RwLock::new(GossipStats::default())),
             signing_key,
             known_keys: Arc::new(RwLock::new(HashMap::new())),
@@ -494,11 +536,13 @@ impl ConfigGossipManager {
     /// * `Err(ConfigGossipError)` - Validation or storage failure
     pub async fn publish_config(&self, content: Vec<u8>) -> Result<SignedConfig, ConfigGossipError> {
         // Get current version and vector clock
+        // If no prior config exists, start with version 1 and empty vector clock
+        // Otherwise, increment version and clone existing vector clock for causality tracking
         let (next_version, mut vector_clock) = {
             let current = self.current_config.read().await;
             match &*current {
                 Some(cfg) => (cfg.version + 1, cfg.vector_clock.clone()),
-                None => (1, VectorClock::new()),
+                None => (INITIAL_CONFIG_VERSION, VectorClock::new()),
             }
         };
 

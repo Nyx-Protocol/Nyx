@@ -273,6 +273,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(deprecated)] // Allow testing deprecated BIKE API during migration to ML-KEM-768
     fn test_bike_not_implemented() {
         let mut rng = rand::thread_rng();
 
