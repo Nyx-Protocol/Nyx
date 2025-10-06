@@ -15,7 +15,7 @@ fn test_info_with_no_daemon_fails_gracefully() -> Result<(), Box<dyn std::error:
         "100",
         "info",
     ]);
-    
+
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("error"));
@@ -32,7 +32,7 @@ fn test_reload_config_with_invalid_endpoint() -> Result<(), Box<dyn std::error::
         "100",
         "reload-config",
     ]);
-    
+
     cmd.assert().failure();
     Ok(())
 }
@@ -52,7 +52,7 @@ fn test_update_config_with_invalid_json() -> Result<(), Box<dyn std::error::Erro
     let tmp_dir = TempDir::new()?;
     let invalid_json_path = tmp_dir.path().join("invalid.json");
     std::fs::write(&invalid_json_path, "{ this is not valid json }")?;
-    
+
     let mut cmd = Command::cargo_bin("nyx-cli")?;
     cmd.args([
         "--endpoint",
@@ -63,7 +63,7 @@ fn test_update_config_with_invalid_json() -> Result<(), Box<dyn std::error::Erro
         "--file",
         invalid_json_path.to_str().unwrap(),
     ]);
-    
+
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("invalid JSON"));
@@ -82,7 +82,7 @@ fn test_update_config_with_missing_file() -> Result<(), Box<dyn std::error::Erro
         "--file",
         "/nonexistent/path/to/config.json",
     ]);
-    
+
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("failed to read file"));
@@ -93,7 +93,7 @@ fn test_update_config_with_missing_file() -> Result<(), Box<dyn std::error::Erro
 fn test_prometheus_get_https_rejected() -> Result<(), Box<dyn std::error::Error>> {
     let mut cmd = Command::cargo_bin("nyx-cli")?;
     cmd.args(["prometheus-get", "https://example.com/metrics"]);
-    
+
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("https is not supported"));
