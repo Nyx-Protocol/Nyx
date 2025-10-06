@@ -1,5 +1,4 @@
 ---- MODULE NyxEdgeComputing ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Edge Computing and Fog Networking                        *)
 (*                                                                          *)
@@ -19,12 +18,12 @@ LOCAL INSTANCE NyxHelpers
 (*   - Edge analytics and data processing                                  *)
 (*   - Edge-to-cloud collaboration                                         *)
 (****************************************************************************)
-
-EXTENDS Naturals, Sequences, FiniteSets, Integers, Reals, TLC
-
 (****************************************************************************)
 (* Edge Node Architecture                                                   *)
 (****************************************************************************)
+
+EXTENDS Naturals, Sequences, FiniteSets, Integers, Reals, TLC
+LOCAL INSTANCE NyxHelpers
 
 \* Edge node types
 EdgeNodeType == {
@@ -120,9 +119,6 @@ EdgeService == [
     state : {"DEPLOYING", "RUNNING", "PAUSED", "MIGRATING", "TERMINATED"}
 ]
 
-(****************************************************************************)
-(* Computation Offloading                                                   *)
-(****************************************************************************)
 
 \* Computation task
 ComputationTask == [
@@ -255,9 +251,6 @@ ComputeCloudExecutionCost(task, cloud) ==
         time_ms |-> total_time * 1000,
         monetary |-> monetary]
 
-(****************************************************************************)
-(* Mobile Edge Computing (MEC)                                              *)
-(****************************************************************************)
 
 \* MEC platform
 MECPlatform == [
@@ -388,9 +381,6 @@ ProcessMECTraffic(platform, packet) ==
                DropPacket(packet)
        ELSE ForwardPacket(packet)  \* Default action
 
-(****************************************************************************)
-(* Cloudlet Management                                                      *)
-(****************************************************************************)
 
 \* Cloudlet
 Cloudlet == [
@@ -473,9 +463,6 @@ MigrateVMBetweenCloudlets(source_cloudlet, target_cloudlet, vm_id) ==
        ]
        ELSE [source |-> source_cloudlet, target |-> target_cloudlet]
 
-(****************************************************************************)
-(* Edge Caching and Content Delivery                                        *)
-(****************************************************************************)
 
 \* Edge cache
 EdgeCache == [
@@ -586,9 +573,6 @@ CooperativeCacheLookup(content_id, local_cache, neighbor_caches) ==
                     source |-> "NEIGHBOR"]
               ELSE [hit |-> FALSE]
 
-(****************************************************************************)
-(* Fog Computing Hierarchy                                                  *)
-(****************************************************************************)
 
 \* Fog hierarchy
 FogHierarchy == [
@@ -645,9 +629,6 @@ EvaluateLayerForTask(task, layer, hierarchy) ==
         total_score == 0.4 * latency_score + 0.4 * resource_score + 0.2 * locality_score
     IN total_score
 
-(****************************************************************************)
-(* Edge Analytics and Data Processing                                       *)
-(****************************************************************************)
 
 \* Edge analytics pipeline
 EdgeAnalyticsPipeline == [
@@ -686,9 +667,6 @@ ProcessDataAtEdge(pipeline, data_batch) ==
         result == ProcessStages(data_batch, pipeline.stages)
     IN result
 
-(****************************************************************************)
-(* Edge Computing Properties and Invariants                                 *)
-(****************************************************************************)
 
 \* Offloading optimality
 THEOREM OffloadingOptimality ==
