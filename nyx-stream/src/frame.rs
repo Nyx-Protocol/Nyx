@@ -146,7 +146,8 @@ impl Frame {
             capabilities,
         };
 
-        let mut payload = Vec::new();
+        // Pre-allocate for typical public key size (32 bytes X25519 + overhead)
+        let mut payload = Vec::with_capacity(128);
         ciborium::ser::into_writer(&crypto_payload, &mut payload).map_err(Error::CborSer)?;
 
         Ok(Self {
@@ -169,7 +170,8 @@ impl Frame {
     pub fn crypto_server_hello(stream_id: u32, seq: u64, ciphertext: Vec<u8>) -> Result<Self> {
         let crypto_payload = CryptoPayload::ServerHello { ciphertext };
 
-        let mut payload = Vec::new();
+        // Pre-allocate for hybrid ciphertext (typically 100-200 bytes)
+        let mut payload = Vec::with_capacity(256);
         ciborium::ser::into_writer(&crypto_payload, &mut payload).map_err(Error::CborSer)?;
 
         Ok(Self {
@@ -191,7 +193,8 @@ impl Frame {
     pub fn crypto_client_finished(stream_id: u32, seq: u64) -> Result<Self> {
         let crypto_payload = CryptoPayload::ClientFinished;
 
-        let mut payload = Vec::new();
+        // Pre-allocate for small confirmation payload
+        let mut payload = Vec::with_capacity(32);
         ciborium::ser::into_writer(&crypto_payload, &mut payload).map_err(Error::CborSer)?;
 
         Ok(Self {
