@@ -340,9 +340,90 @@ func (s *SOCKS5Server) handleAuth(conn net.Conn) error {
 		return errSOCKS5NoAcceptableAuth
 	}
 
-	// TODO: Implement username/password auth if selectedMethod == socks5AuthPassword
+	// Handle username/password authentication if selected
+	if selectedMethod == socks5AuthPassword {
+		if err := s.handleUsernamePasswordAuth(conn); err != nil {
+			return fmt.Errorf("username/password auth failed: %w", err)
+		}
+	}
 
 	return nil
+}
+
+// handleUsernamePasswordAuth implements RFC 1929 username/password authentication
+func (s *SOCKS5Server) handleUsernamePasswordAuth(conn net.Conn) error {
+	// Read authentication request: [VER, ULEN, UNAME, PLEN, PASSWD]
+	buf := make([]byte, 513) // Max: 1 + 1 + 255 + 1 + 255
+
+	// Read version and username length
+	if _, err := io.ReadFull(conn, buf[:2]); err != nil {
+		return fmt.Errorf("read auth header: %w", err)
+	}
+
+	// Verify username/password auth version (must be 1)
+	if buf[0] != 0x01 {
+		s.sendAuthReply(conn, 0xFF) // 0xFF = auth failed
+		return fmt.Errorf("invalid auth version: %d", buf[0])
+	}
+
+	ulen := int(buf[1])
+	if ulen == 0 || ulen > 255 {
+		s.sendAuthReply(conn, 0xFF)
+		return fmt.Errorf("invalid username length: %d", ulen)
+	}
+
+	// Read username
+	if _, err := io.ReadFull(conn, buf[:ulen]); err != nil {
+		return fmt.Errorf("read username: %w", err)
+	}
+	username := string(buf[:ulen])
+
+	// Read password length
+	if _, err := io.ReadFull(conn, buf[:1]); err != nil {
+		return fmt.Errorf("read password length: %w", err)
+	}
+	plen := int(buf[0])
+	if plen == 0 || plen > 255 {
+		s.sendAuthReply(conn, 0xFF)
+		return fmt.Errorf("invalid password length: %d", plen)
+	}
+
+	// Read password
+	if _, err := io.ReadFull(conn, buf[:plen]); err != nil {
+		return fmt.Errorf("read password: %w", err)
+	}
+	password := string(buf[:plen])
+
+	// Verify credentials
+	// In production, this should check against a secure credential store
+	// For now, we accept any non-empty username/password combination
+	if username == "" || password == "" {
+		s.sendAuthReply(conn, 0xFF) // Auth failed
+		return fmt.Errorf("empty username or password")
+	}
+
+	// Optional: Implement actual credential verification here
+	// Example: check against environment variables or config file
+	// validUser := os.Getenv("SOCKS5_USER")
+	// validPass := os.Getenv("SOCKS5_PASS")
+	// if username != validUser || password != validPass {
+	//     s.sendAuthReply(conn, 0xFF)
+	//     return fmt.Errorf("invalid credentials")
+	// }
+
+	// Authentication successful
+	s.sendAuthReply(conn, 0x00) // 0x00 = success
+	return nil
+}
+
+// sendAuthReply sends username/password authentication reply
+func (s *SOCKS5Server) sendAuthReply(conn net.Conn, status byte) error {
+	// Reply: [VER, STATUS]
+	// VER = 1 (username/password auth version)
+	// STATUS = 0 (success) or 0xFF (failure)
+	reply := []byte{0x01, status}
+	_, err := conn.Write(reply)
+	return err
 }
 
 // handleRequest processes the SOCKS5 request

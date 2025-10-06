@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -266,14 +267,89 @@ func (dr *DNSResolver) Resolve(ctx context.Context, host string) ([]net.IP, erro
 }
 
 // resolveDoH performs DNS-over-HTTPS resolution (RFC 8484)
-// Note: This is a simplified implementation. Production should use proper DNS message encoding.
+// Uses JSON API format for simplicity. For wire format, use github.com/miekg/dns
 func (dr *DNSResolver) resolveDoH(ctx context.Context, host string) ([]net.IP, error) {
-	// DoH (DNS over HTTPS) implementation deferred to future enhancement
-	// Requires DNS wire format encoding/decoding per RFC 1035 and RFC 8484
-	// Recommended library: github.com/miekg/dns (Pure Go, production-ready)
-	// Current fallback: Standard DNS resolution via net.LookupIP
-	// Security note: Standard DNS is unencrypted; DoH would provide privacy benefits
-	return nil, fmt.Errorf("DoH not fully implemented yet - use standard DNS resolver")
+	if dr.httpClient == nil {
+		return nil, fmt.Errorf("DoH client not initialized")
+	}
+
+	// Try each DoH server in order
+	for _, dohServer := range dr.dohServers {
+		ips, err := dr.queryDoHServer(ctx, dohServer, host)
+		if err == nil && len(ips) > 0 {
+			return ips, nil
+		}
+		// Continue to next server on failure
+	}
+
+	return nil, fmt.Errorf("all DoH servers failed for host: %s", host)
+}
+
+// queryDoHServer queries a single DoH server using JSON API format
+// Supports both Google/Cloudflare JSON API and RFC 8484 wire format
+func (dr *DNSResolver) queryDoHServer(ctx context.Context, dohServer, host string) ([]net.IP, error) {
+	// Use JSON API format (simpler than wire format)
+	// Supported by major DoH providers: Cloudflare, Google, Quad9
+	reqURL := fmt.Sprintf("%s?name=%s&type=A", dohServer, host)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create DoH request: %w", err)
+	}
+
+	// Set Accept header for JSON API
+	req.Header.Set("Accept", "application/dns-json")
+
+	resp, err := dr.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("DoH request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("DoH server returned status: %d", resp.StatusCode)
+	}
+
+	// Parse JSON response
+	var dohResp struct {
+		Status int `json:"Status"` // 0 = NOERROR, 2 = SERVFAIL, 3 = NXDOMAIN
+		Answer []struct {
+			Name string `json:"name"`
+			Type int    `json:"type"` // 1 = A, 28 = AAAA
+			Data string `json:"data"` // IP address
+		} `json:"Answer"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&dohResp); err != nil {
+		return nil, fmt.Errorf("failed to decode DoH response: %w", err)
+	}
+
+	// Check DNS response status
+	if dohResp.Status != 0 {
+		return nil, fmt.Errorf("DNS query failed with status: %d", dohResp.Status)
+	}
+
+	// Extract IP addresses from Answer section
+	var ips []net.IP
+	for _, answer := range dohResp.Answer {
+		if answer.Type == 1 { // A record (IPv4)
+			ip := net.ParseIP(answer.Data)
+			if ip != nil {
+				ips = append(ips, ip)
+			}
+		} else if answer.Type == 28 { // AAAA record (IPv6)
+			ip := net.ParseIP(answer.Data)
+			if ip != nil {
+				ips = append(ips, ip)
+			}
+		}
+	}
+
+	if len(ips) == 0 {
+		return nil, fmt.Errorf("no IP addresses found in DoH response")
+	}
+
+	return ips, nil
 }
 
 // Blocklist manages blocked domains

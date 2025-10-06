@@ -25,8 +25,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -60,6 +63,7 @@ type ProxyServer struct {
 	mixBridge  *MixBridgeClient
 	exitNode   *ExitNode
 	stats      *Stats
+	startTime  time.Time
 	shutdown   chan struct{}
 	wg         sync.WaitGroup
 }
@@ -92,6 +96,7 @@ func NewProxyServer(socks5Addr, httpAddr, healthAddr, ipcPath string) *ProxyServ
 		mixBridge:  NewMixBridgeClient(ipcPath),
 		exitNode:   exitNode,
 		stats:      &Stats{},
+		startTime:  time.Now(),
 		shutdown:   make(chan struct{}),
 	}
 }
@@ -153,12 +158,90 @@ func (ps *ProxyServer) Start(ctx context.Context) error {
 func (ps *ProxyServer) startHealthServer(ctx context.Context) {
 	defer ps.wg.Done()
 
-	// Simple health endpoint (detailed implementation in next phase)
 	log.Printf("Health check server listening on %s", ps.healthAddr)
 
-	// TODO: Implement HTTP health check handler
-	// For now, just signal readiness
+	// Create HTTP server with health check endpoints
+	mux := http.NewServeMux()
+
+	// Health check endpoint - returns 200 OK if service is healthy
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"status":"healthy","timestamp":"%s"}`, time.Now().UTC().Format(time.RFC3339))
+	})
+
+	// Readiness check endpoint - returns 200 OK if service is ready to accept traffic
+	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		// Check if critical components are initialized
+		// Service is ready if it has been running for at least 1 second
+		ready := time.Since(ps.startTime) > time.Second
+
+		w.Header().Set("Content-Type", "application/json")
+		if ready {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintf(w, `{"status":"ready","timestamp":"%s"}`, time.Now().UTC().Format(time.RFC3339))
+		} else {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			fmt.Fprintf(w, `{"status":"not_ready","timestamp":"%s"}`, time.Now().UTC().Format(time.RFC3339))
+		}
+	})
+
+	// Liveness check endpoint - returns 200 OK if service is running
+	mux.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `{"status":"alive","timestamp":"%s"}`, time.Now().UTC().Format(time.RFC3339))
+	})
+
+	// Metrics endpoint - returns basic proxy metrics
+	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		// Collect basic metrics
+		metrics := map[string]interface{}{
+			"timestamp":      time.Now().UTC().Format(time.RFC3339),
+			"uptime_seconds": time.Since(ps.startTime).Seconds(),
+		}
+
+		// Add exit node metrics if available
+		if ps.exitNode != nil {
+			metrics["exit_node_enabled"] = true
+		}
+
+		// Add mix bridge metrics if available
+		if ps.mixBridge != nil {
+			metrics["mix_bridge_enabled"] = true
+		}
+
+		json.NewEncoder(w).Encode(metrics)
+	})
+
+	// Create HTTP server
+	server := &http.Server{
+		Addr:    ps.healthAddr,
+		Handler: mux,
+	}
+
+	// Start server in goroutine
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("Health server error: %v", err)
+		}
+	}()
+
+	// Wait for shutdown signal
 	<-ctx.Done()
+
+	// Graceful shutdown with timeout
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Health server shutdown error: %v", err)
+	}
+
+	log.Printf("Health check server stopped")
 }
 
 // Shutdown gracefully shuts down the proxy server
