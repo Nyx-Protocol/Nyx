@@ -1,4 +1,5 @@
 ---- MODULE NyxAdvancedOptimization ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Advanced Optimization and Performance Tuning             *)
 (*                                                                          *)
