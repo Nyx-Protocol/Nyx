@@ -1,6 +1,11 @@
+//! Hybrid cryptography test module
+//!
+//! This module tests the hybrid post-quantum cryptographic handshake combining
+//! X25519 (classical ECDH) and Kyber (post-quantum KEM) for enhanced security
+//! against both classical and quantum adversaries.
+
 #![cfg(feature = "hybrid")]
 #![allow(missing_docs, clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-//! Hybrid cryptography test module
 
 use nyx_crypto::hybrid::{handshake, KyberStaticKeypair, X25519StaticKeypair};
 use nyx_crypto::kyber;
