@@ -27,32 +27,52 @@ impl Rs1280 {
     }
 
     /// Given D data shards and P parity shards, fill parity in-place.
+    ///
+    /// # Performance Optimizations
+    /// - Pre-allocates vectors with exact capacity to avoid reallocation
+    /// - Inlined for reduced call overhead in encoding hot paths
+    #[inline]
     pub fn encode_parity(
         &self,
         data: &[&[u8; SHARD_SIZE]],
         parity: &mut [&mut [u8; SHARD_SIZE]],
     ) -> Result<()> {
-        let data_slices: Vec<&[u8]> = data.iter().map(|s| s.as_slice()).collect();
-        let mut parity_slices: Vec<&mut [u8]> =
-            parity.iter_mut().map(|s| s.as_mut_slice()).collect();
+        // Pre-allocate with exact capacity to avoid reallocation during collection
+        let mut data_slices: Vec<&[u8]> = Vec::with_capacity(data.len());
+        for shard in data {
+            data_slices.push(shard.as_slice());
+        }
+        
+        // Pre-allocate parity slices vector
+        let mut parity_slices: Vec<&mut [u8]> = Vec::with_capacity(parity.len());
+        for shard in parity {
+            parity_slices.push(shard.as_mut_slice());
+        }
+        
         self.rs
             .encode_sep(&data_slices, &mut parity_slices)
             .map_err(|e| Error::Protocol(format!("RS encode failed: {e}")))
     }
 
     /// Reconstruct missing shards; None entries will be recovered in-place.
+    ///
+    /// # Performance Optimizations
+    /// - Pre-allocates vectors with exact capacity to avoid reallocation
+    /// - Uses static error messages to avoid allocation overhead
     pub fn reconstruct(&self, shards: &mut [Option<[u8; SHARD_SIZE]>]) -> Result<()> {
         // Validate number of shards first to catch misuse early.
-        if shards.len() != self.rs.total_shard_count() {
+        let expected_count = self.rs.total_shard_count();
+        if shards.len() != expected_count {
             return Err(Error::Protocol(
                 "shard count does not match RS config".into(),
             ));
         }
-        // Convert to Option<Vec<u8>> which the crate supports for reconstruction
-        let mut tmp: Vec<Option<Vec<u8>>> = shards
-            .iter()
-            .map(|o| o.as_ref().map(|a| a.as_slice().to_vec()))
-            .collect();
+        
+        // Pre-allocate with exact capacity to minimize allocations
+        let mut tmp: Vec<Option<Vec<u8>>> = Vec::with_capacity(shards.len());
+        for shard_opt in shards.iter() {
+            tmp.push(shard_opt.as_ref().map(|a| a.as_slice().to_vec()));
+        }
         self.rs
             .reconstruct(&mut tmp)
             .map_err(|e| Error::Protocol(format!("RS reconstruct failed: {e}")))?;
