@@ -1,4 +1,5 @@
 ---- MODULE NyxMonitoring ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Comprehensive Monitoring and Observability               *)
 (*                                                                          *)
