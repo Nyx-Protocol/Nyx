@@ -403,8 +403,11 @@ mod tests {
     #[ignore = "RSA accumulator initialization is slow (prime generation)"]
     async fn test_cache_eviction() {
         let accumulator = Arc::new(RwLock::new(Accumulator::new()));
-        let mut config = ProofDistributorConfig::default();
-        config.max_cached_proofs = 3;
+        // Initialize config with custom max_cached_proofs directly to avoid field_reassign_with_default lint
+        let config = ProofDistributorConfig {
+            max_cached_proofs: 3,
+            ..Default::default()
+        };
         let distributor = ProofDistributor::new(config, accumulator.clone());
 
         // Generate more proofs than cache size
