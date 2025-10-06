@@ -241,12 +241,9 @@ impl DaemonClient {
         )
         .await
         .map_err(|_| Error::timeout(timeout_ms3))??;
-        timeout(
-            Duration::from_millis(timeout_ms3),
-            stream.flush(),
-        )
-        .await
-        .map_err(|_| Error::timeout(timeout_ms3))??;
+        timeout(Duration::from_millis(timeout_ms3), stream.flush())
+            .await
+            .map_err(|_| Error::timeout(timeout_ms3))??;
         // Drop first response line
         let mut buf = Vec::with_capacity(1024);
         read_one_line_with_timeout(&mut stream, &mut buf, self.cfg.request_timeout_ms).await?;
