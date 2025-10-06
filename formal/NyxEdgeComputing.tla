@@ -438,7 +438,7 @@ ProvisionCloudletVM(cloudlet, vm_spec) ==
         
         vm == IF available
              THEN [
-                 vm_id |-> GenerateVMId(),
+                 vm_id |-> GenerateVMId,
                  vm_image |-> vm_spec.image,
                  vcpu |-> vm_spec.vcpu,
                  memory_gb |-> vm_spec.memory_gb,

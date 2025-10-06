@@ -328,7 +328,7 @@ InitiateConnectionMigration(mobile_state, connection_id, new_ap) ==
             new_path |-> new_path,
             buffered_data |-> <<>>,
             sequence_offset |-> 0,
-            migration_token |-> GenerateMigrationToken()
+            migration_token |-> GenerateMigrationToken
         ]
         
     IN [mobile_state EXCEPT

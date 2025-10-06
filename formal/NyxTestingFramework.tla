@@ -240,7 +240,7 @@ FuzzTarget(fuzzer_state, target_function, config) ==
             IF remaining = 0
             THEN state
             ELSE LET input == IF RandomReal() < 0.3
-                             THEN GenerateRandomInput()
+                             THEN GenerateRandomInput
                              ELSE MutateInput(RandomCorpusEntry(state.corpus),
                                             config.input_mutation_rate)
                      start_time == CurrentTime
@@ -329,7 +329,7 @@ Mutant == [
 GenerateMutants(source_code) ==
     LET locations == IdentifyMutationLocations(source_code)
         mutants == {[
-            mutant_id |-> GenerateMutantId(),
+            mutant_id |-> GenerateMutantId,
             original_code |-> source_code,
             mutated_code |-> op.apply(source_code, loc),
             mutation_operator |-> op,

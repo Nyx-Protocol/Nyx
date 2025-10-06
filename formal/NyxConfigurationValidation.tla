@@ -550,7 +550,7 @@ InstantiateTemplate(template, variable_values) ==
         base_with_vars == template.base_values @@ variable_values
         final_values == EvaluateExpressions(DOMAIN template.expressions, base_with_vars)
     IN [
-        config_id |-> GenerateConfigId(),
+        config_id |-> GenerateConfigId,
         schema_id |-> template.schema_id,
         version |-> 1,
         values |-> final_values,

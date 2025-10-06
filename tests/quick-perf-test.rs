@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut latencies = Vec::new();
 
     for _ in 0..100 {
-        let encrypted = cipher.encrypt(&nonce.into(), &message).expect("encryption failed");
+        let encrypted = cipher.encrypt(&nonce.into(), message.as_slice()).expect("encryption failed");
 
         let start = Instant::now();
         sender.send_to(&encrypted, receiver_addr).await?;
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (len, _) = receiver.recv_from(&mut buf).await?;
         buf.truncate(len);
 
-        let _decrypted = cipher.decrypt(&nonce.into(), &buf).expect("decryption failed");
+        let _decrypted = cipher.decrypt(&nonce.into(), buf.as_slice()).expect("decryption failed");
         let elapsed = start.elapsed();
 
         latencies.push(elapsed.as_micros() as f64 / 1000.0);

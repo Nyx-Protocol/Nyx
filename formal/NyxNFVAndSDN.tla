@@ -224,7 +224,6 @@ CreateServiceFunctionPath(sfc, vnf_instances) ==
         path_feasible == VerifyPathConstraints(selected_vnfs, sfc.constraints)
     IN IF path_feasible
        THEN [
-           sfp == [
            sfp_id |-> GenerateSFPId,
            name |-> sfc.name,
            vnf_sequence |-> [i \in 1..Len(selected_vnfs) |->

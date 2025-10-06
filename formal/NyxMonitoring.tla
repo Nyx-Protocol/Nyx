@@ -296,9 +296,9 @@ Tracer == [
 
 \* Start span
 StartSpan(tracer, operation_name, parent_span_id) ==
-    LET span_id == GenerateSpanId()
+    LET span_id == GenerateSpanId
         trace_id == IF parent_span_id = ""
-                   THEN GenerateTraceId()
+                   THEN GenerateTraceId
                    ELSE tracer.active_spans[parent_span_id].trace_id
         span == [
             trace_id |-> trace_id,
@@ -340,11 +340,11 @@ LogToSpan(tracer, span_id, fields) ==
            !.active_spans[span_id].logs = Append(@, log_entry)]
 
 \* Generate trace ID
-GenerateTraceId() ==
+GenerateTraceId ==
     "trace-" \o ToString(RandomInt(1, 1000000000))
 
 \* Generate span ID
-GenerateSpanId() ==
+GenerateSpanId ==
     "span-" \o ToString(RandomInt(1, 1000000000))
 
 (****************************************************************************)

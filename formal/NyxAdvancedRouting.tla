@@ -297,7 +297,7 @@ DSR_RouteDiscovery(source, destination, route_cache) ==
     IF destination \in DOMAIN route_cache
     THEN [found |-> TRUE, path |-> route_cache[destination]]
     ELSE LET route_request == [
-             request_id |-> GenerateRequestId(),
+             request_id |-> GenerateRequestId,
              source |-> source,
              destination |-> destination,
              path |-> <<source>>

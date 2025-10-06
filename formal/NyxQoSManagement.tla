@@ -49,7 +49,8 @@ Sum(S) == LET RECURSIVE SumRec(_)
 Average(S) == IF S = {} THEN 0 ELSE Sum(S) / Cardinality(S)
 
 
-        NyxNetworkLayer, NyxStreamManagement
+INSTANCE NyxNetworkLayer
+INSTANCE NyxStreamManagement
 
 (****************************************************************************)
 (* Traffic Classification                                                   *)

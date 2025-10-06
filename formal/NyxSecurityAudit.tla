@@ -289,7 +289,7 @@ ExecutePenetrationTest(scenario, target_system) ==
         success == CheckSuccessCriteria(vector_results, scenario.success_criteria)
         detected == CheckDetection(vector_results, target_system)
     IN [
-        test_id |-> GenerateTestId(),
+        test_id |-> GenerateTestId,
         scenario |-> scenario,
         timestamp |-> CurrentTime,
         duration |-> ComputeDuration(),
@@ -389,7 +389,7 @@ CheckComplianceRequirement(checker, requirement) ==
         findings == {f : cr \in control_results, f \in cr.findings,
                      cr.status # "COMPLIANT"}
     IN [
-        check_id |-> GenerateCheckId(),
+        check_id |-> GenerateCheckId,
         requirement |-> requirement,
         status |-> status,
         evidence |-> evidence,

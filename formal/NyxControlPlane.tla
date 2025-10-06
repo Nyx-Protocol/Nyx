@@ -408,7 +408,7 @@ PlaceServiceInstance(orchestrator, service_id) ==
                                     orchestrator.node_load)
     IN IF suitable_nodes # {}
        THEN LET instance == [
-                instance_id |-> GenerateInstanceId(),
+                instance_id |-> GenerateInstanceId,
                 service_id |-> service_id,
                 node |-> selected_node,
                 status |-> "PENDING",

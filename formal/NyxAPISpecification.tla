@@ -387,7 +387,7 @@ EventSubscription == [
 
 \* Subscribe to events
 API_SubscribeEvents(subscription) ==
-    LET sub_id == GenerateSubscriptionId()
+    LET sub_id == GenerateSubscriptionId
         registered == RegisterEventSubscription(sub_id, subscription)
     IN IF registered.success
        THEN [
@@ -659,7 +659,7 @@ SDKClient == [
 \* SDK initialization
 SDK_Initialize(endpoint, auth_token, config) ==
     [
-        client_id |-> GenerateClientId(),
+        client_id |-> GenerateClientId,
         api_endpoint |-> endpoint,
         auth_token |-> auth_token,
         config |-> config,
@@ -670,7 +670,7 @@ SDK_Initialize(endpoint, auth_token, config) ==
 \* SDK connect wrapper
 SDK_Connect(client, destination, options) ==
     LET request == [
-            connection_id |-> GenerateConnectionId(),
+            connection_id |-> GenerateConnectionId,
             destination |-> destination,
             options |-> options,
             credentials |-> [auth_token |-> client.auth_token, certificate |-> ""]

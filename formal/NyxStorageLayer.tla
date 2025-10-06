@@ -557,7 +557,7 @@ TwoPhaseCommitCoordinator == [
 
 \* Begin transaction
 BeginTransaction(tpc) ==
-    LET tx_id == GenerateTransactionId()
+    LET tx_id == GenerateTransactionId
         tx_state == [
             tx_id |-> tx_id,
             state |-> "ACTIVE",
