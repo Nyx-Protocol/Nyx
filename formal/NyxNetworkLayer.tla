@@ -28,30 +28,30 @@ EXTENDS Naturals, Sequences, FiniteSets, Integers, TLC
 (* Common Helper Operators                                                  *)
 (****************************************************************************)
 
-* Minimum of a set
-MIN(S) == IF S = {} THEN 0 ELSE CHOOSE x in S : \A y in S : x <= y
+\* Minimum of a set
+MIN(S) == IF S = {} THEN 0 ELSE CHOOSE x \in S : \A y \in S : x <= y
 
-* Maximum of a set
-MAX(S) == IF S = {} THEN 0 ELSE CHOOSE x in S : \A y in S : x >= y
+\* Maximum of a set
+MAX(S) == IF S = {} THEN 0 ELSE CHOOSE x \in S : \A y \in S : x >= y
 
-* Minimum (lowercase alias)
+\* Minimum (lowercase alias)
 Min(x, y) == IF x < y THEN x ELSE y
 
-* Maximum (lowercase alias)
+\* Maximum (lowercase alias)
 Max(x, y) == IF x > y THEN x ELSE y
 
-* Absolute value
+\* Absolute value
 Abs(x) == IF x < 0 THEN -x ELSE x
 
-* Sum of set elements
+\* Sum of set elements
 Sum(S) == LET RECURSIVE SumRec(_)
               SumRec(T) == IF T = {} 
                           THEN 0 
-                          ELSE LET x == CHOOSE y in T : TRUE
+                          ELSE LET x == CHOOSE y \in T : TRUE
                                IN x + SumRec(T \ {x})
           IN SumRec(S)
 
-* Average
+\* Average
 Average(S) == IF S = {} THEN 0 ELSE Sum(S) / Cardinality(S)
 
 
