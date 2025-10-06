@@ -90,12 +90,16 @@ impl CubicState {
         // EWMA: SRTT = (1 - α) * SRTT + α * RTT, where α = 1/8
         // SAFETY: smoothed_rtt is guaranteed to be Some() after the early return above
         // If this fails, it indicates a critical invariant violation (concurrent modification)
-        let srtt = self.smoothed_rtt.expect("BUG: smoothed_rtt should be initialized after first RTT sample");
+        let srtt = self
+            .smoothed_rtt
+            .expect("BUG: smoothed_rtt should be initialized after first RTT sample");
         // Use abs_diff to get absolute difference
         let rtt_diff = Duration::from_micros(rtt.as_micros().abs_diff(srtt.as_micros()) as u64);
 
         // RTTVAR = (1 - β) * RTTVAR + β * |SRTT - RTT|, where β = 1/4
-        let rttvar = self.rtt_var.expect("BUG: rtt_var should be initialized with smoothed_rtt");
+        let rttvar = self
+            .rtt_var
+            .expect("BUG: rtt_var should be initialized with smoothed_rtt");
         self.rtt_var = Some(Duration::from_micros(
             rttvar.as_micros() as u64 * 3 / 4 + rtt_diff.as_micros() as u64 / 4,
         ));
@@ -379,16 +383,22 @@ impl QuicFrame {
                 // SAFETY: Length check above guarantees [offset..offset+8] has exactly 8 bytes
                 // Using expect() instead of unwrap() provides diagnostic context if invariant is violated
                 let stream_id = u64::from_be_bytes(
-                    data[offset..offset + 8].try_into()
-                        .expect("BUG: slice length checked above but try_into failed"));
+                    data[offset..offset + 8]
+                        .try_into()
+                        .expect("BUG: slice length checked above but try_into failed"),
+                );
                 offset += 8;
                 let stream_offset = u64::from_be_bytes(
-                    data[offset..offset + 8].try_into()
-                        .expect("BUG: slice length checked above but try_into failed"));
+                    data[offset..offset + 8]
+                        .try_into()
+                        .expect("BUG: slice length checked above but try_into failed"),
+                );
                 offset += 8;
                 let length = u64::from_be_bytes(
-                    data[offset..offset + 8].try_into()
-                        .expect("BUG: slice length checked above but try_into failed")) as usize;
+                    data[offset..offset + 8]
+                        .try_into()
+                        .expect("BUG: slice length checked above but try_into failed"),
+                ) as usize;
                 offset += 8;
 
                 if data.len() < offset + length {
@@ -421,8 +431,10 @@ impl QuicFrame {
                         ));
                     }
                     let length = u64::from_be_bytes(
-                        data[offset..offset + 8].try_into()
-                            .expect("BUG: slice length checked above but try_into failed")) as usize;
+                        data[offset..offset + 8]
+                            .try_into()
+                            .expect("BUG: slice length checked above but try_into failed"),
+                    ) as usize;
                     offset += 8;
 
                     if data.len() < offset + length {
@@ -448,16 +460,22 @@ impl QuicFrame {
                     return Err(QuicError::PacketDecode("Incomplete ACK frame".to_string()));
                 }
                 let largest_ack = u64::from_be_bytes(
-                    data[offset..offset + 8].try_into()
-                        .expect("BUG: slice length checked above but try_into failed"));
+                    data[offset..offset + 8]
+                        .try_into()
+                        .expect("BUG: slice length checked above but try_into failed"),
+                );
                 offset += 8;
                 let ack_delay = u64::from_be_bytes(
-                    data[offset..offset + 8].try_into()
-                        .expect("BUG: slice length checked above but try_into failed"));
+                    data[offset..offset + 8]
+                        .try_into()
+                        .expect("BUG: slice length checked above but try_into failed"),
+                );
                 offset += 8;
                 let range_count = u64::from_be_bytes(
-                    data[offset..offset + 8].try_into()
-                        .expect("BUG: slice length checked above but try_into failed")) as usize;
+                    data[offset..offset + 8]
+                        .try_into()
+                        .expect("BUG: slice length checked above but try_into failed"),
+                ) as usize;
                 offset += 8;
 
                 let mut ack_ranges = Vec::new();
@@ -466,12 +484,16 @@ impl QuicFrame {
                         return Err(QuicError::PacketDecode("Incomplete ACK ranges".to_string()));
                     }
                     let start = u64::from_be_bytes(
-                        data[offset..offset + 8].try_into()
-                            .expect("BUG: slice length checked above but try_into failed"));
+                        data[offset..offset + 8]
+                            .try_into()
+                            .expect("BUG: slice length checked above but try_into failed"),
+                    );
                     offset += 8;
                     let end = u64::from_be_bytes(
-                        data[offset..offset + 8].try_into()
-                            .expect("BUG: slice length checked above but try_into failed"));
+                        data[offset..offset + 8]
+                            .try_into()
+                            .expect("BUG: slice length checked above but try_into failed"),
+                    );
                     offset += 8;
                     ack_ranges.push((start, end));
                 }
@@ -493,12 +515,16 @@ impl QuicFrame {
                     ));
                 }
                 let error_code = u64::from_be_bytes(
-                    data[offset..offset + 8].try_into()
-                        .expect("BUG: slice length checked above but try_into failed"));
+                    data[offset..offset + 8]
+                        .try_into()
+                        .expect("BUG: slice length checked above but try_into failed"),
+                );
                 offset += 8;
                 let reason_len = u64::from_be_bytes(
-                    data[offset..offset + 8].try_into()
-                        .expect("BUG: slice length checked above but try_into failed")) as usize;
+                    data[offset..offset + 8]
+                        .try_into()
+                        .expect("BUG: slice length checked above but try_into failed"),
+                ) as usize;
                 offset += 8;
 
                 if data.len() < offset + reason_len {

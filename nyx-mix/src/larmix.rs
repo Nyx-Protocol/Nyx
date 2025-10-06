@@ -34,22 +34,23 @@ pub fn select_mix_node<'a>(
 
     // Single-pass optimization: find max weight during iteration without intermediate Vec
     // Use fold to track (index, max_weight) in one pass
-    let (max_idx, _) = candidates
-        .iter()
-        .enumerate()
-        .fold((0, f64::NEG_INFINITY), |(max_i, max_w), (i, c)| {
-            // Compute weight inline without Vec allocation
-            let rate = 1.0 / (c.rtt_ms as f64 + 1.0);
-            let weight = Exp::new(rate)
-                .unwrap_or_else(|_| Exp::new(1.0).unwrap())
-                .sample(rng);
-            
-            if weight > max_w {
-                (i, weight)
-            } else {
-                (max_i, max_w)
-            }
-        });
+    let (max_idx, _) =
+        candidates
+            .iter()
+            .enumerate()
+            .fold((0, f64::NEG_INFINITY), |(max_i, max_w), (i, c)| {
+                // Compute weight inline without Vec allocation
+                let rate = 1.0 / (c.rtt_ms as f64 + 1.0);
+                let weight = Exp::new(rate)
+                    .unwrap_or_else(|_| Exp::new(1.0).unwrap())
+                    .sample(rng);
+
+                if weight > max_w {
+                    (i, weight)
+                } else {
+                    (max_i, max_w)
+                }
+            });
 
     candidates.get(max_idx)
 }

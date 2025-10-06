@@ -42,13 +42,13 @@ impl Rs1280 {
         for shard in data {
             data_slices.push(shard.as_slice());
         }
-        
+
         // Pre-allocate parity slices vector
         let mut parity_slices: Vec<&mut [u8]> = Vec::with_capacity(parity.len());
         for shard in parity {
             parity_slices.push(shard.as_mut_slice());
         }
-        
+
         self.rs
             .encode_sep(&data_slices, &mut parity_slices)
             .map_err(|e| Error::Protocol(format!("RS encode failed: {e}")))
@@ -67,7 +67,7 @@ impl Rs1280 {
                 "shard count does not match RS config".into(),
             ));
         }
-        
+
         // Pre-allocate with exact capacity to minimize allocations
         let mut tmp: Vec<Option<Vec<u8>>> = Vec::with_capacity(shards.len());
         for shard_opt in shards.iter() {

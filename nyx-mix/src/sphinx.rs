@@ -104,7 +104,8 @@ pub fn build_sphinx_packet(payload: &[u8], path: &[HopInfo]) -> Result<SphinxPac
         // Prepend routing info to payload
         // Pre-allocate: next_hop + null terminator + current_payload
         let next_hop_bytes = hop_info.next_hop.as_bytes();
-        let mut routing_payload = Vec::with_capacity(next_hop_bytes.len() + 1 + current_payload.len());
+        let mut routing_payload =
+            Vec::with_capacity(next_hop_bytes.len() + 1 + current_payload.len());
         routing_payload.extend_from_slice(next_hop_bytes);
         routing_payload.push(0); // Null terminator
         routing_payload.extend_from_slice(&current_payload);

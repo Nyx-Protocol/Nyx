@@ -354,13 +354,134 @@ pub struct TeredoAdapter {
 /// We avoid C/C++ dependencies, so relying on std::net which doesn't expose
 /// interface enumeration. Alternative approach: spawn platform command and parse.
 pub fn detect_teredo_adapters() -> Vec<TeredoAdapter> {
-    // Platform-specific adapter detection would require:
-    // - Windows: WMI queries or netsh command parsing
-    // - Linux: /proc/net/if_inet6 parsing for Teredo prefixes (2001::/32)
-    // - macOS: ifconfig parsing
-    // For now, Teredo detection is handled at the connection establishment level
-    // via TeredoClient::establish_tunnel() which performs actual connectivity tests
-    Vec::new()
+    use std::net::Ipv6Addr;
+    use std::process::Command;
+
+    let mut adapters = Vec::new();
+
+    // Platform-specific adapter detection
+    #[cfg(target_os = "windows")]
+    {
+        // On Windows, use netsh to query Teredo status
+        if let Ok(output) = Command::new("netsh")
+            .args(["interface", "teredo", "show", "state"])
+            .output()
+        {
+            if output.status.success() {
+                if let Ok(stdout) = String::from_utf8(output.stdout) {
+                    // Parse netsh output for Teredo information
+                    // Look for lines like "Type                    : client"
+                    // and "Client IPv6 Address : 2001:0:..."
+                    if stdout.contains("Type") && stdout.contains("client") {
+                        // Extract Teredo IPv6 address
+                        for line in stdout.lines() {
+                            if line.contains("Client IPv6 Address")
+                                || line.contains("Local Address")
+                            {
+                                if let Some(addr_str) = line.split(':').nth(1) {
+                                    let addr_str = addr_str.trim();
+                                    if let Ok(ipv6_addr) = addr_str.parse::<Ipv6Addr>() {
+                                        // Verify it's a Teredo address (2001:0::/32 prefix)
+                                        if is_teredo_address(ipv6_addr) {
+                                            if let Ok(teredo_info) = parse_teredo_address(ipv6_addr)
+                                            {
+                                                let adapter = TeredoAdapter {
+                                                    name: "Teredo Tunneling Adapter".to_string(),
+                                                    ipv6_addr,
+                                                    teredo_info,
+                                                    last_seen: Instant::now(),
+                                                };
+                                                adapters.push(adapter);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // On Linux, check /proc/net/if_inet6 for Teredo prefixes
+        if let Ok(contents) = std::fs::read_to_string("/proc/net/if_inet6") {
+            for line in contents.lines() {
+                // Format: addr device_number prefix_len scope flags interface_name
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 6 {
+                    // Parse IPv6 address (hex format without colons)
+                    if let Ok(addr_bytes) = hex::decode(parts[0]) {
+                        if addr_bytes.len() == 16 {
+                            let mut addr_array = [0u8; 16];
+                            addr_array.copy_from_slice(&addr_bytes);
+                            let ipv6_addr = Ipv6Addr::from(addr_array);
+
+                            // Check if it's a Teredo address
+                            if is_teredo_address(ipv6_addr) {
+                                let interface_name = parts[5].to_string();
+                                // Parse Teredo components
+                                if let Ok(teredo_info) = parse_teredo_address(ipv6_addr) {
+                                    let adapter = TeredoAdapter {
+                                        name: interface_name,
+                                        ipv6_addr,
+                                        teredo_info,
+                                        last_seen: Instant::now(),
+                                    };
+                                    adapters.push(adapter);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        // On macOS, use ifconfig to detect IPv6 addresses
+        if let Ok(output) = Command::new("ifconfig").output() {
+            if output.status.success() {
+                if let Ok(stdout) = String::from_utf8(output.stdout) {
+                    let mut current_interface: Option<String> = None;
+
+                    for line in stdout.lines() {
+                        // Interface name lines don't start with whitespace
+                        if !line.starts_with(|c: char| c.is_whitespace()) {
+                            if let Some(name) = line.split(':').next() {
+                                current_interface = Some(name.trim().to_string());
+                            }
+                        } else if line.contains("inet6") {
+                            // Parse IPv6 address from lines like "inet6 2001:0:... ..."
+                            let parts: Vec<&str> = line.split_whitespace().collect();
+                            if parts.len() >= 2 && parts[0] == "inet6" {
+                                // Remove % suffix if present (e.g., 2001:0:...%utun0)
+                                let addr_str = parts[1].split('%').next().unwrap_or(parts[1]);
+                                if let Ok(ipv6_addr) = addr_str.parse::<Ipv6Addr>() {
+                                    if is_teredo_address(&ipv6_addr) {
+                                        if let Some(ref iface) = current_interface {
+                                            let adapter = TeredoAdapter {
+                                                name: iface.clone(),
+                                                teredo_address: ipv6_addr,
+                                                server: None,
+                                                public_ipv4: None,
+                                            };
+                                            adapters.push(adapter);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    adapters
 }
 
 /// Check if system has Teredo capability
