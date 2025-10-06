@@ -484,40 +484,94 @@ fn ensure_token_from_env_or_cookie() -> Option<String> {
     }
 
     // 4) Otherwise, auto-generate a cookie (Tor-like UX)
+    // SECURITY: Use cryptographically secure random token (32 bytes = 256 bits)
     let mut bytes = [0u8; 32];
     rand::thread_rng().fill_bytes(&mut bytes);
     let tok = hex::encode(bytes);
+    
+    // Create parent directory with secure permissions before writing cookie
     if let Some(parent) = cookie_path.parent() {
         if let Err(e) = std::fs::create_dir_all(parent) {
-            warn!("failed to create cookie dir: {e}");
+            warn!(
+                path = ?parent,
+                "failed to create cookie dir: {e}"
+            );
             return None;
         }
+        
+        // Set directory permissions before creating file (Unix only)
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            if let Ok(meta) = std::fs::metadata(parent) {
+                let mut perm = meta.permissions();
+                perm.set_mode(0o700); // rwx------ for directory
+                if let Err(e) = std::fs::set_permissions(parent, perm) {
+                    warn!("failed to secure cookie directory: {e}");
+                }
+            }
+        }
     }
-    if let Err(e) = std::fs::write(&cookie_path, &tok) {
-        warn!("failed to write cookie file {}: {e}", cookie_path.display());
+    
+    // Write cookie file atomically (write to temp, then rename)
+    // This prevents partial writes and ensures atomic visibility
+    let temp_path = cookie_path.with_extension("tmp");
+    if let Err(e) = std::fs::write(&temp_path, &tok) {
+        warn!(
+            path = ?temp_path,
+            "failed to write cookie temp file: {e}"
+        );
         return None;
     }
-    // Best-effort permission tightening (Unix only)
+    
+    // Set file permissions before making visible (Unix only)
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        if let Ok(meta) = std::fs::metadata(&cookie_path) {
+        if let Ok(meta) = std::fs::metadata(&temp_path) {
             let mut perm = meta.permissions();
-            perm.set_mode(0o600);
-            let _ = std::fs::set_permissions(&cookie_path, perm);
+            perm.set_mode(0o600); // rw------- for file
+            if let Err(e) = std::fs::set_permissions(&temp_path, perm) {
+                warn!("failed to set cookie file permissions: {e}");
+                let _ = std::fs::remove_file(&temp_path);
+                return None;
+            }
         }
     }
+    
+    // Atomic rename to final location
+    if let Err(e) = std::fs::rename(&temp_path, &cookie_path) {
+        warn!(
+            from = ?temp_path,
+            to = ?cookie_path,
+            "failed to install cookie file: {e}"
+        );
+        let _ = std::fs::remove_file(&temp_path);
+        return None;
+    }
+    
     #[cfg(windows)]
     {
-        // Best-effort on windows without unsafe: mark the cookie as read-only.
-        // Files under %APPDATA% are already private to the current user by default ACLs.
+        // Windows: Set read-only after creation
+        // Note: Files under %APPDATA% are already private to current user by default ACLs
+        // For enhanced security in shared environments, consider using Windows ACL APIs
         if let Ok(meta) = std::fs::metadata(&cookie_path) {
             let mut perm = meta.permissions();
             perm.set_readonly(true);
-            let _ = std::fs::set_permissions(&cookie_path, perm);
+            if let Err(e) = std::fs::set_permissions(&cookie_path, perm) {
+                warn!("failed to make cookie read-only: {e}");
+            }
         }
     }
-    info!("generated control auth cookie at {}", cookie_path.display());
+    
+    info!(
+        path = ?cookie_path,
+        token_length = tok.len(),
+        "generated control auth cookie"
+    );
+    #[cfg(feature = "telemetry")]
+    nyx_telemetry::record_counter("nyx_daemon_cookie_generated", 1);
+    
     Some(tok)
 }
 
@@ -1023,10 +1077,17 @@ async fn process_request(
 
 fn is_authorized(state: &DaemonState, auth: Option<&str>) -> bool {
     // Auth mode: require token by default, allow disable via NYX_DAEMON_DISABLE_AUTH=1
-    let auth_disabled = std::env::var("NYX_DAEMON_DISABLE_AUTH")
-        .ok()
-        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-        .unwrap_or(false);
+    // SECURITY: Auth bypass is only allowed in debug builds to prevent production misconfiguration
+    let auth_disabled = if cfg!(debug_assertions) {
+        std::env::var("NYX_DAEMON_DISABLE_AUTH")
+            .ok()
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false)
+    } else {
+        // In release builds, always enforce authentication
+        // This prevents accidental auth bypass in production deployments
+        false
+    };
 
     // Treat empty or whitespace-only token as not set (disabled auth)
     let effective = state
@@ -1037,14 +1098,24 @@ fn is_authorized(state: &DaemonState, auth: Option<&str>) -> bool {
 
     if effective.is_none() {
         if auth_disabled {
-            // Emit a warning for security awareness
+            // Emit a warning for security awareness with audit trail
             static ONCE: std::sync::Once = std::sync::Once::new();
             ONCE.call_once(|| {
-                warn!("SECURITY WARNING: authentication disabled via NYX_DAEMON_DISABLE_AUTH=1")
+                warn!(
+                    build_profile = if cfg!(debug_assertions) { "debug" } else { "release" },
+                    "SECURITY WARNING: authentication disabled via NYX_DAEMON_DISABLE_AUTH=1"
+                );
             });
+            #[cfg(feature = "telemetry")]
+            nyx_telemetry::record_counter("nyx_daemon_auth_bypass_enabled", 1);
             return true;
         }
-        warn!("authorization failed: token not configured (set NYX_DAEMON_DISABLE_AUTH=1 to disable auth)");
+        // Log authentication failure with context for security auditing
+        warn!(
+            "authorization failed: token not configured - Set NYX_DAEMON_TOKEN env var or place token in cookie file"
+        );
+        #[cfg(feature = "telemetry")]
+        nyx_telemetry::record_counter("nyx_daemon_auth_no_token", 1);
         return false;
     }
 
@@ -1073,12 +1144,25 @@ fn is_authorized(state: &DaemonState, auth: Option<&str>) -> bool {
             let ok = result == 0 && length_match;
 
             if !ok {
-                warn!("authorization failed: invalid token");
+                // Security audit log: Failed authentication attempt
+                warn!(
+                    token_length = provided_bytes.len(),
+                    "authorization failed: invalid token"
+                );
+                #[cfg(feature = "telemetry")]
+                nyx_telemetry::record_counter("nyx_daemon_auth_invalid_token", 1);
+            } else {
+                // Successful authentication - log at debug level to avoid noise
+                tracing::debug!("authorization successful");
+                #[cfg(feature = "telemetry")]
+                nyx_telemetry::record_counter("nyx_daemon_auth_success", 1);
             }
             ok
         }
         None => {
-            warn!("authorization failed: missing token");
+            warn!("authorization failed: missing token in request");
+            #[cfg(feature = "telemetry")]
+            nyx_telemetry::record_counter("nyx_daemon_auth_missing_token", 1);
             false
         }
     }

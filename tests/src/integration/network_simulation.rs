@@ -12,9 +12,9 @@
 // - Statistical measurement and validation
 // - Comprehensive error scenarios
 
-use crate::test_harness::{NetworkConfig, TestHarness, TestResult};
+use crate::test_harness::{DaemonConfig, NetworkConfig, TestHarness, TestResult};
 use std::time::{Duration, Instant};
-use tracing::info;
+use tracing::{info, warn};
 
 /// Number of samples for statistical measurement
 #[allow(dead_code)]

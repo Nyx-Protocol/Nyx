@@ -95,72 +95,90 @@
 - **Backup Security**: Encrypt all backups and store them securely
 ## Incident Response
 
-### Security Incident Classification
-- **Critical**: Remote code execution, data breaches, cryptographic failures
-- **High**: Privilege escalation, authentication bypass, significant DoS
-- **Medium**: Information disclosure, limited DoS, configuration issues
-- **Low**: Minor information leakage, documentation issues
+<!--
+	NyxNet SECURITY.md
+	High-level threat model, cryptographic rationale, lifecycle policy, and hardening roadmap.
+	IMPORTANT: Keep this file stable; external users and auditors may deep link to sections.
+-->
 
-### Response Timeline
-- **Critical**: 2 hours acknowledgment, 24 hours initial response, 72 hours patch
-- **High**: 4 hours acknowledgment, 72 hours initial response, 7 days patch
-- **Medium**: 24 hours acknowledgment, 7 days initial response, 30 days patch
-- **Low**: 72 hours acknowledgment, 30 days response
+# NyxNet Security Overview
 
-## Vulnerability Disclosure
+> Living document: threat model, key lifecycle, defensive controls & roadmap. Pure Rust & **no unsafe** guarantee across critical crates.
 
-### Coordinated Disclosure Process
-1. **Report** the vulnerability via GitHub Security Advisories with detailed reproduction steps
-2. **Initial Assessment** within 24 hours with severity classification
-3. **Detailed Analysis** and impact assessment within 72 hours
-4. **Fix Development** with regular progress updates
-5. **Testing** and validation of the fix
-6. **Coordinated Release** with proper attribution
-7. **Public Disclosure** 90 days after initial report (or sooner if fixed)
+## 1. Threat Model
+| Actor | Capabilities | Goals | In-Scope Mitigations |
+|-------|--------------|-------|----------------------|
+| Passive Global Observer | Bulk capture, timing correlation | Deanonymize flows | Adaptive & Poisson cover traffic, padding, (future) path diversity, anti‑replay |
+| Active Network Adversary | Inject / drop / reorder / delay / path kill | Downgrade / partition / correlation | Hybrid handshake validation, invalid key guards, multipath failover, strict parsing |
+| Malicious Peer (Byzantine) | Malformed frames, protocol deviation | Resource exhaustion, state desync | Size bounds, capability negotiation enforcement, error categorization |
+| Compromised Node (Post‑Compromise) | Key exfiltration, traffic pattern leak | Long‑term decryption, impersonation | Ephemeral keys, rekey policy, zeroization, hybrid secrecy |
+| Local Side‑Channel Attacker | Cache / timing observation | Secret extraction | Constant‑time primitives (deps), no unsafe, avoid secret‑dependent branching |
+| Supply Chain Attacker | Dependency swap / injection | Backdoor / exfiltration | Version pinning, no network build.rs, (planned) cargo‑deny & SBOM |
 
-### Required Information
-- Detailed vulnerability description
-- Proof of concept or reproduction steps
-- Affected versions and components
-- Potential impact assessment
-- Suggested mitigation strategies
+Out-of-scope (initial): simultaneous catastrophic break of both ML-KEM-768 & X25519, physical hardware attacks.
 
-## Security Governance
+## 2. Cryptographic Design
+- Hybrid Secret = `HKDF(salt = SHA256(client_pub||server_pub), ikm = kyber_ss || x25519_ss)` for robustness.
+- ML-KEM-768 (post‑quantum IND‑CCA) + X25519 (mature, small key, constant‑time implementation).
+- AEAD: ChaCha20-Poly1305 (ubiquitous constant‑time path). HPKE optional for plugin microchannels.
+- Zeroization: `ZeroizeOnDrop` for long-lived secret containers.
 
-### Security Team
-- **Security Officer**: Overall security strategy and incident response
-- **Cryptography Lead**: Cryptographic protocol review and implementation
-- **Infrastructure Security**: System and deployment security
-- **External Advisors**: Independent security researchers and academics
+## 3. Key & Session Lifecycle
+| Material | Generation | Storage | Lifetime / Rekey Trigger (Target) | Disposal |
+|----------|-----------|---------|----------------------------------|----------|
+| Hybrid Handshake Key Pair | Ephemeral per session (OsRng) | RAM only | One connection | Drop → zeroize secret parts |
+| Shared Secret | HKDF from hybrid | RAM only | Min(1GB data, 10 min) (configurable **planned hook**) | `ZeroizeOnDrop` |
+| Plugin Session Keys | Derived (context KDF) | RAM | Plugin-defined (<= shared secret window) | Zeroize on plugin unload |
+| Anti‑Replay Windows | Initialized per direction | RAM ring buffer | Rotated on rekey | Cleared at close |
 
-### Security Policies
-- **Secure Development Lifecycle**: Integrated security throughout development
-- **Regular Security Training**: Ongoing education for all contributors
-- **Compliance Monitoring**: Regular compliance checks and audits
-- **Third-party Assessment**: Annual independent security assessments
+Planned telemetry: `nyx_rekey_bytes_since`, `nyx_rekey_seconds_since`.
 
-## Bug Bounty Program
+## 4. Defensive Controls
+| Layer | Control | Description |
+|-------|---------|-------------|
+| Framing | Strict size bounds | Early reject oversize / malformed frames |
+| Replay | Sliding windows & nonces | Separate windows for early data & multipath dataplane |
+| Memory Safety | `#![forbid(unsafe_code)` | Enforced in core, crypto, transport, stream, conformance |
+| Secret Hygiene | Ephemeral keys, zeroize | Minimizes long-term exposure window |
+| Capability Negotiation | Required vs optional gating | Unsupported required → structured CLOSE frame |
+| Observability | Prometheus & OTLP (opt-in) | Security events to become counters (invalid_key, replay) |
+| Sandbox (future) | `os_sandbox` feature | OS-level restrictions / job objects / pledge analogs |
 
-### Scope
-- **In Scope**: Core protocol implementation, cryptographic modules, network handling
-- **Out of Scope**: Documentation, build scripts, example code, test utilities
+## 5. Side‑Channel Considerations
+- Depend on constant‑time properties of upstream crates (`ml-kem`, `x25519-dalek`, `chacha20poly1305`, `blake3`, `sha2`).
+- No secret‑dependent branching in handshake orchestration (reviewed).
+- Pending: lightweight static scan for early‑exit comparisons / pattern leaks.
 
-### Rewards
-- **Critical**: $5,000 - $10,000 USD
-- **High**: $1,000 - $5,000 USD  
-- **Medium**: $500 - $1,000 USD
-- **Low**: $100 - $500 USD
+## 6. Telemetry & Privacy
+- No raw secret values logged; debug prints redact or hash prefixes.
+- Sampling (`otlp_sampling_rate`) to bound PII leakage risk.
+- Future: hashed anonymized connection IDs in exported traces.
 
-*Note: Actual rewards depend on impact, quality of report, and cooperation during disclosure.*
+## 7. Supply Chain & Build Integrity
+Current:
+- Version pinning via workspace.
+- No network fetch in build scripts (proto generation is local).
+Planned:
+- `cargo audit` + `cargo deny` CI gating.
+- CycloneDX SBOM + signed release artifacts.
+- Reproducible build (vendor + SHA256 manifest script).
 
-## Contact
+## 8. Known Gaps / Roadmap
+| Item | Status | Plan |
+|------|--------|------|
+| Rekey Enforcement Hook | WIP | Implement scheduler + counters |
+| Formal Scope Doc | Pending | `FORMAL_SCOPE.md` enumerating safety/liveness |
+| Entropy Anonymity Metrics | Planned | Compute & export anonymity set / entropy |
+| QUIC Implementation | Stub | Integrate pure Rust QUIC lib (no C deps) |
+| Side‑Channel Audit Script | Missing | Add pattern-based scanner in `scripts/` |
+| Security Event Metrics | Partial | Add counters & docs |
 
-- **Primary**: GitHub Security Advisories (preferred)
-- **Emergency**: security@nyx-protocol.org (for critical issues requiring immediate attention)
-- **PGP Key**: Available on request for encrypted communications
+## 9. Responsible Disclosure
+Private channel (TBD). Please **avoid public issue** submission for vulnerabilities. Target SLA: acknowledge <72h, preliminary assessment <7d.
 
-**Response Languages**: English, Japanese
+## 10. Licensing & Compatibility
+- Dual MIT / Apache‑2.0 (permissive, audit‑friendly).
+- No GPL contamination → easy downstream embedding.
 
 ---
-
-*This security policy is reviewed quarterly and updated as needed. Last updated: 2025-08-29*
+*Contributions welcome – include rationale with each cryptographic or policy change.*

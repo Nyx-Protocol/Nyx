@@ -945,149 +945,149 @@ mod tests {
     #[ignore = "LEGACY: receive_config is now async - see test_ed25519_multinode_gossip_scenario"]
     fn test_receive_config_causally_older() {
         // OLD API: receive_config is now async
-        let dht = Arc::new(RwLock::new(DhtStorage::new()));
+        // let dht = Arc::new(RwLock::new(DhtStorage::new()));
         // let manager = ConfigGossipManager::new("node1".to_string(), dht.clone());
 
         // Publish current config with causal history: node1=2, node2=1
         // This represents: node1 has seen node2's updates and made 2 updates
-        let mut vector_clock = VectorClock::new();
-        vector_clock.increment("node2"); // Seen node2's update
-        vector_clock.increment("node1");
-        vector_clock.increment("node1");
+        // let mut vector_clock = VectorClock::new();
+        // vector_clock.increment("node2"); // Seen node2's update
+        // vector_clock.increment("node1");
+        // vector_clock.increment("node1");
 
-        let content1 = b"log_level = \"debug\"".to_vec();
-        let config1 = SignedConfig::new(content1, 2, vector_clock, "node1".to_string());
-        manager.receive_config(config1).unwrap();
+        // let content1 = b"log_level = \"debug\"".to_vec();
+        // let config1 = SignedConfig::new(content1, 2, vector_clock, "node1".to_string());
+        // manager.receive_config(config1).unwrap();
 
         // Verify first config was applied
-        assert_eq!(manager.get_stats().configs_applied, 1);
+        // assert_eq!(manager.get_stats().configs_applied, 1);
 
         // Create a causally older config from node2: node2=1
         // This is causally before the above (node1's clock includes node2=1)
-        let mut old_clock = VectorClock::new();
-        old_clock.increment("node2");
+        // let mut old_clock = VectorClock::new();
+        // old_clock.increment("node2");
 
-        let content2 = b"log_level = \"info\"".to_vec();
-        let old_config = SignedConfig::new(content2, 1, old_clock, "node2".to_string());
+        // let content2 = b"log_level = \"info\"".to_vec();
+        // let old_config = SignedConfig::new(content2, 1, old_clock, "node2".to_string());
 
         // Receive causally older config (should be rejected)
-        let result = manager.receive_config(old_config.clone());
-        assert!(result.is_ok()); // No error, but should not be applied
+        // let result = manager.receive_config(old_config.clone());
+        // assert!(result.is_ok()); // No error, but should not be applied
 
-        let current = manager.get_current_config().unwrap();
-        assert_eq!(current.version, 2); // Should still be the current version
-        assert_eq!(current.originator, "node1"); // Should still be node1
+        // let current = manager.get_current_config().unwrap();
+        // assert_eq!(current.version, 2); // Should still be the current version
+        // assert_eq!(current.originator, "node1"); // Should still be node1
 
         // Verify stats: received incremented, but NOT applied
-        let stats = manager.get_stats();
-        assert_eq!(stats.configs_received, 2);
-        assert_eq!(stats.configs_applied, 1); // Only first config applied
+        // let stats = manager.get_stats();
+        // assert_eq!(stats.configs_received, 2);
+        // assert_eq!(stats.configs_applied, 1); // Only first config applied
     }
 
     #[test]
     #[ignore = "LEGACY: receive_config is now async - see test_ed25519_multinode_gossip_scenario"]
     fn test_conflict_resolution_lww() {
         // OLD API: receive_config is now async
-        let dht = Arc::new(RwLock::new(DhtStorage::new()));
+        // let dht = Arc::new(RwLock::new(DhtStorage::new()));
         // let manager = ConfigGossipManager::new("node1".to_string(), dht.clone());
 
         // Publish local config
-        let mut local_clock = VectorClock::new();
-        local_clock.increment("node1");
+        // let mut local_clock = VectorClock::new();
+        // local_clock.increment("node1");
 
-        let content1 = b"log_level = \"info\"".to_vec();
-        let local_config = SignedConfig::new(content1, 1, local_clock, "node1".to_string());
-        manager.receive_config(local_config).unwrap();
+        // let content1 = b"log_level = \"info\"".to_vec();
+        // let local_config = SignedConfig::new(content1, 1, local_clock, "node1".to_string());
+        // manager.receive_config(local_config).unwrap();
 
         // Simulate a concurrent update from another node
-        std::thread::sleep(std::time::Duration::from_millis(10));
+        // std::thread::sleep(std::time::Duration::from_millis(10));
 
-        let mut remote_clock = VectorClock::new();
-        remote_clock.increment("node2");
+        // let mut remote_clock = VectorClock::new();
+        // remote_clock.increment("node2");
 
-        let content2 = b"log_level = \"debug\"".to_vec();
-        let remote_config = SignedConfig::new(content2, 1, remote_clock, "node2".to_string());
+        // let content2 = b"log_level = \"debug\"".to_vec();
+        // let remote_config = SignedConfig::new(content2, 1, remote_clock, "node2".to_string());
 
         // LWW should accept the remote config (newer timestamp)
-        let result = manager.receive_config(remote_config.clone());
-        assert!(result.is_ok());
+        // let result = manager.receive_config(remote_config.clone());
+        // assert!(result.is_ok());
 
-        let stats = manager.get_stats();
-        assert_eq!(stats.conflicts_detected, 1);
-        assert_eq!(stats.conflicts_resolved, 1);
+        // let stats = manager.get_stats();
+        // assert_eq!(stats.conflicts_detected, 1);
+        // assert_eq!(stats.conflicts_resolved, 1);
 
-        let current = manager.get_current_config().unwrap();
-        assert_eq!(current.originator, "node2");
+        // let current = manager.get_current_config().unwrap();
+        // assert_eq!(current.originator, "node2");
     }
 
     #[test]
     #[ignore = "LEGACY: ConfigGossipManager::new now requires SigningKey parameter"]
     fn test_validation_failure() {
         // OLD API: ConfigGossipManager::new now requires SigningKey parameter
-        let dht = Arc::new(RwLock::new(DhtStorage::new()));
+        // let dht = Arc::new(RwLock::new(DhtStorage::new()));
         // let manager = ConfigGossipManager::new("node1".to_string(), dht);
 
         // Invalid TOML
-        let invalid_content = b"invalid toml syntax {{".to_vec();
-        let result = manager.publish_config(invalid_content);
+        // let invalid_content = b"invalid toml syntax {{".to_vec();
+        // let result = manager.publish_config(invalid_content);
 
-        assert!(matches!(
-            result,
-            Err(ConfigGossipError::ValidationFailed { .. })
-        ));
+        // assert!(matches!(
+        //     result,
+        //     Err(ConfigGossipError::ValidationFailed { .. })
+        // ));
     }
 
     #[test]
     #[ignore = "LEGACY: ConfigGossipManager::new now requires SigningKey parameter"]
     fn test_fetch_from_dht() {
         // OLD API: ConfigGossipManager::new now requires SigningKey parameter
-        let dht = Arc::new(RwLock::new(DhtStorage::new()));
+        // let dht = Arc::new(RwLock::new(DhtStorage::new()));
         // let manager = ConfigGossipManager::new("node1".to_string(), dht.clone());
 
         // Initially empty
-        assert!(manager.fetch_from_dht().unwrap().is_none());
+        // assert!(manager.fetch_from_dht().unwrap().is_none());
 
         // Publish a config
-        let content = b"log_level = \"debug\"".to_vec();
-        manager.publish_config(content.clone()).unwrap();
+        // let content = b"log_level = \"debug\"".to_vec();
+        // manager.publish_config(content.clone()).unwrap();
 
         // Fetch from DHT
-        let fetched = manager.fetch_from_dht().unwrap();
-        assert!(fetched.is_some());
+        // let fetched = manager.fetch_from_dht().unwrap();
+        // assert!(fetched.is_some());
 
-        let config = fetched.unwrap();
-        assert_eq!(config.content, content);
+        // let config = fetched.unwrap();
+        // assert_eq!(config.content, content);
     }
 
     #[test]
     #[ignore = "LEGACY: receive_config is now async - see test_ed25519_multinode_gossip_scenario"]
     fn test_stats_tracking() {
         // OLD API: receive_config is now async
-        let dht = Arc::new(RwLock::new(DhtStorage::new()));
+        // let dht = Arc::new(RwLock::new(DhtStorage::new()));
         // let manager = ConfigGossipManager::new("node1".to_string(), dht.clone());
 
-        let stats = manager.get_stats();
-        assert_eq!(stats.configs_received, 0);
-        assert_eq!(stats.configs_applied, 0);
+        // let stats = manager.get_stats();
+        // assert_eq!(stats.configs_received, 0);
+        // assert_eq!(stats.configs_applied, 0);
 
         // Publish a config
-        let content = b"log_level = \"info\"".to_vec();
-        manager.publish_config(content).unwrap();
+        // let content = b"log_level = \"info\"".to_vec();
+        // manager.publish_config(content).unwrap();
 
         // Receive a config
-        let mut clock = VectorClock::new();
-        clock.increment("node2");
-        let remote_config = SignedConfig::new(
-            b"log_level = \"debug\"".to_vec(),
-            2,
-            clock,
-            "node2".to_string(),
-        );
-        manager.receive_config(remote_config).unwrap();
+        // let mut clock = VectorClock::new();
+        // clock.increment("node2");
+        // let remote_config = SignedConfig::new(
+        //     b"log_level = \"debug\"".to_vec(),
+        //     2,
+        //     clock,
+        //     "node2".to_string(),
+        // );
+        // manager.receive_config(remote_config).unwrap();
 
-        let stats = manager.get_stats();
-        assert_eq!(stats.configs_received, 1);
-        assert_eq!(stats.configs_applied, 1);
+        // let stats = manager.get_stats();
+        // assert_eq!(stats.configs_received, 1);
+        // assert_eq!(stats.configs_applied, 1);
     }
 
     // ============================================================================
@@ -1190,6 +1190,7 @@ mod tests {
     #[tokio::test]
     async fn test_ed25519_unknown_node_rejection() {
         use rand::rngs::OsRng;
+        use tokio::sync::RwLock;
         
         let mut csprng = OsRng;
         let node1_signing_key = SigningKey::generate(&mut csprng);
@@ -1221,7 +1222,7 @@ mod tests {
         ));
 
         // Verify stats tracked rejection
-        let stats = manager.get_stats();
+        let stats = manager.get_stats().await;
         assert_eq!(stats.configs_received, 1);
         assert_eq!(stats.configs_applied, 0);
     }
@@ -1229,6 +1230,7 @@ mod tests {
     #[tokio::test]
     async fn test_ed25519_signature_verification_in_gossip() {
         use rand::rngs::OsRng;
+        use tokio::sync::RwLock;
         
         let mut csprng = OsRng;
         let node1_signing_key = SigningKey::generate(&mut csprng);
@@ -1262,7 +1264,7 @@ mod tests {
         let result = manager.receive_config(valid_config).await;
         assert!(result.is_ok());
 
-        let stats = manager.get_stats();
+        let stats = manager.get_stats().await;
         assert_eq!(stats.configs_applied, 1);
         assert_eq!(stats.signature_failures, 0);
     }
@@ -1270,6 +1272,7 @@ mod tests {
     #[tokio::test]
     async fn test_ed25519_invalid_signature_rejection() {
         use rand::rngs::OsRng;
+        use tokio::sync::RwLock;
         
         let mut csprng = OsRng;
         let node1_signing_key = SigningKey::generate(&mut csprng);
@@ -1307,7 +1310,7 @@ mod tests {
             Err(ConfigGossipError::InvalidSignature { .. })
         ));
 
-        let stats = manager.get_stats();
+        let stats = manager.get_stats().await;
         assert_eq!(stats.signature_failures, 1);
         assert_eq!(stats.configs_applied, 0);
     }
@@ -1315,6 +1318,7 @@ mod tests {
     #[tokio::test]
     async fn test_ed25519_multinode_gossip_scenario() {
         use rand::rngs::OsRng;
+        use tokio::sync::RwLock;
         
         let mut csprng = OsRng;
         
@@ -1368,11 +1372,11 @@ mod tests {
         assert!(manager1.receive_config(config3.clone()).await.is_ok());
 
         // Verify node1 has latest config
-        let current = manager1.get_current_config().unwrap();
+        let current = manager1.get_current_config().await.unwrap();
         assert_eq!(current.originator, "node3");
         assert_eq!(current.version, 2);
 
-        let stats = manager1.get_stats();
+        let stats = manager1.get_stats().await;
         assert_eq!(stats.configs_received, 2);
         assert_eq!(stats.configs_applied, 2);
         assert_eq!(stats.signature_failures, 0);
@@ -1401,7 +1405,7 @@ mod tests {
         }
         let elapsed = start.elapsed();
 
-        let avg_micros = elapsed.as_micros() / iterations;
+        let avg_micros = (elapsed.as_micros() as u64) / iterations;
         println!("Average signature generation time: {}μs", avg_micros);
 
         // PERFORMANCE REQUIREMENT: <100μs per signature

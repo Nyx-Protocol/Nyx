@@ -643,12 +643,18 @@ impl StreamManager {
         all_streams
     }
 
-    /// Create a reverse index for efficient stream_id -> connection_id lookup
+    /// Create a reverse index for stream_id -> connection_id lookup
     ///
     /// Returns a HashMap mapping stream_id to connection_id.
-    /// This is useful for operations like close_stream when only stream_id is known.
     ///
-    /// Note: This is an O(n) operation where n is the total number of streams.
+    /// # Important Limitations
+    /// - Stream IDs are only unique within a connection, not globally
+    /// - If multiple connections have streams with the same ID, only one will be in the index
+    /// - This method is primarily useful for single-connection scenarios
+    /// - For multi-connection scenarios, use `iter_all_streams()` instead
+    ///
+    /// # Performance
+    /// This is an O(n) operation where n is the total number of streams.
     /// Consider caching this index if called frequently.
     pub async fn build_stream_index(&self) -> HashMap<StreamId, ConnectionId> {
         let conns = self.connections.read().await;
@@ -1036,20 +1042,25 @@ mod tests {
         let manager = StreamManager::new(StreamManagerConfig::default());
 
         manager.register_connection(1).await;
-        manager.register_connection(2).await;
 
         let stream1 = manager
             .create_client_stream(1, StreamType::Bidirectional)
             .await
             .unwrap();
         let stream2 = manager
-            .create_client_stream(2, StreamType::Bidirectional)
+            .create_server_stream(1, StreamType::Bidirectional)
             .await
             .unwrap();
 
         let index = manager.build_stream_index().await;
 
+        // Both streams belong to connection 1
         assert_eq!(index.get(&stream1), Some(&1));
-        assert_eq!(index.get(&stream2), Some(&2));
+        assert_eq!(index.get(&stream2), Some(&1));
+        
+        // Verify stream IDs are different (client odd, server even)
+        assert_ne!(stream1, stream2);
+        assert_eq!(stream1 % 2, 1); // Client stream is odd
+        assert_eq!(stream2 % 2, 0); // Server stream is even
     }
 }

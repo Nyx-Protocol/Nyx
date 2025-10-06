@@ -11,7 +11,7 @@ Modular, privacy-first networking stack in Rust. Clean architecture, safe-by-def
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE-APACHE)
 ![Rust Edition](https://img.shields.io/badge/Rust-2021-orange)
 ![OS](https://img.shields.io/badge/OS-Linux%20%7C%20macOS%20%7C%20Windows-555)
-![Tests](https://img.shields.io/badge/Tests-410%2B%20passing-success)
+![Tests](https://img.shields.io/badge/Tests-400%2B%20passing-success)
 
 </div>
 
@@ -32,7 +32,7 @@ NyxNet is a privacy-first, post-quantum secure networking stack implemented in p
 - **OTLP Telemetry**: OpenTelemetry integration (Jaeger/Tempo) with configurable sampling
 - **Kubernetes-Native**: Helm charts with HPA, PDB, ServiceMonitor support
 - **Pure Rust + Go**: Zero C/C++ dependencies, memory-safe implementation
-- **315+ Tests**: Comprehensive test coverage (unit, integration, fuzzing)
+- **400+ Tests**: Comprehensive test coverage (unit, integration, fuzzing)
 
 ## Crate Structure
 
@@ -215,6 +215,8 @@ See `charts/nyx/values.yaml` for all configuration options and `docs/quickstart-
 
 ## Documentation
 
+**Judge / Auditor Quick Links**: See concise overview in [`SUMMARY.md`](./SUMMARY.md) and security posture in [`SECURITY.md`](./SECURITY.md).
+
 - **Getting Started**: `docs/index.md`
 - **Architecture Guide**: `docs/architecture.md` (1050+ lines, ASCII diagrams)
 - **Configuration Reference**: `docs/configuration.md` (850+ lines, 80+ parameters)
@@ -247,6 +249,19 @@ See `charts/nyx/values.yaml` for all configuration options and `docs/quickstart-
 	- Cryptography: AEAD/KDF/HPKE, key rotation, PQ readiness; threat model covers global passive/active
 
 ## Contributing
+
+## Performance (Snapshot Targets)
+> Benchmarks are being automated; current numbers are targets / indicative until CI publishes JSON artifacts.
+
+| Metric | Target (Initial) | Notes |
+|--------|------------------|-------|
+| Hybrid Handshake Median | < 8 ms (loopback) | ML-KEM-768 + X25519 HKDF combined secret |
+| Multipath Failover | < 250 ms | Simulated path loss / recovery via harness |
+| Cover Traffic Overhead | 0.2–0.6 utilization adaptive window | Adaptive manager keeps anonymity-budget band |
+| UDP Loopback RTT p50 | < 120 µs | `UdpEndpoint` buffered send/recv |
+| Rekey Data Threshold | 1 GB or 10 min | Policy – implementation hook WIP |
+
+Planned CI additions: criterion subset, `cargo audit` gate, anonymity entropy gauge export.
 
 We welcome contributions! Please review `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md`. Keep changes safe, focused, and well-tested.
 
