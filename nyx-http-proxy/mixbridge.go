@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"log"
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // JSON-RPC 2.0 structures
@@ -90,23 +91,52 @@ type MixBridgeClient struct {
 
 // NewMixBridgeClient creates a new Mix Layer IPC bridge client
 func NewMixBridgeClient(socketPath string) *MixBridgeClient {
-	return &MixBridgeClient{
+	mbc := &MixBridgeClient{
 		socketPath: socketPath,
 	}
+	// Attempt initial connection (non-blocking, will retry on first request)
+	if err := mbc.Connect(); err != nil {
+		log.Printf("Warning: Initial Mix Layer connection failed: %v (will retry on first request)", err)
+	}
+	return mbc
 }
 
-// Connect establishes IPC connection to Mix Layer
+// Connect establishes IPC connection to Mix Layer with retry logic
 func (mbc *MixBridgeClient) Connect() error {
 	mbc.mu.Lock()
 	defer mbc.mu.Unlock()
 
-	// Platform-specific connection
-	// Unix socket for Linux/macOS, Named Pipe for Windows
-	conn, err := net.Dial("unix", mbc.socketPath)
-	if err != nil {
-		return fmt.Errorf("failed to connect to Mix Layer at %s: %w", mbc.socketPath, err)
+	// Close existing connection if any
+	if mbc.conn != nil {
+		mbc.conn.Close()
+		mbc.conn = nil
+		mbc.reader = nil
+		mbc.writer = nil
 	}
 
+	// Platform-specific connection
+	// Unix socket for Linux/macOS, Named Pipe for Windows
+	var conn net.Conn
+	var err error
+
+	// Retry connection up to 5 times with exponential backoff
+	for i := 0; i < 5; i++ {
+		conn, err = net.DialTimeout("unix", mbc.socketPath, 5*time.Second)
+		if err == nil {
+			break
+		}
+		if i < 4 {
+			backoff := time.Duration(1<<uint(i)) * 100 * time.Millisecond // 100ms, 200ms, 400ms, 800ms
+			log.Printf("Mix Layer connection attempt %d/5 failed: %v (retrying in %v)", i+1, err, backoff)
+			time.Sleep(backoff)
+		}
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to connect to Mix Layer at %s after 5 attempts: %w", mbc.socketPath, err)
+	}
+
+	log.Printf("Successfully connected to Mix Layer at %s", mbc.socketPath)
 	mbc.conn = conn
 	mbc.reader = bufio.NewReader(conn)
 	mbc.writer = bufio.NewWriter(conn)
@@ -284,8 +314,15 @@ func (mbc *MixBridgeClient) sendRequest(request JsonRpcRequest) (*JsonRpcRespons
 	mbc.mu.Lock()
 	defer mbc.mu.Unlock()
 
+	// Auto-reconnect if disconnected
 	if mbc.conn == nil {
-		return nil, errors.New("not connected to Mix Layer")
+		log.Printf("Mix Layer connection not established, attempting to reconnect...")
+		mbc.mu.Unlock() // Unlock before calling Connect (which locks internally)
+		if err := mbc.Connect(); err != nil {
+			mbc.mu.Lock() // Re-lock before returning
+			return nil, fmt.Errorf("failed to reconnect to Mix Layer: %w", err)
+		}
+		mbc.mu.Lock() // Re-lock after Connect
 	}
 
 	// Serialize request
@@ -294,28 +331,45 @@ func (mbc *MixBridgeClient) sendRequest(request JsonRpcRequest) (*JsonRpcRespons
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	// Send request (newline-delimited)
+	log.Printf("Mix Layer RPC -> %s (ID: %v)", request.Method, request.ID)
+
+	// Send request (newline-delimited JSON-RPC)
 	if _, err := mbc.writer.Write(requestJSON); err != nil {
+		// Connection error - mark as disconnected
+		mbc.conn.Close()
+		mbc.conn = nil
 		return nil, fmt.Errorf("failed to write request: %w", err)
 	}
 	if err := mbc.writer.WriteByte('\n'); err != nil {
+		// Connection error - mark as disconnected
+		mbc.conn.Close()
+		mbc.conn = nil
 		return nil, fmt.Errorf("failed to write newline: %w", err)
 	}
 	if err := mbc.writer.Flush(); err != nil {
+		// Connection error - mark as disconnected
+		mbc.conn.Close()
+		mbc.conn = nil
 		return nil, fmt.Errorf("failed to flush writer: %w", err)
 	}
 
-	// Read response (newline-delimited)
+	// Read response (newline-delimited) with timeout
+	mbc.conn.SetReadDeadline(time.Now().Add(30 * time.Second))
 	responseJSON, err := mbc.reader.ReadBytes('\n')
 	if err != nil {
+		// Connection error - mark as disconnected
+		mbc.conn.Close()
+		mbc.conn = nil
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	// Parse response
 	var response JsonRpcResponse
 	if err := json.Unmarshal(responseJSON, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
+		return nil, fmt.Errorf("failed to parse response: %w (raw: %s)", err, string(responseJSON))
 	}
+
+	log.Printf("Mix Layer RPC <- %s (ID: %v, Error: %v)", request.Method, response.ID, response.Error != nil)
 
 	return &response, nil
 }
@@ -326,6 +380,7 @@ func (mbc *MixBridgeClient) Close() error {
 	defer mbc.mu.Unlock()
 
 	if mbc.conn != nil {
+		log.Printf("Closing Mix Layer connection")
 		err := mbc.conn.Close()
 		mbc.conn = nil
 		mbc.reader = nil
