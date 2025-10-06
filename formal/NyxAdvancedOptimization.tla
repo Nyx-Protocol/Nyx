@@ -1,5 +1,4 @@
 ---- MODULE NyxAdvancedOptimization ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Advanced Optimization and Performance Tuning             *)
 (*                                                                          *)
@@ -19,8 +18,9 @@ LOCAL INSTANCE NyxHelpers
 (*   - Multi-objective optimization                                        *)
 (*   - Real-time performance adaptation                                    *)
 (****************************************************************************)
-
 EXTENDS Naturals, Sequences, FiniteSets, Integers, Reals, TLC
+LOCAL INSTANCE NyxHelpers
+
 
 (****************************************************************************)
 (* Adaptive Buffer Management                                               *)
