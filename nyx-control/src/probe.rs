@@ -126,7 +126,7 @@ mod test_s {
 // ==================== Network Path Probing ====================
 
 /// Network probe metrics for path quality measurement
-/// 
+///
 /// These metrics feed into PathBuilder and multipath scheduler
 /// to enable dynamic path selection based on real-time network conditions.
 #[derive(Debug, Clone)]
@@ -159,7 +159,7 @@ impl Default for NetworkProbeMetrics {
 }
 
 /// Network path prober for multipath scheduling
-/// 
+///
 /// Continuously measures path quality and feeds metrics to:
 /// - PathBuilder for route selection
 /// - Multipath scheduler for traffic distribution
@@ -175,7 +175,7 @@ pub struct NetworkPathProber {
 
 impl NetworkPathProber {
     /// Create new network path prober
-    /// 
+    ///
     /// # Arguments
     /// * `probe_interval` - How often to probe each path (default: 5 seconds)
     pub fn new(probe_interval: Duration) -> Self {
@@ -187,12 +187,12 @@ impl NetworkPathProber {
     }
 
     /// Start probing a specific path
-    /// 
+    ///
     /// Launches a background task that:
     /// 1. Periodically sends probe packets
     /// 2. Measures RTT, packet loss, jitter
     /// 3. Updates metrics for PathBuilder consumption
-    /// 
+    ///
     /// # Arguments
     /// * `local_addr` - Local bind address for probes
     /// * `target` - Target path to probe
@@ -211,41 +211,44 @@ impl NetworkPathProber {
                 total_probes += 1;
 
                 // Perform probe (simple UDP echo with timeout)
-                let success = match Self::udp_probe(local_addr, target, Duration::from_secs(2)).await {
-                    Ok(rtt) => {
-                        rtt_samples.push(rtt);
-                        // Keep last 10 samples for jitter calculation
-                        if rtt_samples.len() > 10 {
-                            rtt_samples.remove(0);
+                let success =
+                    match Self::udp_probe(local_addr, target, Duration::from_secs(2)).await {
+                        Ok(rtt) => {
+                            rtt_samples.push(rtt);
+                            // Keep last 10 samples for jitter calculation
+                            if rtt_samples.len() > 10 {
+                                rtt_samples.remove(0);
+                            }
+                            true
                         }
-                        true
-                    }
-                    Err(_) => {
-                        loss_count += 1;
-                        false
-                    }
-                };
+                        Err(_) => {
+                            loss_count += 1;
+                            false
+                        }
+                    };
 
                 // Calculate metrics
                 if success && !rtt_samples.is_empty() {
                     let avg_rtt = rtt_samples.iter().sum::<Duration>() / rtt_samples.len() as u32;
-                    
+
                     // Calculate jitter (standard deviation of RTT)
                     let jitter = if rtt_samples.len() > 1 {
                         let mean = avg_rtt.as_secs_f64();
-                        let variance: f64 = rtt_samples.iter()
+                        let variance: f64 = rtt_samples
+                            .iter()
                             .map(|rtt| {
                                 let diff = rtt.as_secs_f64() - mean;
                                 diff * diff
                             })
-                            .sum::<f64>() / (rtt_samples.len() - 1) as f64;
+                            .sum::<f64>()
+                            / (rtt_samples.len() - 1) as f64;
                         Duration::from_secs_f64(variance.sqrt())
                     } else {
                         Duration::ZERO
                     };
 
                     let loss_rate = loss_count as f64 / total_probes as f64;
-                    
+
                     // Estimate bandwidth (simplified: 1500 bytes / avg_rtt)
                     let bandwidth = if avg_rtt > Duration::ZERO {
                         ((1500.0 / avg_rtt.as_secs_f64()) as u64).max(1000)
@@ -310,21 +313,21 @@ impl NetworkPathProber {
     }
 
     /// Get current metrics for a path
-    /// 
+    ///
     /// Returns metrics suitable for feeding to PathBuilder or multipath scheduler
     pub async fn get_metrics(&self, target: &SocketAddr) -> Option<NetworkProbeMetrics> {
         self.metrics.read().await.get(target).cloned()
     }
 
     /// Get all path metrics
-    /// 
+    ///
     /// Returns map of all monitored paths and their current metrics
     pub async fn get_all_metrics(&self) -> HashMap<SocketAddr, NetworkProbeMetrics> {
         self.metrics.read().await.clone()
     }
 
     /// Simple UDP probe implementation
-    /// 
+    ///
     /// Sends a small packet and measures RTT to target.
     /// This is a simplified implementation; production should use
     /// nyx-transport's PathValidator for proper PATH_CHALLENGE/RESPONSE.
@@ -337,7 +340,7 @@ impl NetworkPathProber {
 
         let socket = UdpSocket::bind(local_addr).await?;
         let probe_data = b"PROBE";
-        
+
         let start = Instant::now();
         socket.send_to(probe_data, target).await?;
 
@@ -351,10 +354,10 @@ impl NetworkPathProber {
     }
 
     /// Get path quality score (0.0 to 1.0)
-    /// 
+    ///
     /// Combines RTT, loss rate, and jitter into a single quality metric
     /// suitable for path ranking in multipath scheduling.
-    /// 
+    ///
     /// Score calculation:
     /// - Base score: 1.0
     /// - Penalty for RTT: -0.3 * (rtt / 500ms)
@@ -411,7 +414,7 @@ mod network_probe_tests {
     async fn prober_get_metrics_empty() {
         let prober = NetworkPathProber::new(Duration::from_secs(1));
         let target: SocketAddr = "127.0.0.1:9999".parse().unwrap();
-        
+
         let metrics = prober.get_metrics(&target).await;
         assert!(metrics.is_none());
     }
@@ -420,7 +423,7 @@ mod network_probe_tests {
     async fn prober_path_quality_no_data() {
         let prober = NetworkPathProber::new(Duration::from_secs(1));
         let target: SocketAddr = "127.0.0.1:9999".parse().unwrap();
-        
+
         let quality = prober.get_path_quality(&target).await;
         assert_eq!(quality, 0.0);
     }
@@ -429,20 +432,23 @@ mod network_probe_tests {
     async fn prober_path_quality_good_metrics() {
         let prober = NetworkPathProber::new(Duration::from_secs(1));
         let target: SocketAddr = "127.0.0.1:9999".parse().unwrap();
-        
+
         // Insert good metrics
         {
             let mut metrics = prober.metrics.write().await;
-            metrics.insert(target, NetworkProbeMetrics {
-                rtt: Duration::from_millis(50),
-                loss_rate: 0.0,
-                jitter: Duration::from_millis(5),
-                bandwidth: 10_000_000,
-                timestamp: Instant::now(),
-                sample_count: 10,
-            });
+            metrics.insert(
+                target,
+                NetworkProbeMetrics {
+                    rtt: Duration::from_millis(50),
+                    loss_rate: 0.0,
+                    jitter: Duration::from_millis(5),
+                    bandwidth: 10_000_000,
+                    timestamp: Instant::now(),
+                    sample_count: 10,
+                },
+            );
         }
-        
+
         let quality = prober.get_path_quality(&target).await;
         assert!(quality > 0.8); // Should be high quality
     }
@@ -451,20 +457,23 @@ mod network_probe_tests {
     async fn prober_path_quality_poor_metrics() {
         let prober = NetworkPathProber::new(Duration::from_secs(1));
         let target: SocketAddr = "127.0.0.1:9999".parse().unwrap();
-        
+
         // Insert poor metrics
         {
             let mut metrics = prober.metrics.write().await;
-            metrics.insert(target, NetworkProbeMetrics {
-                rtt: Duration::from_millis(1000),
-                loss_rate: 0.5,
-                jitter: Duration::from_millis(200),
-                bandwidth: 100_000,
-                timestamp: Instant::now(),
-                sample_count: 10,
-            });
+            metrics.insert(
+                target,
+                NetworkProbeMetrics {
+                    rtt: Duration::from_millis(1000),
+                    loss_rate: 0.5,
+                    jitter: Duration::from_millis(200),
+                    bandwidth: 100_000,
+                    timestamp: Instant::now(),
+                    sample_count: 10,
+                },
+            );
         }
-        
+
         let quality = prober.get_path_quality(&target).await;
         assert!(quality < 0.3); // Should be poor quality
     }
@@ -473,18 +482,18 @@ mod network_probe_tests {
     async fn prober_stop_all() {
         let prober = NetworkPathProber::new(Duration::from_secs(1));
         let target: SocketAddr = "127.0.0.1:9999".parse().unwrap();
-        
+
         // Add metrics manually
         {
             let mut metrics = prober.metrics.write().await;
             metrics.insert(target, NetworkProbeMetrics::default());
         }
-        
+
         assert!(prober.get_metrics(&target).await.is_some());
-        
+
         // Stop all
         prober.stop_all().await;
-        
+
         assert!(prober.get_metrics(&target).await.is_none());
     }
 
@@ -493,14 +502,14 @@ mod network_probe_tests {
         let prober = NetworkPathProber::new(Duration::from_secs(1));
         let target1: SocketAddr = "127.0.0.1:8001".parse().unwrap();
         let target2: SocketAddr = "127.0.0.1:8002".parse().unwrap();
-        
+
         // Add multiple metrics
         {
             let mut metrics = prober.metrics.write().await;
             metrics.insert(target1, NetworkProbeMetrics::default());
             metrics.insert(target2, NetworkProbeMetrics::default());
         }
-        
+
         let all_metrics = prober.get_all_metrics().await;
         assert_eq!(all_metrics.len(), 2);
         assert!(all_metrics.contains_key(&target1));

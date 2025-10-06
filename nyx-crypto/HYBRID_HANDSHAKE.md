@@ -2,15 +2,17 @@
 
 ## Overview
 
-This document describes the implementation of the hybrid post-quantum handshake protocol in nyx-crypto, combining classical X25519 elliptic curve cryptography with post-quantum Kyber KEM for forward secrecy against quantum attacks.
+This document describes the implementation of the hybrid post-quantum handshake protocol in nyx-crypto, combining classical X25519 elliptic curve cryptography with post-quantum **ML-KEM-768** (NIST FIPS 203, formerly Kyber) for forward secrecy against quantum attacks.
+
+> **Note**: This implementation uses ML-KEM-768, the NIST-standardized post-quantum KEM algorithm. For information about BIKE KEM support status, see [BIKE_STATUS.md](docs/BIKE_STATUS.md).
 
 ## Architecture
 
 ### Core Components
 
 1. **Classical Cryptography**: X25519 Elliptic Curve Diffie-Hellman
-2. **Post-Quantum Cryptography**: Kyber KEM (Key Encapsulation Mechanism)
-3. **Hybrid Protocol**: Combines both for quantum-resistant security
+2. **Post-Quantum Cryptography**: ML-KEM-768 (NIST FIPS 203) - formerly known as Kyber-768
+3. **Hybrid Protocol**: Combines both for quantum-resistant security (secure if either assumption holds)
 4. **Telemetry Integration**: Comprehensive metrics and monitoring
 5. **HPKE Support**: RFC9180 Hybrid Public Key Encryption for envelope encryption
 

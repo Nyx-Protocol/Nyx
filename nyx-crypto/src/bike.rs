@@ -1,7 +1,7 @@
 //! BIKE KEM (Bit Flipping Key Encapsulation) - Placeholder Module
 //!
 //! BIKE is a code-based post-quantum KEM that was a NIST Round 3 alternate candidate.
-//! 
+//!
 //! ## Current Status: NOT IMPLEMENTED
 //!
 //! This module is a placeholder for future BIKE KEM support when a production-grade

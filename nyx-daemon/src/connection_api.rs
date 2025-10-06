@@ -60,7 +60,7 @@ impl IntoResponse for ErrorResponse {
             "INVALID_REQUEST" => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
-        
+
         (status, Json(self)).into_response()
     }
 }
@@ -74,7 +74,7 @@ pub struct ApiState {
 /// Creates the connection API router
 pub fn create_connection_router(connection_manager: Arc<ConnectionManager>) -> Router {
     let state = ApiState { connection_manager };
-    
+
     Router::new()
         .route("/api/v1/connections", get(list_connections))
         .route("/api/v1/connections/:id", get(get_connection_status))
@@ -87,12 +87,16 @@ async fn list_connections(
     State(state): State<ApiState>,
 ) -> Result<Json<ListConnectionsResponse>, ErrorResponse> {
     info!("GET /api/v1/connections");
-    
+
     let conn_ids = state.connection_manager.list_connections().await;
     let mut connections = Vec::new();
 
     for conn_id in &conn_ids {
-        if let Some(status) = state.connection_manager.get_connection_status(*conn_id).await {
+        if let Some(status) = state
+            .connection_manager
+            .get_connection_status(*conn_id)
+            .await
+        {
             connections.push(ConnectionStatusResponse {
                 id: status.id,
                 age_ms: status.age.as_millis() as u64,
@@ -125,9 +129,12 @@ async fn get_connection_status(
     Path(conn_id): Path<u32>,
 ) -> Result<Json<ConnectionStatusResponse>, ErrorResponse> {
     info!("GET /api/v1/connections/{}", conn_id);
-    
-    let status = state.connection_manager.get_connection_status(conn_id).await;
-    
+
+    let status = state
+        .connection_manager
+        .get_connection_status(conn_id)
+        .await;
+
     match status {
         Some(s) => {
             let response = ConnectionStatusResponse {
@@ -160,7 +167,7 @@ async fn close_connection(
     Path(conn_id): Path<u32>,
 ) -> Result<StatusCode, ErrorResponse> {
     info!("POST /api/v1/connections/{}/close", conn_id);
-    
+
     match state.connection_manager.close_connection(conn_id).await {
         Ok(_) => Ok(StatusCode::NO_CONTENT),
         Err(e) => Err(ErrorResponse {
@@ -182,7 +189,7 @@ mod tests {
     async fn test_get_connection_status_not_found() {
         let manager = Arc::new(ConnectionManager::new(ConnectionManagerConfig::default()));
         let app = create_connection_router(manager);
-        
+
         let response = app
             .oneshot(
                 Request::builder()
@@ -192,19 +199,19 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]
     async fn test_get_connection_status_found() {
         let manager = Arc::new(ConnectionManager::new(ConnectionManagerConfig::default()));
-        
+
         // Create a connection
         let conn_id = manager.create_connection().await.unwrap();
-        
+
         let app = create_connection_router(manager);
-        
+
         let response = app
             .oneshot(
                 Request::builder()
@@ -214,19 +221,19 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(response.status(), StatusCode::OK);
     }
 
     #[tokio::test]
     async fn test_close_connection() {
         let manager = Arc::new(ConnectionManager::new(ConnectionManagerConfig::default()));
-        
+
         // Create a connection
         let conn_id = manager.create_connection().await.unwrap();
-        
+
         let app = create_connection_router(manager);
-        
+
         let response = app
             .oneshot(
                 Request::builder()
@@ -237,7 +244,7 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
     }
 
@@ -245,7 +252,7 @@ mod tests {
     async fn test_list_connections_empty() {
         let manager = Arc::new(ConnectionManager::new(ConnectionManagerConfig::default()));
         let app = create_connection_router(manager);
-        
+
         let response = app
             .oneshot(
                 Request::builder()
@@ -255,13 +262,13 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(response.status(), StatusCode::OK);
-        
+
         use http_body_util::BodyExt;
         let body = response.into_body().collect().await.unwrap().to_bytes();
         let list: ListConnectionsResponse = serde_json::from_slice(&body).unwrap();
-        
+
         assert_eq!(list.connections.len(), 0);
         assert_eq!(list.total_count, 0);
     }
@@ -269,13 +276,13 @@ mod tests {
     #[tokio::test]
     async fn test_list_connections_with_data() {
         let manager = Arc::new(ConnectionManager::new(ConnectionManagerConfig::default()));
-        
+
         // Create connections
         let conn1 = manager.create_connection().await.unwrap();
         let conn2 = manager.create_connection().await.unwrap();
-        
+
         let app = create_connection_router(manager);
-        
+
         let response = app
             .oneshot(
                 Request::builder()
@@ -285,16 +292,16 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(response.status(), StatusCode::OK);
-        
+
         use http_body_util::BodyExt;
         let body = response.into_body().collect().await.unwrap().to_bytes();
         let list: ListConnectionsResponse = serde_json::from_slice(&body).unwrap();
-        
+
         assert_eq!(list.total_count, 2);
         assert_eq!(list.connections.len(), 2);
-        
+
         let ids: Vec<u32> = list.connections.iter().map(|c| c.id).collect();
         assert!(ids.contains(&conn1));
         assert!(ids.contains(&conn2));

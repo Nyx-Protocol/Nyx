@@ -491,7 +491,12 @@ pub mod ik_demo {
 }
 
 #[cfg(test)]
-#[allow(clippy::panic, clippy::uninlined_format_args, clippy::unwrap_used, clippy::expect_used)]
+#[allow(
+    clippy::panic,
+    clippy::uninlined_format_args,
+    clippy::unwrap_used,
+    clippy::expect_used
+)]
 mod test_s {
     use super::*;
     #[test]
@@ -578,8 +583,8 @@ mod test_s {
         let hdr = if &msg1_bad[0..2] == b"NX" { 4 } else { 0 };
         let idx = hdr + 32 + ik_demo::MSG1_LEN_CIPHERTEXT + 2; // early CT position
         msg1_bad[idx] ^= 1;
-    let err = responder_handshake(&r, &i.pk, &msg1_bad, prologue);
-    assert!(matches!(err, Err(Error::Protocol(_))));
+        let err = responder_handshake(&r, &i.pk, &msg1_bad, prologue);
+        assert!(matches!(err, Err(Error::Protocol(_))));
         Ok(())
     }
 
@@ -595,8 +600,8 @@ mod test_s {
         // Strip header to simulate legacy msg1 carrying early data
         assert!(init.msg1.len() > 4 && &init.msg1[0..2] == b"NX");
         let legacy = init.msg1[4..].to_vec();
-    let err = ik_demo::responder_handshake(&r, &i.pk, &legacy, prologue);
-    assert!(matches!(err, Err(Error::Protocol(s)) if s.contains("legacy early")));
+        let err = ik_demo::responder_handshake(&r, &i.pk, &legacy, prologue);
+        assert!(matches!(err, Err(Error::Protocol(s)) if s.contains("legacy early")));
         Ok(())
     }
 
@@ -660,8 +665,8 @@ mod test_s {
         let resp = responder_handshake(&r, &i.pk, &init.msg1, prologue)?;
         let mut bad = resp.msg2.clone();
         bad[0] ^= 0x01; // flip a bit
-    let err = ik_demo::initiator_verify_msg2(&mut init, &bad);
-    assert!(matches!(err, Err(Error::Protocol(_))));
+        let err = ik_demo::initiator_verify_msg2(&mut init, &bad);
+        assert!(matches!(err, Err(Error::Protocol(_))));
         Ok(())
     }
 

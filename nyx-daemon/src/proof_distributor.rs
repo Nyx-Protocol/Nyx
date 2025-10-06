@@ -17,7 +17,7 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 /// Proof distributor errors
 #[derive(Debug, Error)]
@@ -109,6 +109,7 @@ pub struct ProofDistributor {
     /// Cached proofs (batch_id -> proof)
     proof_cache: Arc<RwLock<HashMap<u64, BatchProof>>>,
     /// Accumulator instance for generating proofs
+    #[allow(dead_code)]
     accumulator: Arc<RwLock<Accumulator>>,
     /// Metrics tracking
     metrics: Arc<RwLock<ProofMetrics>>,
@@ -132,7 +133,7 @@ impl ProofDistributor {
     pub async fn generate_proof(
         &self,
         batch_id: u64,
-        batch_elements: &[Vec<u8>],
+        _batch_elements: &[Vec<u8>],
     ) -> Result<BatchProof, ProofError> {
         info!("Generating proof for batch {}", batch_id);
 
@@ -141,7 +142,7 @@ impl ProofDistributor {
         let accumulator_value = vec![1, 2, 3, 4]; // Placeholder
 
         // Generate witness for the first element as representative
-        // In production, this could be a batch witness or Merkle proof  
+        // In production, this could be a batch witness or Merkle proof
         // For now, we skip witness generation to avoid slow prime computations in tests
         let witness = vec![];
 
@@ -152,7 +153,9 @@ impl ProofDistributor {
             .as_secs();
 
         // Sign proof (simplified - in production use proper signatures)
-        let signature = self.sign_proof(batch_id, &accumulator_value, timestamp).await;
+        let signature = self
+            .sign_proof(batch_id, &accumulator_value, timestamp)
+            .await;
 
         let proof = BatchProof {
             batch_id,
@@ -214,7 +217,12 @@ impl ProofDistributor {
 
         // Verify signature
         if !self
-            .verify_signature(proof.batch_id, &proof.accumulator_value, proof.timestamp, &proof.signature)
+            .verify_signature(
+                proof.batch_id,
+                &proof.accumulator_value,
+                proof.timestamp,
+                &proof.signature,
+            )
             .await
         {
             let mut metrics = self.metrics.write().await;
@@ -320,7 +328,10 @@ mod tests {
         // Generate proof (without adding elements to avoid slow prime generation)
         let elements = vec![b"element1".to_vec(), b"element2".to_vec()];
         let batch_id = 1;
-        let proof = distributor.generate_proof(batch_id, &elements).await.unwrap();
+        let proof = distributor
+            .generate_proof(batch_id, &elements)
+            .await
+            .unwrap();
 
         assert_eq!(proof.batch_id, batch_id);
         assert!(!proof.accumulator_value.is_empty());
@@ -362,7 +373,10 @@ mod tests {
 
         let result = distributor.get_proof(999).await;
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ProofError::ProofNotFound(999)));
+        assert!(matches!(
+            result.unwrap_err(),
+            ProofError::ProofNotFound(999)
+        ));
     }
 
     #[tokio::test]
@@ -375,7 +389,10 @@ mod tests {
         // Generate multiple proofs
         for batch_id in 1..=5 {
             let elements = vec![format!("element{}", batch_id).into_bytes()];
-            distributor.generate_proof(batch_id, &elements).await.unwrap();
+            distributor
+                .generate_proof(batch_id, &elements)
+                .await
+                .unwrap();
         }
 
         let batch_ids = distributor.list_batch_ids().await;
@@ -394,7 +411,10 @@ mod tests {
         // Generate more proofs than cache size
         for batch_id in 1..=5 {
             let elements = vec![format!("element{}", batch_id).into_bytes()];
-            distributor.generate_proof(batch_id, &elements).await.unwrap();
+            distributor
+                .generate_proof(batch_id, &elements)
+                .await
+                .unwrap();
         }
 
         let batch_ids = distributor.list_batch_ids().await;
@@ -418,7 +438,7 @@ mod tests {
 
         let elements = vec![b"element1".to_vec()];
         let mut proof = distributor.generate_proof(1, &elements).await.unwrap();
-        
+
         // Tamper with signature
         proof.signature = vec![0u8; 32];
 

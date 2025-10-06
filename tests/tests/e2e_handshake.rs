@@ -6,7 +6,7 @@
 use nyx_integration_tests::{DaemonConfig, TestHarness, TestResult};
 
 /// Test daemon spawning and basic TCP connectivity
-/// 
+///
 /// Note: nyx-daemon expects JSON-RPC protocol, not raw PING messages.
 /// This test validates:
 /// 1. Daemon process spawning via cargo run
@@ -43,7 +43,7 @@ async fn test_daemon_spawn_and_connect() -> TestResult<()> {
 
     // Verify client handle exists
     let _client = harness.client("client").expect("Client not found");
-    
+
     // Test passes if we can spawn daemon and establish TCP connection
     // Full JSON-RPC protocol testing deferred to future work
     tracing::info!("Test passed: daemon spawned and TCP connection established");
@@ -56,7 +56,7 @@ async fn test_daemon_spawn_and_connect() -> TestResult<()> {
 }
 
 /// Test multi-node daemon orchestration
-/// 
+///
 /// Validates:
 /// 1. Multiple daemon instances can run simultaneously
 /// 2. Each daemon binds to a different port
@@ -89,14 +89,14 @@ async fn test_multinode_scenario() -> TestResult<()> {
 
     harness.spawn_daemon("server1", server1_config).await?;
     tracing::info!("Server 1 spawned");
-    
+
     harness.spawn_daemon("server2", server2_config).await?;
     tracing::info!("Server 2 spawned");
 
     // Connect clients to both servers
     harness.connect_client("client1", "server1").await?;
     tracing::info!("Client 1 connected to server 1");
-    
+
     harness.connect_client("client2", "server2").await?;
     tracing::info!("Client 2 connected to server 2");
 

@@ -18,6 +18,7 @@ pub mod cover_adaptive;
 pub mod enhanced_cover_traffic; // Enhanced cover traffic & traffic analysis resistance for v1.0
 pub mod errors; // Error types for mix module
 pub mod larmix;
+pub mod sphinx; // Sphinx-like onion encryption for Phase 3
 pub mod vdf;
 pub mod vdf_calib;
 

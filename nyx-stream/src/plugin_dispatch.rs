@@ -158,7 +158,7 @@ impl PluginDispatcher {
         capabilities: HashSet<u32>,
     ) -> Self {
         let sandbox_policy = Self::select_sandbox_policy_for_capabilities(&capabilities);
-        
+
         Self {
             registry,
             runtimes: Arc::new(RwLock::new(HashMap::new())),
@@ -186,7 +186,7 @@ impl PluginDispatcher {
         // Optionally update sandbox policy based on new capabilities
         if update_sandbox {
             let new_policy = Self::select_sandbox_policy_for_capabilities(&capabilities);
-            
+
             // Update sandbox policy for all loaded plugins
             let mut runtimes = self.runtimes.write().await;
             for runtime in runtimes.values_mut() {
@@ -366,11 +366,11 @@ impl PluginDispatcher {
         // Check capability requirements
         // Verify that all capabilities required by the plugin have been negotiated
         let negotiated_caps = self.negotiated_capabilities.read().await;
-        
+
         // For now, check if plugin requires CAP_PLUGIN_FRAMEWORK (0x0002)
         // Future: Query plugin metadata for required capabilities
         use crate::capability::CAP_PLUGIN_FRAMEWORK;
-        
+
         if Self::plugin_requires_capability(plugin_id, CAP_PLUGIN_FRAMEWORK)
             && !negotiated_caps.contains(&CAP_PLUGIN_FRAMEWORK)
         {
@@ -560,8 +560,8 @@ impl PluginDispatcher {
                 allow_network: true,
                 allow_filesystem: FilesystemAccess::ReadOnly,
                 memory_limit: Some(512 * 1024 * 1024), // 512 MB limit
-                network_allowlist: vec![],              // Empty = allow all
-                filesystem_allowlist: vec![],           // Empty = allow all (read-only)
+                network_allowlist: vec![],             // Empty = allow all
+                filesystem_allowlist: vec![],          // Empty = allow all (read-only)
             }
         } else {
             // Strict policy: no plugin capabilities negotiated
@@ -683,7 +683,10 @@ mod tests {
 
         // With CAP_PLUGIN_FRAMEWORK, should have permissive policy
         assert!(policy.allow_network);
-        assert!(matches!(policy.allow_filesystem, FilesystemAccess::ReadOnly));
+        assert!(matches!(
+            policy.allow_filesystem,
+            FilesystemAccess::ReadOnly
+        ));
         assert_eq!(policy.memory_limit, Some(512 * 1024 * 1024));
     }
 
@@ -720,7 +723,10 @@ mod tests {
         assert!(dispatcher.sandbox_policy.is_some());
         let policy = dispatcher.sandbox_policy.as_ref().unwrap();
         assert!(policy.allow_network);
-        assert!(matches!(policy.allow_filesystem, FilesystemAccess::ReadOnly));
+        assert!(matches!(
+            policy.allow_filesystem,
+            FilesystemAccess::ReadOnly
+        ));
     }
 
     #[tokio::test]
@@ -784,7 +790,7 @@ mod tests {
         // This test would require plugin_requires_capability to return true
         // Since it currently returns false (placeholder), we'll document the
         // expected behavior when plugin manifest support is added.
-        
+
         // Future test case:
         // 1. Create dispatcher with empty capability set
         // 2. Load plugin that requires CAP_PLUGIN_FRAMEWORK
@@ -795,7 +801,7 @@ mod tests {
         let plugin_id = PluginId(1);
         let cap_id = 0x0002;
         let err = DispatchError::CapabilityNotNegotiated(plugin_id, cap_id);
-        
+
         let err_msg = format!("{}", err);
         assert!(err_msg.contains("0x00000002"));
         assert!(err_msg.contains("not negotiated"));

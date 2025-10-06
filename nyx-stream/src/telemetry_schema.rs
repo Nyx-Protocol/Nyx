@@ -193,6 +193,33 @@ impl StreamTelemetryContext {
         connections.get(&connection_id).cloned().unwrap_or_default()
     }
 
+    /// Take all finished spans (end_time is Some) and remove them from internal storage
+    /// This allows external exporters to collect spans without holding them indefinitely
+    pub async fn take_finished_spans(&self) -> Vec<TelemetrySpan> {
+        let mut spans_guard = self.spans.write().await;
+
+        // Collect finished span IDs first, then remove them to avoid borrow conflicts
+        // We need the intermediate Vec because we can't remove while iterating
+        // The `needless_collect` lint is allowed here due to mutable borrow requirements
+        #[allow(clippy::needless_collect)]
+        let finished_ids: Vec<u64> = spans_guard
+            .iter()
+            .filter_map(|(id, span)| {
+                if span.end_time.is_some() {
+                    Some(*id)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Remove and collect finished spans
+        finished_ids
+            .into_iter()
+            .filter_map(|id| spans_guard.remove(&id))
+            .collect()
+    }
+
     fn generate_span_id(&self) -> u64 {
         use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -446,5 +473,50 @@ mod tests {
             .get_connection_spans(connection_id)
             .await;
         assert!(!spans.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_take_finished_spans() {
+        let config = TelemetryConfig::default();
+        let context = StreamTelemetryContext::new(config);
+
+        // Create and finish some spans
+        let span_id1 = context.create_span("span1", None).await.unwrap();
+        let span_id2 = context.create_span("span2", None).await.unwrap();
+        let span_id3 = context.create_span("span3", None).await.unwrap();
+
+        // Finish first two spans
+        context.end_span(span_id1, SpanStatus::Ok).await;
+        context.end_span(span_id2, SpanStatus::Error).await;
+        // Leave span3 unfinished
+
+        // Take finished spans
+        let finished = context.take_finished_spans().await;
+
+        assert_eq!(finished.len(), 2);
+        assert!(finished.iter().any(|s| s.span_id == span_id1));
+        assert!(finished.iter().any(|s| s.span_id == span_id2));
+        assert!(!finished.iter().any(|s| s.span_id == span_id3));
+
+        // Verify finished spans were removed from internal storage
+        let spans = context.spans.read().await;
+        assert!(!spans.contains_key(&span_id1));
+        assert!(!spans.contains_key(&span_id2));
+        assert!(spans.contains_key(&span_id3)); // Unfinished span remains
+    }
+
+    #[tokio::test]
+    async fn test_take_finished_spans_empty() {
+        let config = TelemetryConfig::default();
+        let context = StreamTelemetryContext::new(config);
+
+        // No spans created
+        let finished = context.take_finished_spans().await;
+        assert_eq!(finished.len(), 0);
+
+        // Create but don't finish spans
+        let _span_id = context.create_span("unfinished", None).await.unwrap();
+        let finished = context.take_finished_spans().await;
+        assert_eq!(finished.len(), 0);
     }
 }

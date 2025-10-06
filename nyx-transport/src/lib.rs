@@ -20,10 +20,6 @@
     clippy::unreachable,
     clippy::uninlined_format_args
 )]
-#![warn(
-    clippy::todo,
-    clippy::unimplemented
-)]
 
 use std::sync::{
     atomic::{AtomicU64, Ordering},

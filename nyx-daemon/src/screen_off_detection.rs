@@ -13,11 +13,11 @@
 
 #![forbid(unsafe_code)]
 
-use std::time::{Duration, Instant};
-use std::collections::VecDeque;
 use serde::{Deserialize, Serialize};
-use tokio::sync::RwLock;
+use std::collections::VecDeque;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 /// Screen state tracking for adaptive power management
@@ -89,6 +89,44 @@ impl Default for ScreenOffConfig {
             screen_off_cover_ratio: 0.1,
             screen_on_cover_ratio: 0.4,
             state_change_cooldown: Duration::from_secs(5),
+        }
+    }
+}
+
+#[cfg(not(test))]
+impl From<crate::LowPowerConfig> for ScreenOffConfig {
+    /// Convert LowPowerConfig from nyx.toml into ScreenOffConfig
+    fn from(lp: crate::LowPowerConfig) -> Self {
+        Self {
+            min_screen_off_duration: Duration::from_secs(10), // Fixed: reasonable default
+            tracking_window: Duration::from_secs(3600),       // 1 hour
+            battery_thresholds: BatteryThresholds {
+                critical_level: (lp.battery_critical_threshold as f32) / 100.0,
+                low_level: (lp.battery_low_threshold as f32) / 100.0,
+                hysteresis: (lp.battery_hysteresis as f32) / 100.0,
+            },
+            screen_off_cover_ratio: lp.background_cover_traffic_ratio as f32,
+            screen_on_cover_ratio: lp.active_cover_traffic_ratio as f32,
+            state_change_cooldown: Duration::from_millis(lp.screen_off_cooldown_ms),
+        }
+    }
+}
+
+#[cfg(test)]
+impl From<crate::config_manager::LowPowerConfig> for ScreenOffConfig {
+    /// Convert LowPowerConfig from nyx.toml into ScreenOffConfig (test version)
+    fn from(lp: crate::config_manager::LowPowerConfig) -> Self {
+        Self {
+            min_screen_off_duration: Duration::from_secs(10), // Fixed: reasonable default
+            tracking_window: Duration::from_secs(3600),       // 1 hour
+            battery_thresholds: BatteryThresholds {
+                critical_level: (lp.battery_critical_threshold as f32) / 100.0,
+                low_level: (lp.battery_low_threshold as f32) / 100.0,
+                hysteresis: (lp.battery_hysteresis as f32) / 100.0,
+            },
+            screen_off_cover_ratio: lp.background_cover_traffic_ratio as f32,
+            screen_on_cover_ratio: lp.active_cover_traffic_ratio as f32,
+            state_change_cooldown: Duration::from_millis(lp.screen_off_cooldown_ms),
         }
     }
 }
@@ -183,6 +221,10 @@ impl ScreenOffDetector {
     /// Create a new screen-off detector
     pub fn new(config: ScreenOffConfig) -> Self {
         let now = Instant::now();
+        let stats = ScreenOffStats {
+            current_cover_ratio: config.screen_on_cover_ratio,
+            ..Default::default()
+        };
         Self {
             config,
             current_screen_state: ScreenState::On,
@@ -191,13 +233,25 @@ impl ScreenOffDetector {
             last_power_change: now,
             screen_history: VecDeque::new(),
             battery_level: 1.0, // Start with full battery
-            stats: ScreenOffStats::default(),
+            stats,
         }
     }
 
     /// Create with default configuration
     pub fn with_default_config() -> Self {
         Self::new(ScreenOffConfig::default())
+    }
+
+    /// Create from LowPowerConfig (from nyx.toml)
+    #[cfg(not(test))]
+    pub fn from_low_power_config(lp: crate::LowPowerConfig) -> Self {
+        Self::new(ScreenOffConfig::from(lp))
+    }
+
+    /// Create from LowPowerConfig (from nyx.toml) - test version
+    #[cfg(test)]
+    pub fn from_low_power_config(lp: crate::config_manager::LowPowerConfig) -> Self {
+        Self::new(ScreenOffConfig::from(lp))
     }
 
     /// Update screen state
@@ -275,14 +329,14 @@ impl ScreenOffDetector {
     /// Update power state based on current conditions
     fn update_power_state(&mut self) -> Option<PowerStateEvent> {
         let now = Instant::now();
-        
+
         // Respect cooldown period
         if now.duration_since(self.last_power_change) < self.config.state_change_cooldown {
             return None;
         }
 
         let new_state = self.determine_power_state();
-        
+
         if new_state == self.current_power_state {
             return None; // No change
         }
@@ -365,7 +419,10 @@ impl ScreenOffDetector {
                 if self.battery_level <= self.config.battery_thresholds.low_level {
                     format!("Low battery: {:.1}%", self.battery_level * 100.0)
                 } else {
-                    format!("Screen off for {}s", self.config.min_screen_off_duration.as_secs())
+                    format!(
+                        "Screen off for {}s",
+                        self.config.min_screen_off_duration.as_secs()
+                    )
                 }
             }
             PowerState::Critical => format!("Critical battery: {:.1}%", self.battery_level * 100.0),
@@ -387,7 +444,7 @@ impl ScreenOffDetector {
     fn clean_history(&mut self) {
         let now = Instant::now();
         let cutoff = now.checked_sub(self.config.tracking_window).unwrap_or(now);
-        
+
         while let Some(front) = self.screen_history.front() {
             if front.timestamp < cutoff {
                 self.screen_history.pop_front();
@@ -406,13 +463,13 @@ impl ScreenOffDetector {
 
         let now = Instant::now();
         let window_start = now.checked_sub(self.config.tracking_window).unwrap_or(now);
-        
+
         let mut screen_on_time = Duration::ZERO;
         let mut screen_off_time = Duration::ZERO;
-        
+
         let mut current_state = ScreenState::On; // Assume started with screen on
         let mut state_start = window_start;
-        
+
         for event in &self.screen_history {
             if event.timestamp > window_start {
                 // Add duration from state_start to event timestamp
@@ -421,26 +478,26 @@ impl ScreenOffDetector {
                     ScreenState::On => screen_on_time += duration,
                     ScreenState::Off => screen_off_time += duration,
                 }
-                
+
                 current_state = event.state;
                 state_start = event.timestamp;
             }
         }
-        
+
         // Add time from last event to now
         let final_duration = now.duration_since(state_start);
         match current_state {
             ScreenState::On => screen_on_time += final_duration,
             ScreenState::Off => screen_off_time += final_duration,
         }
-        
+
         let total_time = screen_on_time + screen_off_time;
         if total_time > Duration::ZERO {
             self.stats.screen_off_ratio = screen_off_time.as_secs_f32() / total_time.as_secs_f32();
         } else {
             self.stats.screen_off_ratio = 0.0;
         }
-        
+
         // Update stats
         self.stats.screen_on_duration = screen_on_time;
         self.stats.screen_off_duration = screen_off_time;
@@ -481,12 +538,12 @@ impl ScreenOffDetector {
                 timestamp: now,
                 reason: "App backgrounded".to_string(),
             };
-            
+
             self.current_power_state = PowerState::Inactive;
             self.last_power_change = now;
             self.stats.power_state_changes += 1;
             self.update_cover_traffic_ratio(PowerState::Inactive);
-            
+
             Some(event)
         } else if !is_background && self.current_power_state == PowerState::Inactive {
             // Return to appropriate state based on current conditions
@@ -539,7 +596,10 @@ impl SharedScreenOffDetector {
 
     /// Set app background state
     pub async fn set_app_background(&self, is_background: bool) -> Option<PowerStateEvent> {
-        self.detector.write().await.set_app_background(is_background)
+        self.detector
+            .write()
+            .await
+            .set_app_background(is_background)
     }
 
     /// Get current statistics
@@ -597,16 +657,16 @@ mod tests {
     #[test]
     fn test_screen_state_transitions() {
         let mut detector = ScreenOffDetector::with_default_config();
-        
+
         // Transition to screen off
         let event = detector.update_screen_state(ScreenState::Off);
         assert!(event.is_some());
         assert_eq!(detector.get_screen_state(), ScreenState::Off);
-        
+
         // No change - should return None
         let event = detector.update_screen_state(ScreenState::Off);
         assert!(event.is_none());
-        
+
         // Back to screen on
         let event = detector.update_screen_state(ScreenState::On);
         assert!(event.is_some());
@@ -616,15 +676,15 @@ mod tests {
     #[test]
     fn test_battery_level_updates() {
         let mut detector = ScreenOffDetector::with_default_config();
-        
+
         // Valid battery level
         detector.update_battery_level(0.5);
         assert_eq!(detector.get_battery_level(), 0.5);
-        
+
         // Clamped to valid range
         detector.update_battery_level(-0.1);
         assert_eq!(detector.get_battery_level(), 0.0);
-        
+
         detector.update_battery_level(1.5);
         assert_eq!(detector.get_battery_level(), 1.0);
     }
@@ -633,9 +693,9 @@ mod tests {
     fn test_power_state_low_battery() {
         let mut config = ScreenOffConfig::default();
         config.state_change_cooldown = Duration::ZERO; // Disable cooldown for testing
-        
+
         let mut detector = ScreenOffDetector::new(config);
-        
+
         // Set low battery
         let event = detector.update_battery_level(0.2); // Below 25% threshold
         assert!(event.is_some());
@@ -646,9 +706,9 @@ mod tests {
     fn test_power_state_critical_battery() {
         let mut config = ScreenOffConfig::default();
         config.state_change_cooldown = Duration::ZERO;
-        
+
         let mut detector = ScreenOffDetector::new(config);
-        
+
         // Set critical battery
         let event = detector.update_battery_level(0.05); // Below 10% threshold
         assert!(event.is_some());
@@ -659,15 +719,15 @@ mod tests {
     fn test_cover_traffic_ratio_updates() {
         let mut config = ScreenOffConfig::default();
         config.state_change_cooldown = Duration::ZERO;
-        
+
         let mut detector = ScreenOffDetector::new(config);
-        
+
         // Default active state
         assert_eq!(detector.get_cover_traffic_ratio(), 0.4); // screen_on_cover_ratio
-        
+
         // Screen off should trigger background state after enough time
         detector.update_screen_state(ScreenState::Off);
-        
+
         // Force power state update by setting battery low
         detector.update_battery_level(0.2);
         assert_eq!(detector.get_cover_traffic_ratio(), 0.1); // screen_off_cover_ratio
@@ -679,15 +739,15 @@ mod tests {
         let mut config = ScreenOffConfig::default();
         config.state_change_cooldown = Duration::ZERO;
         let mut detector = ScreenOffDetector::new(config);
-        
+
         // Verify initial state
         assert_eq!(detector.get_power_state(), PowerState::Active);
-        
+
         // Set app to background
         let event = detector.set_app_background(true);
         assert!(event.is_some());
         assert_eq!(detector.get_power_state(), PowerState::Inactive);
-        
+
         // Return to foreground
         let event = detector.set_app_background(false);
         assert!(event.is_some());
@@ -697,15 +757,15 @@ mod tests {
     #[tokio::test]
     async fn test_shared_detector() {
         let detector = SharedScreenOffDetector::with_default_config();
-        
+
         // Test screen state update
         let event = detector.update_screen_state(ScreenState::Off).await;
         assert!(event.is_some());
-        
+
         let (screen_state, power_state, battery) = detector.get_states().await;
         assert_eq!(screen_state, ScreenState::Off);
         assert_eq!(battery, 1.0);
-        
+
         // Test battery update
         let event = detector.update_battery_level(0.5).await;
         let battery = detector.get_states().await.2;
@@ -715,13 +775,13 @@ mod tests {
     #[test]
     fn test_screen_off_ratio_calculation() {
         let mut detector = ScreenOffDetector::with_default_config();
-        
+
         // Simulate some screen state changes
         detector.update_screen_state(ScreenState::Off);
         std::thread::sleep(Duration::from_millis(100));
         detector.update_screen_state(ScreenState::On);
         std::thread::sleep(Duration::from_millis(100));
-        
+
         let stats = detector.get_stats();
         // Should have some screen-off time recorded
         assert!(stats.screen_off_duration > Duration::ZERO);
@@ -732,10 +792,10 @@ mod tests {
     #[test]
     fn test_configuration_updates() {
         let mut detector = ScreenOffDetector::with_default_config();
-        
+
         let mut new_config = ScreenOffConfig::default();
         new_config.screen_off_cover_ratio = 0.05;
-        
+
         detector.update_config(new_config);
         assert_eq!(detector.get_config().screen_off_cover_ratio, 0.05);
     }
@@ -746,17 +806,17 @@ mod tests {
         config.state_change_cooldown = Duration::ZERO;
         config.battery_thresholds.low_level = 0.25;
         config.battery_thresholds.hysteresis = 0.05;
-        
+
         let mut detector = ScreenOffDetector::new(config);
-        
+
         // Drop below threshold
         detector.update_battery_level(0.20);
         assert_eq!(detector.get_power_state(), PowerState::Background);
-        
+
         // Rise slightly above threshold but below hysteresis
         detector.update_battery_level(0.27);
         assert_eq!(detector.get_power_state(), PowerState::Background); // Should stay
-        
+
         // Rise above threshold + hysteresis
         detector.update_battery_level(0.35);
         assert_eq!(detector.get_power_state(), PowerState::Active); // Should change

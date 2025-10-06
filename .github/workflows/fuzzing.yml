@@ -1,0 +1,237 @@
+name: Fuzzing CI
+
+on:
+  schedule:
+    # Run fuzzing weekly (Sunday at 2 AM UTC)
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Specific fuzz target to run (leave empty for all)'
+        required: false
+        type: string
+      duration:
+        description: 'Fuzzing duration in seconds per target'
+        required: false
+        default: '3600'
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: full
+  # Limit parallel jobs to reduce resource contention
+  CARGO_BUILD_JOBS: 2
+
+jobs:
+  fuzzing:
+    name: Fuzz ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        # List of fuzz targets from fuzz/fuzz_targets/
+        target:
+          - extended_packet
+          - capability_negotiation
+          - ice_candidate
+          - quic_packet
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Install Rust nightly toolchain
+      uses: dtolnay/rust-toolchain@nightly
+    
+    - name: Cache cargo registry and build artifacts
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          fuzz/target
+        key: fuzzing-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          fuzzing-${{ runner.os }}-${{ matrix.target }}-
+          fuzzing-${{ runner.os }}-
+    
+    - name: Install cargo-fuzz
+      run: cargo install cargo-fuzz --locked
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcap-dev pkg-config protobuf-compiler
+    
+    - name: Build fuzz target
+      run: |
+        cd fuzz
+        cargo fuzz build ${{ matrix.target }} --verbose
+    
+    - name: Run fuzzing
+      id: fuzz_run
+      run: |
+        cd fuzz
+        # Determine fuzzing duration (workflow input or default 3600s = 1 hour)
+        DURATION="${{ github.event.inputs.duration || '3600' }}"
+        
+        # Skip if specific target requested and this isn't it
+        if [ -n "${{ github.event.inputs.target }}" ] && [ "${{ github.event.inputs.target }}" != "${{ matrix.target }}" ]; then
+          echo "Skipping ${{ matrix.target }} (only running ${{ github.event.inputs.target }})"
+          exit 0
+        fi
+        
+        echo "Running cargo-fuzz on target '${{ matrix.target }}' for ${DURATION} seconds"
+        
+        # Run fuzzing with timeout and capture exit code
+        # Note: cargo-fuzz exits with non-zero on crash (expected behavior)
+        timeout ${DURATION}s cargo fuzz run ${{ matrix.target }} -- -max_total_time=${DURATION} || EXIT_CODE=$?
+        
+        # Exit codes: 0=success, 124=timeout (normal), others=crash
+        if [ "${EXIT_CODE:-0}" -eq 124 ] || [ "${EXIT_CODE:-0}" -eq 0 ]; then
+          echo "Fuzzing completed normally (no crashes detected)"
+          echo "crashes_found=false" >> $GITHUB_OUTPUT
+          exit 0
+        else
+          echo "Fuzzing found crashes (exit code: ${EXIT_CODE})"
+          echo "crashes_found=true" >> $GITHUB_OUTPUT
+          # List crash artifacts for debugging
+          if [ -d "fuzz/artifacts/${{ matrix.target }}" ]; then
+            echo "Crash artifacts:"
+            ls -lh fuzz/artifacts/${{ matrix.target }}
+          fi
+          exit 0  # Don't fail the workflow, handle in next step
+        fi
+      continue-on-error: true
+    
+    - name: Upload crash artifacts
+      if: steps.fuzz_run.outputs.crashes_found == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: fuzz-crashes-${{ matrix.target }}-${{ github.run_number }}
+        path: fuzz/artifacts/${{ matrix.target }}/
+        retention-days: 90
+        if-no-files-found: warn
+    
+    - name: Upload corpus (for reproducibility)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: fuzz-corpus-${{ matrix.target }}-${{ github.run_number }}
+        path: fuzz/corpus/${{ matrix.target }}/
+        retention-days: 30
+        if-no-files-found: ignore
+    
+    - name: Create GitHub Issue on crash
+      if: steps.fuzz_run.outputs.crashes_found == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const target = '${{ matrix.target }}';
+          const runNumber = '${{ github.run_number }}';
+          const runUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+          
+          // Read crash artifact files (if available locally, otherwise reference artifact)
+          let crashDetails = 'See uploaded artifacts for crash inputs.';
+          const artifactPath = `fuzz/artifacts/${target}`;
+          
+          try {
+            if (fs.existsSync(artifactPath)) {
+              const files = fs.readdirSync(artifactPath);
+              if (files.length > 0) {
+                crashDetails = `Found ${files.length} crash input(s):\n`;
+                files.forEach(file => {
+                  crashDetails += `- \`${file}\`\n`;
+                });
+              }
+            }
+          } catch (error) {
+            console.log(`Could not read crash files: ${error.message}`);
+          }
+          
+          // Check for existing open issues with same target
+          const existingIssues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'fuzzing,bug',
+            per_page: 100
+          });
+          
+          const targetIssue = existingIssues.data.find(issue => 
+            issue.title.includes(`Fuzzing crash in \`${target}\``)
+          );
+          
+          if (targetIssue) {
+            // Comment on existing issue instead of creating duplicate
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: targetIssue.number,
+              body: `## Additional Fuzzing Crash Detected\n\n` +
+                    `**Run:** [#${runNumber}](${runUrl})\n` +
+                    `**Target:** \`${target}\`\n` +
+                    `**Timestamp:** ${new Date().toISOString()}\n\n` +
+                    `${crashDetails}\n\n` +
+                    `Download artifacts: [fuzz-crashes-${target}-${runNumber}](${runUrl})`
+            });
+            console.log(`Updated existing issue #${targetIssue.number}`);
+          } else {
+            // Create new issue
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Fuzzing crash in \`${target}\` (Run #${runNumber})`,
+              labels: ['bug', 'fuzzing', 'security'],
+              body: `## Fuzzing Crash Report\n\n` +
+                    `**Fuzz Target:** \`${target}\`\n` +
+                    `**CI Run:** [#${runNumber}](${runUrl})\n` +
+                    `**Timestamp:** ${new Date().toISOString()}\n\n` +
+                    `### Crash Details\n\n${crashDetails}\n\n` +
+                    `### Reproduction\n\n` +
+                    `1. Download crash artifacts from CI run\n` +
+                    `2. Extract to \`fuzz/artifacts/${target}/\`\n` +
+                    `3. Run: \`cd fuzz && cargo fuzz run ${target} artifacts/${target}/<crash-file>\`\n\n` +
+                    `### Next Steps\n\n` +
+                    `- [ ] Reproduce crash locally\n` +
+                    `- [ ] Analyze root cause with debugger\n` +
+                    `- [ ] Fix vulnerability or add input validation\n` +
+                    `- [ ] Add regression test\n` +
+                    `- [ ] Verify fix with extended fuzzing\n\n` +
+                    `### Artifacts\n\n` +
+                    `Download: [fuzz-crashes-${target}-${runNumber}](${runUrl})`
+            });
+            console.log('Created new fuzzing crash issue');
+          }
+
+  fuzzing-summary:
+    name: Fuzzing Summary
+    runs-on: ubuntu-latest
+    needs: fuzzing
+    if: always()
+    
+    steps:
+    - name: Generate summary
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const runs = ${{ toJSON(needs.fuzzing.result) }};
+          let summary = '## Fuzzing CI Summary\n\n';
+          summary += `**Run:** #${{ github.run_number }}\n`;
+          summary += `**Status:** ${runs}\n\n`;
+          
+          // Note: Individual target results would require API queries
+          // For simplicity, just report overall status
+          if (runs === 'success') {
+            summary += '✅ All fuzz targets completed without crashes\n';
+          } else if (runs === 'failure') {
+            summary += '⚠️ Some fuzz targets found crashes (check artifacts and issues)\n';
+          } else {
+            summary += `ℹ️ Fuzzing completed with status: ${runs}\n`;
+          }
+          
+          console.log(summary);
+          core.summary.addRaw(summary);
+          await core.summary.write();

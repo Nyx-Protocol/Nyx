@@ -12,6 +12,5 @@ pub mod integration;
 
 // Re-export common utilities for integration tests
 pub use test_harness::{
-    ClientHandle, DaemonConfig, DaemonHandle, NetworkConfig, TestHarness, TestNetwork,
-    TestResult,
+    ClientHandle, DaemonConfig, DaemonHandle, NetworkConfig, TestHarness, TestNetwork, TestResult,
 };

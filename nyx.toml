@@ -179,3 +179,30 @@ prometheus_enabled = false
 service_name = "nyx-daemon"
 # Enable span export
 span_export_enabled = false
+
+# Low-power mode configuration (§7.1 Screen-off Detector)
+[low_power]
+# Enable low-power mode features (mobile battery optimization)
+enabled = true
+
+# Cover traffic ratios based on device state
+# Background ratio (screen off, app backgrounded): 0.05-0.1
+background_cover_traffic_ratio = 0.08
+# Active ratio (screen on, app foregrounded): 0.3-0.5
+active_cover_traffic_ratio = 0.4
+
+# Battery level thresholds (percentage 0-100)
+# Critical threshold: triggers aggressive power saving (default 10%)
+battery_critical_threshold = 10
+# Low threshold: triggers moderate power saving (default 20%)
+battery_low_threshold = 20
+# Hysteresis: prevents rapid state oscillation (default 5%)
+battery_hysteresis = 5
+
+# Screen state change cooldown (milliseconds)
+# Prevents rapid adjustments on transient screen toggles (default 5000ms)
+screen_off_cooldown_ms = 5000
+
+# App foreground/background detection timeout (seconds)
+# Time to wait before considering app truly backgrounded (default 10s)
+app_background_timeout = 10

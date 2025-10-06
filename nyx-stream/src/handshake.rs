@@ -36,19 +36,21 @@
 #![forbid(unsafe_code)]
 
 use crate::capability::{self, Capability};
-use crate::telemetry_schema::{NyxTelemetryInstrumentation, ConnectionId, SpanStatus, span_names, attribute_names};
+use crate::telemetry_schema::{
+    attribute_names, span_names, ConnectionId, NyxTelemetryInstrumentation, SpanStatus,
+};
 use crate::{Error, Result};
+use hkdf::Hkdf;
 use nyx_crypto::hybrid_handshake::{
     HybridCiphertext, HybridHandshake as CryptoHandshake, HybridKeyPair, HybridPublicKey,
     SharedSecret,
 };
+use sha2::Sha256;
 use std::fmt;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, warn};
 use zeroize::ZeroizeOnDrop;
-use hkdf::Hkdf;
-use sha2::Sha256;
 
 /// Handshake state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -188,7 +190,10 @@ impl ClientHandshake {
     }
 
     /// Create a new client handshake with telemetry
-    pub fn with_telemetry(telemetry: Arc<NyxTelemetryInstrumentation>, connection_id: ConnectionId) -> Self {
+    pub fn with_telemetry(
+        telemetry: Arc<NyxTelemetryInstrumentation>,
+        connection_id: ConnectionId,
+    ) -> Self {
         Self {
             state: Arc::new(Mutex::new(HandshakeState::Idle)),
             key_pair: None,
@@ -209,14 +214,13 @@ impl ClientHandshake {
     /// Returns Ok(()) if all required peer capabilities are supported,
     /// or Err with unsupported capability ID if negotiation fails.
     pub fn validate_peer_capabilities(peer_caps: &[Capability]) -> Result<()> {
-        capability::negotiate(capability::LOCAL_CAP_IDS, peer_caps)
-            .map_err(|e| match e {
-                capability::CapabilityError::UnsupportedRequired(id) => {
-                    warn!(unsupported_cap_id = id, "Unsupported required capability");
-                    Error::Protocol(format!("Unsupported required capability: 0x{:08x}", id))
-                }
-                _ => Error::Protocol(format!("Capability negotiation failed: {}", e)),
-            })
+        capability::negotiate(capability::LOCAL_CAP_IDS, peer_caps).map_err(|e| match e {
+            capability::CapabilityError::UnsupportedRequired(id) => {
+                warn!(unsupported_cap_id = id, "Unsupported required capability");
+                Error::Protocol(format!("Unsupported required capability: 0x{:08x}", id))
+            }
+            _ => Error::Protocol(format!("Capability negotiation failed: {}", e)),
+        })
     }
 
     /// Initialize handshake and return public key for transmission
@@ -234,9 +238,23 @@ impl ClientHandshake {
 
         // Start telemetry span for handshake initialization
         if let (Some(telemetry), Some(connection_id)) = (&self.telemetry, &self.connection_id) {
-            if let Some(span_id) = telemetry.get_context().create_span(span_names::PROTOCOL_NEGOTIATION, None).await {
-                telemetry.get_context().add_span_attribute(span_id, attribute_names::CONNECTION_ID, &connection_id.inner().to_string()).await;
-                telemetry.get_context().add_span_attribute(span_id, "handshake.type", "client_init").await;
+            if let Some(span_id) = telemetry
+                .get_context()
+                .create_span(span_names::PROTOCOL_NEGOTIATION, None)
+                .await
+            {
+                telemetry
+                    .get_context()
+                    .add_span_attribute(
+                        span_id,
+                        attribute_names::CONNECTION_ID,
+                        &connection_id.inner().to_string(),
+                    )
+                    .await;
+                telemetry
+                    .get_context()
+                    .add_span_attribute(span_id, "handshake.type", "client_init")
+                    .await;
             }
         }
 
@@ -257,11 +275,25 @@ impl ClientHandshake {
 
         // Record successful initialization in telemetry
         if let (Some(telemetry), Some(connection_id)) = (&self.telemetry, &self.connection_id) {
-            if let Ok(spans) = tokio::time::timeout(std::time::Duration::from_millis(10), 
-                telemetry.get_context().get_connection_spans(*connection_id)).await {
+            if let Ok(spans) = tokio::time::timeout(
+                std::time::Duration::from_millis(10),
+                telemetry.get_context().get_connection_spans(*connection_id),
+            )
+            .await
+            {
                 for span_id in spans {
-                    let _ = telemetry.get_context().add_span_attribute(span_id, "public_key.size", &public_key.size().to_string()).await;
-                    let _ = telemetry.get_context().end_span(span_id, SpanStatus::Ok).await;
+                    let _ = telemetry
+                        .get_context()
+                        .add_span_attribute(
+                            span_id,
+                            "public_key.size",
+                            &public_key.size().to_string(),
+                        )
+                        .await;
+                    let _ = telemetry
+                        .get_context()
+                        .end_span(span_id, SpanStatus::Ok)
+                        .await;
                 }
             }
         }
@@ -348,7 +380,10 @@ impl ServerHandshake {
     }
 
     /// Create a new server handshake with telemetry
-    pub fn with_telemetry(telemetry: Arc<NyxTelemetryInstrumentation>, connection_id: ConnectionId) -> Self {
+    pub fn with_telemetry(
+        telemetry: Arc<NyxTelemetryInstrumentation>,
+        connection_id: ConnectionId,
+    ) -> Self {
         Self {
             state: Arc::new(Mutex::new(HandshakeState::Idle)),
             client_public: None,
@@ -365,14 +400,16 @@ impl ServerHandshake {
 
     /// Validate peer (client) capabilities received in CRYPTO frame
     pub fn validate_peer_capabilities(peer_caps: &[Capability]) -> Result<()> {
-        capability::negotiate(capability::LOCAL_CAP_IDS, peer_caps)
-            .map_err(|e| match e {
-                capability::CapabilityError::UnsupportedRequired(id) => {
-                    warn!(unsupported_cap_id = id, "Unsupported required capability from client");
-                    Error::Protocol(format!("Unsupported required capability: 0x{:08x}", id))
-                }
-                _ => Error::Protocol(format!("Capability negotiation failed: {}", e)),
-            })
+        capability::negotiate(capability::LOCAL_CAP_IDS, peer_caps).map_err(|e| match e {
+            capability::CapabilityError::UnsupportedRequired(id) => {
+                warn!(
+                    unsupported_cap_id = id,
+                    "Unsupported required capability from client"
+                );
+                Error::Protocol(format!("Unsupported required capability: 0x{:08x}", id))
+            }
+            _ => Error::Protocol(format!("Capability negotiation failed: {}", e)),
+        })
     }
 
     /// Process client public key and return ciphertext for transmission
@@ -462,10 +499,7 @@ mod tests {
         assert_eq!(client.state().await, HandshakeState::Idle);
 
         let client_public = client.init().await?;
-        assert_eq!(
-            client.state().await,
-            HandshakeState::ClientAwaitingResponse
-        );
+        assert_eq!(client.state().await, HandshakeState::ClientAwaitingResponse);
 
         // Server side
         let mut server = ServerHandshake::new();
@@ -527,7 +561,7 @@ mod tests {
     fn test_get_local_capabilities() {
         let caps = ClientHandshake::get_local_capabilities();
         assert!(!caps.is_empty());
-        
+
         // Should have core capability
         assert!(caps.iter().any(|c| c.id == capability::CAP_CORE));
     }
@@ -536,7 +570,7 @@ mod tests {
     fn test_validate_peer_capabilities_success() {
         // Peer only requires CORE (which we support)
         let peer_caps = vec![Capability::required(capability::CAP_CORE, vec![])];
-        
+
         let result = ClientHandshake::validate_peer_capabilities(&peer_caps);
         assert!(result.is_ok());
     }
@@ -548,7 +582,7 @@ mod tests {
             Capability::required(capability::CAP_CORE, vec![]),
             Capability::required(0xFFFF, vec![]), // Unknown required capability
         ];
-        
+
         let result = ClientHandshake::validate_peer_capabilities(&peer_caps);
         assert!(result.is_err());
     }
@@ -560,7 +594,7 @@ mod tests {
             Capability::required(capability::CAP_CORE, vec![]),
             Capability::optional(0xFFFF, vec![]), // Unknown but optional
         ];
-        
+
         let result = ClientHandshake::validate_peer_capabilities(&peer_caps);
         assert!(result.is_ok());
     }

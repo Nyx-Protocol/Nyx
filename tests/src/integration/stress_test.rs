@@ -12,30 +12,34 @@
 // - Statistical measurement and validation
 // - CI-friendly test durations (shortened for automation)
 
-use crate::test_harness::{DaemonConfig, TestHarness, TestResult};
+use crate::test_harness::{TestHarness, TestResult};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Barrier};
 use std::time::{Duration, Instant};
-use tokio::sync::Barrier;
-use tokio::time::interval;
 use tracing::{info, warn};
 
 /// Number of concurrent clients for stress testing
+#[allow(dead_code)]
 const CONCURRENT_CLIENTS: usize = 100;
 
 /// High throughput payload size (10 MB)
+#[allow(dead_code)]
 const HIGH_THROUGHPUT_PAYLOAD_SIZE: usize = 10 * 1024 * 1024;
 
 /// Long-running test duration (60 seconds)
+#[allow(dead_code)]
 const LONG_RUNNING_DURATION: Duration = Duration::from_secs(60);
 
 /// Short stress test duration for CI (5 seconds)
+#[allow(dead_code)]
 const SHORT_STRESS_DURATION: Duration = Duration::from_secs(5);
 
 /// Maximum acceptable connection failure rate (1%)
+#[allow(dead_code)]
 const MAX_FAILURE_RATE: f64 = 0.01;
 
 /// Stress test statistics
+#[allow(dead_code)]
 #[derive(Debug, Default)]
 struct StressStats {
     connections_attempted: AtomicUsize,
@@ -50,8 +54,12 @@ struct StressStats {
 impl Clone for StressStats {
     fn clone(&self) -> Self {
         Self {
-            connections_attempted: AtomicUsize::new(self.connections_attempted.load(Ordering::Relaxed)),
-            connections_succeeded: AtomicUsize::new(self.connections_succeeded.load(Ordering::Relaxed)),
+            connections_attempted: AtomicUsize::new(
+                self.connections_attempted.load(Ordering::Relaxed),
+            ),
+            connections_succeeded: AtomicUsize::new(
+                self.connections_succeeded.load(Ordering::Relaxed),
+            ),
             connections_failed: AtomicUsize::new(self.connections_failed.load(Ordering::Relaxed)),
             bytes_sent: AtomicU64::new(self.bytes_sent.load(Ordering::Relaxed)),
             bytes_received: AtomicU64::new(self.bytes_received.load(Ordering::Relaxed)),
@@ -62,10 +70,12 @@ impl Clone for StressStats {
 }
 
 impl StressStats {
+    #[allow(dead_code)]
     fn new() -> Self {
         Self::default()
     }
 
+    #[allow(dead_code)]
     fn success_rate(&self) -> f64 {
         let attempted = self.connections_attempted.load(Ordering::Relaxed);
         if attempted == 0 {
@@ -75,14 +85,17 @@ impl StressStats {
         succeeded as f64 / attempted as f64
     }
 
+    #[allow(dead_code)]
     fn failure_rate(&self) -> f64 {
         1.0 - self.success_rate()
     }
 
+    #[allow(dead_code)]
     fn total_bytes(&self) -> u64 {
         self.bytes_sent.load(Ordering::Relaxed) + self.bytes_received.load(Ordering::Relaxed)
     }
 
+    #[allow(dead_code)]
     fn report(&self) {
         let attempted = self.connections_attempted.load(Ordering::Relaxed);
         let succeeded = self.connections_succeeded.load(Ordering::Relaxed);
@@ -92,10 +105,20 @@ impl StressStats {
         let requests_failed = self.requests_failed.load(Ordering::Relaxed);
 
         info!("=== Stress Test Statistics ===");
-        info!("Connections: {} attempted, {} succeeded, {} failed", attempted, succeeded, failed);
+        info!(
+            "Connections: {} attempted, {} succeeded, {} failed",
+            attempted, succeeded, failed
+        );
         info!("Success rate: {:.2}%", self.success_rate() * 100.0);
-        info!("Total bytes transferred: {} ({:.2} MB)", bytes, bytes as f64 / 1_000_000.0);
-        info!("Requests: {} sent, {} failed", requests_sent, requests_failed);
+        info!(
+            "Total bytes transferred: {} ({:.2} MB)",
+            bytes,
+            bytes as f64 / 1_000_000.0
+        );
+        info!(
+            "Requests: {} sent, {} failed",
+            requests_sent, requests_failed
+        );
     }
 }
 
@@ -103,11 +126,12 @@ impl StressStats {
 #[tokio::test]
 #[ignore] // Requires running daemon and significant resources
 async fn test_concurrent_connections() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
-    info!("Starting concurrent connections stress test ({} clients)", CONCURRENT_CLIENTS);
+    info!(
+        "Starting concurrent connections stress test ({} clients)",
+        CONCURRENT_CLIENTS
+    );
 
     let mut harness = TestHarness::new();
 
@@ -128,14 +152,17 @@ async fn test_concurrent_connections() -> TestResult<()> {
     for i in 0..CONCURRENT_CLIENTS {
         let stats_clone = Arc::clone(&stats);
         let barrier_clone = Arc::clone(&barrier);
-        let daemon_addr = harness.daemon("daemon_stress")
+        let daemon_addr = harness
+            .daemon("daemon_stress")
             .unwrap()
             .bind_addr()
             .await
             .unwrap();
 
         let task = tokio::spawn(async move {
-            stats_clone.connections_attempted.fetch_add(1, Ordering::Relaxed);
+            stats_clone
+                .connections_attempted
+                .fetch_add(1, Ordering::Relaxed);
 
             // Wait for all clients to be ready
             barrier_clone.wait().await;
@@ -143,23 +170,33 @@ async fn test_concurrent_connections() -> TestResult<()> {
             // Attempt connection
             match tokio::time::timeout(
                 Duration::from_secs(5),
-                tokio::net::TcpStream::connect(daemon_addr)
-            ).await {
+                tokio::net::TcpStream::connect(daemon_addr),
+            )
+            .await
+            {
                 Ok(Ok(_stream)) => {
-                    stats_clone.connections_succeeded.fetch_add(1, Ordering::Relaxed);
-                    
+                    stats_clone
+                        .connections_succeeded
+                        .fetch_add(1, Ordering::Relaxed);
+
                     // Send small payload
                     let payload = vec![0x42; 1024];
-                    stats_clone.bytes_sent.fetch_add(payload.len() as u64, Ordering::Relaxed);
+                    stats_clone
+                        .bytes_sent
+                        .fetch_add(payload.len() as u64, Ordering::Relaxed);
                     stats_clone.requests_sent.fetch_add(1, Ordering::Relaxed);
                 }
                 Ok(Err(e)) => {
                     warn!("Client {} connection failed: {}", i, e);
-                    stats_clone.connections_failed.fetch_add(1, Ordering::Relaxed);
+                    stats_clone
+                        .connections_failed
+                        .fetch_add(1, Ordering::Relaxed);
                 }
                 Err(_) => {
                     warn!("Client {} connection timeout", i);
-                    stats_clone.connections_failed.fetch_add(1, Ordering::Relaxed);
+                    stats_clone
+                        .connections_failed
+                        .fetch_add(1, Ordering::Relaxed);
                 }
             }
         });
@@ -195,11 +232,12 @@ async fn test_concurrent_connections() -> TestResult<()> {
 #[tokio::test]
 #[ignore] // Requires running daemon and significant time/memory
 async fn test_high_throughput() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
-    info!("Starting high throughput stress test ({} MB payload)", HIGH_THROUGHPUT_PAYLOAD_SIZE / 1_000_000);
+    info!(
+        "Starting high throughput stress test ({} MB payload)",
+        HIGH_THROUGHPUT_PAYLOAD_SIZE / 1_000_000
+    );
 
     let mut harness = TestHarness::new();
 
@@ -209,29 +247,36 @@ async fn test_high_throughput() -> TestResult<()> {
         ..Default::default()
     };
 
-    harness.spawn_daemon("daemon_throughput", daemon_config).await?;
+    harness
+        .spawn_daemon("daemon_throughput", daemon_config)
+        .await?;
 
     // Connect client
-    harness.connect_client("client_throughput", "daemon_throughput").await?;
+    harness
+        .connect_client("client_throughput", "daemon_throughput")
+        .await?;
 
     let client = harness.client("client_throughput").unwrap();
 
     // Generate large payload
-    info!("Generating {} MB payload...", HIGH_THROUGHPUT_PAYLOAD_SIZE / 1_000_000);
+    info!(
+        "Generating {} MB payload...",
+        HIGH_THROUGHPUT_PAYLOAD_SIZE / 1_000_000
+    );
     let payload: Vec<u8> = (0..HIGH_THROUGHPUT_PAYLOAD_SIZE)
         .map(|i| (i % 256) as u8)
         .collect();
 
     // Measure throughput
     let start = Instant::now();
-    
+
     info!("Sending payload...");
     client.send(&payload).await?;
-    
+
     let mut recv_buf = vec![0u8; HIGH_THROUGHPUT_PAYLOAD_SIZE];
     info!("Receiving payload...");
     let n = client.recv(&mut recv_buf).await?;
-    
+
     let duration = start.elapsed();
     let throughput_mbps = {
         let bits = (n * 8) as f64;
@@ -245,7 +290,10 @@ async fn test_high_throughput() -> TestResult<()> {
     );
 
     // Verify data integrity
-    assert_eq!(n, HIGH_THROUGHPUT_PAYLOAD_SIZE, "Should receive full payload");
+    assert_eq!(
+        n, HIGH_THROUGHPUT_PAYLOAD_SIZE,
+        "Should receive full payload"
+    );
     assert_eq!(&recv_buf[..n], &payload[..], "Payload should match");
 
     // Verify reasonable throughput (>10 Mbps)
@@ -266,11 +314,12 @@ async fn test_high_throughput() -> TestResult<()> {
 #[tokio::test]
 #[ignore] // Requires long runtime (60 seconds)
 async fn test_long_running_stability() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
-    info!("Starting long-running stability test ({:?})", LONG_RUNNING_DURATION);
+    info!(
+        "Starting long-running stability test ({:?})",
+        LONG_RUNNING_DURATION
+    );
 
     let mut harness = TestHarness::new();
 
@@ -280,10 +329,14 @@ async fn test_long_running_stability() -> TestResult<()> {
         ..Default::default()
     };
 
-    harness.spawn_daemon("daemon_stability", daemon_config).await?;
+    harness
+        .spawn_daemon("daemon_stability", daemon_config)
+        .await?;
 
     // Connect client
-    harness.connect_client("client_stability", "daemon_stability").await?;
+    harness
+        .connect_client("client_stability", "daemon_stability")
+        .await?;
 
     let client = harness.client("client_stability").unwrap();
 
@@ -291,18 +344,23 @@ async fn test_long_running_stability() -> TestResult<()> {
     let start = Instant::now();
     let mut interval = interval(Duration::from_millis(100));
 
-    info!("Sending sustained traffic for {:?}...", LONG_RUNNING_DURATION);
+    info!(
+        "Sending sustained traffic for {:?}...",
+        LONG_RUNNING_DURATION
+    );
 
     while start.elapsed() < LONG_RUNNING_DURATION {
         interval.tick().await;
 
         // Send small request
         let payload = vec![0x42; 256];
-        
+
         match client.send(&payload).await {
             Ok(_) => {
                 stats.requests_sent.fetch_add(1, Ordering::Relaxed);
-                stats.bytes_sent.fetch_add(payload.len() as u64, Ordering::Relaxed);
+                stats
+                    .bytes_sent
+                    .fetch_add(payload.len() as u64, Ordering::Relaxed);
             }
             Err(e) => {
                 warn!("Request failed: {}", e);
@@ -346,9 +404,7 @@ async fn test_long_running_stability() -> TestResult<()> {
 #[tokio::test]
 #[ignore] // Requires long runtime and memory profiling
 async fn test_memory_leak_detection() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
     info!("Starting memory leak detection test");
 
@@ -363,15 +419,20 @@ async fn test_memory_leak_detection() -> TestResult<()> {
         ..Default::default()
     };
 
-    harness.spawn_daemon("daemon_memleak", daemon_config).await?;
+    harness
+        .spawn_daemon("daemon_memleak", daemon_config)
+        .await?;
 
     // Baseline measurement (simplified - actual implementation would use jemalloc stats)
     info!("Establishing baseline...");
     let baseline_allocations = get_allocation_count();
 
     // Generate sustained load
-    info!("Generating sustained load for {} seconds...", SHORT_STRESS_DURATION.as_secs());
-    
+    info!(
+        "Generating sustained load for {} seconds...",
+        SHORT_STRESS_DURATION.as_secs()
+    );
+
     let stats = Arc::new(StressStats::new());
     let start = Instant::now();
     let mut interval = interval(Duration::from_millis(100));
@@ -412,6 +473,7 @@ async fn test_memory_leak_detection() -> TestResult<()> {
 }
 
 /// Simplified allocation counter (placeholder for real memory profiling)
+#[allow(dead_code)]
 fn get_allocation_count() -> usize {
     // In production, use jemalloc stats or similar
     // This is a placeholder that returns a pseudo-random value
@@ -419,20 +481,19 @@ fn get_allocation_count() -> usize {
     // #[global_allocator]
     // static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
     use std::time::SystemTime;
-    
+
     SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
-        .as_nanos() as usize % 1_000_000
+        .as_nanos() as usize
+        % 1_000_000
 }
 
 /// Test burst traffic handling
 #[tokio::test]
 #[ignore] // Requires running daemon
 async fn test_burst_traffic() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
     info!("Starting burst traffic stress test");
 
@@ -447,7 +508,9 @@ async fn test_burst_traffic() -> TestResult<()> {
     harness.spawn_daemon("daemon_burst", daemon_config).await?;
 
     // Connect client
-    harness.connect_client("client_burst", "daemon_burst").await?;
+    harness
+        .connect_client("client_burst", "daemon_burst")
+        .await?;
 
     let client = harness.client("client_burst").unwrap();
 
@@ -461,11 +524,13 @@ async fn test_burst_traffic() -> TestResult<()> {
 
     for _ in 0..burst_size {
         let payload = vec![0x42; 512];
-        
+
         match client.send(&payload).await {
             Ok(_) => {
                 stats.requests_sent.fetch_add(1, Ordering::Relaxed);
-                stats.bytes_sent.fetch_add(payload.len() as u64, Ordering::Relaxed);
+                stats
+                    .bytes_sent
+                    .fetch_add(payload.len() as u64, Ordering::Relaxed);
             }
             Err(e) => {
                 warn!("Burst request failed: {}", e);
@@ -502,9 +567,7 @@ async fn test_burst_traffic() -> TestResult<()> {
 #[tokio::test]
 #[ignore] // Requires running daemon
 async fn test_error_recovery() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
     info!("Starting error recovery stress test");
 
@@ -516,7 +579,9 @@ async fn test_error_recovery() -> TestResult<()> {
         ..Default::default()
     };
 
-    harness.spawn_daemon("daemon_recovery", daemon_config).await?;
+    harness
+        .spawn_daemon("daemon_recovery", daemon_config)
+        .await?;
 
     let stats = Arc::new(StressStats::new());
 
@@ -526,10 +591,10 @@ async fn test_error_recovery() -> TestResult<()> {
 
         stats.connections_attempted.fetch_add(1, Ordering::Relaxed);
 
-        match harness.connect_client(
-            &format!("client_recovery_{}", attempt),
-            "daemon_recovery"
-        ).await {
+        match harness
+            .connect_client(&format!("client_recovery_{}", attempt), "daemon_recovery")
+            .await
+        {
             Ok(_) => {
                 stats.connections_succeeded.fetch_add(1, Ordering::Relaxed);
                 info!("Connection {} succeeded", attempt);

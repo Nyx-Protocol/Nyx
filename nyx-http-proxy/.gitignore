@@ -1,0 +1,23 @@
+# Binaries
+nyx-http-proxy
+nyx-http-proxy.exe
+nyx-http-proxy-*
+
+# Go build artifacts
+*.test
+*.out
+*.prof
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

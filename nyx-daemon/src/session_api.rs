@@ -85,7 +85,7 @@ impl IntoResponse for ErrorResponse {
             "INVALID_REQUEST" => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
-        
+
         (status, Json(self)).into_response()
     }
 }
@@ -105,7 +105,7 @@ pub struct ApiState {
 /// An axum Router with all session API routes configured
 pub fn create_session_router(session_manager: Arc<SessionManager>) -> Router {
     let state = ApiState { session_manager };
-    
+
     Router::new()
         .route("/api/v1/sessions", get(list_sessions))
         .route("/api/v1/sessions/:id", get(get_session_status))
@@ -122,16 +122,18 @@ async fn list_sessions(
     State(_state): State<ApiState>,
     Query(query): Query<ListSessionsQuery>,
 ) -> Result<Json<ListSessionsResponse>, ErrorResponse> {
-    info!("GET /api/v1/sessions (state={:?}, role={:?})", 
-          query.state_filter, query.role_filter);
-    
+    info!(
+        "GET /api/v1/sessions (state={:?}, role={:?})",
+        query.state_filter, query.role_filter
+    );
+
     // TODO: Implement actual filtering once SessionManager supports listing
     // For now, return empty list (implementation will be completed in integration phase)
     let response = ListSessionsResponse {
         sessions: vec![],
         total_count: 0,
     };
-    
+
     Ok(Json(response))
 }
 
@@ -141,9 +143,9 @@ async fn get_session_status(
     Path(session_id): Path<u32>,
 ) -> Result<Json<SessionStatusResponse>, ErrorResponse> {
     info!("GET /api/v1/sessions/{}", session_id);
-    
+
     let status = state.session_manager.get_session_status(session_id).await;
-    
+
     match status {
         Some(s) => {
             let response = SessionStatusResponse {
@@ -158,7 +160,10 @@ async fn get_session_status(
                     bytes_rx: s.metrics.bytes_rx,
                     frames_tx: s.metrics.frames_tx,
                     frames_rx: s.metrics.frames_rx,
-                    handshake_duration_ms: s.metrics.handshake_duration.map(|d| d.as_millis() as u64),
+                    handshake_duration_ms: s
+                        .metrics
+                        .handshake_duration
+                        .map(|d| d.as_millis() as u64),
                     // Note: established_at is Instant (not SystemTime), so we return None for now
                     // Proper implementation would require storing SystemTime in SessionMetrics
                     established_at_ms: None,
@@ -179,7 +184,7 @@ async fn close_session(
     Path(session_id): Path<u32>,
 ) -> Result<StatusCode, ErrorResponse> {
     info!("POST /api/v1/sessions/{}/close", session_id);
-    
+
     match state.session_manager.close_session(session_id).await {
         Ok(_) => Ok(StatusCode::NO_CONTENT),
         Err(e) => Err(ErrorResponse {
@@ -196,12 +201,12 @@ mod tests {
     use axum::body::Body;
     use axum::http::{Request, StatusCode};
     use tower::ServiceExt; // For oneshot()
-    
+
     #[tokio::test]
     async fn test_get_session_status_not_found() {
         let manager = Arc::new(SessionManager::new(SessionManagerConfig::default()));
         let app = create_session_router(manager);
-        
+
         let response = app
             .oneshot(
                 Request::builder()
@@ -211,19 +216,19 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
-    
+
     #[tokio::test]
     async fn test_get_session_status_found() {
         let manager = Arc::new(SessionManager::new(SessionManagerConfig::default()));
-        
+
         // Create a client session
         let session_id = manager.create_client_session().await.unwrap();
-        
+
         let app = create_session_router(manager);
-        
+
         let response = app
             .oneshot(
                 Request::builder()
@@ -233,19 +238,19 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(response.status(), StatusCode::OK);
     }
-    
+
     #[tokio::test]
     async fn test_close_session() {
         let manager = Arc::new(SessionManager::new(SessionManagerConfig::default()));
-        
+
         // Create a client session
         let session_id = manager.create_client_session().await.unwrap();
-        
+
         let app = create_session_router(manager);
-        
+
         let response = app
             .oneshot(
                 Request::builder()
@@ -256,15 +261,15 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
     }
-    
+
     #[tokio::test]
     async fn test_list_sessions_empty() {
         let manager = Arc::new(SessionManager::new(SessionManagerConfig::default()));
         let app = create_session_router(manager);
-        
+
         let response = app
             .oneshot(
                 Request::builder()
@@ -274,28 +279,29 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(response.status(), StatusCode::OK);
-        
+
         use http_body_util::BodyExt;
         let body = response.into_body().collect().await.unwrap().to_bytes();
         let list: ListSessionsResponse = serde_json::from_slice(&body).unwrap();
-        
+
         assert_eq!(list.sessions.len(), 0);
         assert_eq!(list.total_count, 0);
     }
-    
+
     #[tokio::test]
     async fn test_session_api_integration() {
         let manager = Arc::new(SessionManager::new(SessionManagerConfig::default()));
-        
+
         // Create a client session
         let session_id = manager.create_client_session().await.unwrap();
-        
+
         let app = create_session_router(manager.clone());
-        
+
         // Get status
-        let response = app.clone()
+        let response = app
+            .clone()
             .oneshot(
                 Request::builder()
                     .uri(format!("/api/v1/sessions/{}", session_id))
@@ -304,9 +310,9 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(response.status(), StatusCode::OK);
-        
+
         // Close session
         let response = app
             .oneshot(
@@ -318,7 +324,7 @@ mod tests {
             )
             .await
             .unwrap();
-        
+
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
     }
 }

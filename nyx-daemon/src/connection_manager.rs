@@ -43,10 +43,10 @@ impl Default for ConnectionManagerConfig {
     fn default() -> Self {
         Self {
             max_connections: 1000,
-            initial_cwnd: 10,        // 10 packets (RFC 6928)
-            max_cwnd: 1000,          // Cap at 1000 packets
-            rtt_alpha: 0.125,        // Standard TCP alpha
-            rate_limit_bps: 100_000_000,  // 100 Mbps
+            initial_cwnd: 10,               // 10 packets (RFC 6928)
+            max_cwnd: 1000,                 // Cap at 1000 packets
+            rtt_alpha: 0.125,               // Standard TCP alpha
+            rate_limit_bps: 100_000_000,    // 100 Mbps
             rate_limit_capacity: 1_000_000, // 1 MB burst
         }
     }
@@ -134,13 +134,11 @@ impl RttEstimator {
             let diff = sample.abs_diff(self.srtt);
 
             self.rttvar = Duration::from_secs_f64(
-                (1.0 - self.alpha) * self.rttvar.as_secs_f64() 
-                + self.alpha * diff.as_secs_f64()
+                (1.0 - self.alpha) * self.rttvar.as_secs_f64() + self.alpha * diff.as_secs_f64(),
             );
 
             self.srtt = Duration::from_secs_f64(
-                (1.0 - self.alpha) * self.srtt.as_secs_f64() 
-                + self.alpha * sample.as_secs_f64()
+                (1.0 - self.alpha) * self.srtt.as_secs_f64() + self.alpha * sample.as_secs_f64(),
             );
         }
 
@@ -267,8 +265,8 @@ impl Connection {
         }
 
         // Update RTprop (minimum RTT observed in last 10s)
-        if rtt_sample < self.bbr.rtprop 
-            || self.last_activity.duration_since(self.bbr.last_update) > Duration::from_secs(10) 
+        if rtt_sample < self.bbr.rtprop
+            || self.last_activity.duration_since(self.bbr.last_update) > Duration::from_secs(10)
         {
             self.bbr.rtprop = rtt_sample;
         }
@@ -361,7 +359,7 @@ impl ConnectionManager {
     /// Close a connection
     pub async fn close_connection(&self, conn_id: ConnectionId) -> Result<(), ConnectionError> {
         let mut conns = self.connections.write().await;
-        
+
         if conns.remove(&conn_id).is_some() {
             info!("Closed connection {}", conn_id);
             Ok(())
@@ -399,8 +397,9 @@ impl ConnectionManager {
         rtt_sample: Duration,
     ) -> Result<(), ConnectionError> {
         let mut conns = self.connections.write().await;
-        
-        let conn = conns.get_mut(&conn_id)
+
+        let conn = conns
+            .get_mut(&conn_id)
             .ok_or(ConnectionError::ConnectionNotFound)?;
 
         // Update connection state
@@ -415,10 +414,15 @@ impl ConnectionManager {
     }
 
     /// Check if connection can send
-    pub async fn can_send(&self, conn_id: ConnectionId, bytes: u64) -> Result<bool, ConnectionError> {
+    pub async fn can_send(
+        &self,
+        conn_id: ConnectionId,
+        bytes: u64,
+    ) -> Result<bool, ConnectionError> {
         let mut conns = self.connections.write().await;
-        
-        let conn = conns.get_mut(&conn_id)
+
+        let conn = conns
+            .get_mut(&conn_id)
             .ok_or(ConnectionError::ConnectionNotFound)?;
 
         Ok(conn.can_send(bytes))
@@ -432,8 +436,9 @@ impl ConnectionManager {
         data: Vec<u8>,
     ) -> Result<(), ConnectionError> {
         let mut conns = self.connections.write().await;
-        
-        let conn = conns.get_mut(&conn_id)
+
+        let conn = conns
+            .get_mut(&conn_id)
             .ok_or(ConnectionError::ConnectionNotFound)?;
 
         conn.on_send(packet_id, data);
@@ -445,7 +450,7 @@ impl ConnectionManager {
         let conns = self.connections.read().await;
         conns.keys().copied().collect()
     }
-    
+
     /// Get connection count
     pub fn connection_count(&self) -> usize {
         // Non-blocking access for synchronous contexts
@@ -520,7 +525,7 @@ mod tests {
 
         // Wait for refill (simulated)
         std::thread::sleep(Duration::from_millis(100));
-        
+
         // Should have ~100 tokens
         assert!(bucket.available() > 0);
     }
@@ -554,12 +559,15 @@ mod tests {
         let conn_id = manager.create_connection().await.unwrap();
 
         // Process ACK
-        manager.process_ack(
-            conn_id,
-            vec![1, 2, 3],
-            4500, // 3 packets * 1500 bytes
-            Duration::from_millis(50),
-        ).await.unwrap();
+        manager
+            .process_ack(
+                conn_id,
+                vec![1, 2, 3],
+                4500, // 3 packets * 1500 bytes
+                Duration::from_millis(50),
+            )
+            .await
+            .unwrap();
 
         // Check updated status
         let status = manager.get_connection_status(conn_id).await.unwrap();

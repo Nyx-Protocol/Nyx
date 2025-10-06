@@ -16,12 +16,13 @@ nyx-crypto = { path = "../nyx-crypto" }
 tokio = { version = "1.37", features = ["full"] }
 tokio-stream = "0.1"
 
-# gRPC client dependencies - INTENTIONALLY DISABLED
-# gRPC uses ring/openssl which introduces C dependencies and compilation complexity.
-# Nyx uses pure Rust JSON-RPC over Unix Domain Sockets/Named Pipes instead.
-# tonic = { version = "0.10", features = ["transport"] }
+# gRPC client dependencies - Pure Rust configuration
+# Using tonic without default features to exclude ring/openssl (C dependencies)
+# Features: transport (TCP/HTTP2), prost (protobuf), codegen (client generation)
+tonic = { version = "0.11", default-features = false, features = ["transport", "prost", "codegen"] }
 prost = "0.12"
 prost-types = "0.12"
+tokio-util = { version = "0.7", features = ["codec"] }
 
 # Error handling and utilities
 anyhow = "1.0"
@@ -30,7 +31,7 @@ tracing = "0.1"
 
 # Crypto and hashing for deterministic key derivation in daemon client
 ed25519-dalek = { version = "2", features = ["std"] }
-blake3 = "1"
+blake3 = { version = "1", features = ["pure"] }
 hex = "0.4"
 
 # Serialization and configuration
@@ -68,9 +69,8 @@ fastrand = "2.0"
 tracing-subscriber = "0.3.19"
 
 [build-dependencies]
-# Build-time gRPC code generation - INTENTIONALLY DISABLED
-# tonic-build uses protoc and ring dependencies which conflict with pure Rust goals
-# tonic-build = "0.10"
+# Build-time gRPC code generation - Pure Rust configuration
+tonic-build = "0.11"
 
 [features]
 default = []

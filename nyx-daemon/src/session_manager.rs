@@ -1,4 +1,4 @@
-﻿//! Session Manager for Nyx Daemon
+//! Session Manager for Nyx Daemon
 //!
 //! Manages active stream sessions, handshake lifecycle, and traffic key storage.
 //! Integrates with nyx-stream handshake layer and provides gRPC/IPC status interface.
@@ -37,8 +37,8 @@
 
 #![forbid(unsafe_code)]
 
-use nyx_stream::handshake::{ClientHandshake, ServerHandshake, TrafficKeys};
 use nyx_stream::capability::Capability;
+use nyx_stream::handshake::{ClientHandshake, ServerHandshake, TrafficKeys};
 use nyx_stream::replay_protection::DirectionalReplayProtection;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -169,7 +169,7 @@ impl Session {
     pub fn age(&self) -> Duration {
         self.created_at.elapsed()
     }
-    
+
     /// Perform rekey operation
     ///
     /// This resets the anti-replay protection window as per spec:
@@ -178,14 +178,17 @@ impl Session {
         if self.state != SessionState::Established {
             return Err(format!("Cannot rekey session in state {:?}", self.state));
         }
-        
+
         // Reset anti-replay protection as per spec §2.1
         self.replay_protection.reset_all().await;
-        
+
         // Update activity timestamp
         self.touch();
-        
-        info!("Session {} rekey completed, replay protection reset", self.id);
+
+        info!(
+            "Session {} rekey completed, replay protection reset",
+            self.id
+        );
         Ok(())
     }
 }
@@ -206,8 +209,8 @@ pub struct SessionManagerConfig {
 impl Default for SessionManagerConfig {
     fn default() -> Self {
         Self {
-            idle_timeout: Duration::from_secs(300),      // 5 minutes
-            handshake_timeout: Duration::from_secs(30),  // 30 seconds
+            idle_timeout: Duration::from_secs(300),     // 5 minutes
+            handshake_timeout: Duration::from_secs(30), // 30 seconds
             max_sessions: 10_000,
             enable_metrics: true,
         }
@@ -257,7 +260,7 @@ impl SessionManager {
     /// Returns the session ID and initiates handshake.
     pub async fn create_client_session(&self) -> Result<SessionId, SessionError> {
         let mut sessions = self.sessions.write().await;
-        
+
         // Check max sessions limit
         if sessions.len() >= self.config.max_sessions {
             return Err(SessionError::TooManySessions);
@@ -286,7 +289,7 @@ impl SessionManager {
     /// Create a new server-side session
     pub async fn create_server_session(&self) -> Result<SessionId, SessionError> {
         let mut sessions = self.sessions.write().await;
-        
+
         if sessions.len() >= self.config.max_sessions {
             return Err(SessionError::TooManySessions);
         }
@@ -311,12 +314,9 @@ impl SessionManager {
     /// Initiate handshake for a client session
     ///
     /// Returns the hybrid public key to send in CRYPTO ClientHello frame.
-    pub async fn initiate_handshake(
-        &self,
-        session_id: SessionId,
-    ) -> Result<Vec<u8>, SessionError> {
+    pub async fn initiate_handshake(&self, session_id: SessionId) -> Result<Vec<u8>, SessionError> {
         let mut sessions = self.sessions.write().await;
-        
+
         let session = sessions
             .get_mut(&session_id)
             .ok_or(SessionError::SessionNotFound)?;
@@ -359,7 +359,7 @@ impl SessionManager {
         server_capabilities: Option<Vec<Capability>>,
     ) -> Result<(), SessionError> {
         let mut sessions = self.sessions.write().await;
-        
+
         let session = sessions
             .get_mut(&session_id)
             .ok_or(SessionError::SessionNotFound)?;
@@ -371,7 +371,7 @@ impl SessionManager {
         // Validate server capabilities if provided
         if let Some(caps) = &server_capabilities {
             use nyx_stream::capability::{negotiate, CapabilityError, LOCAL_CAP_IDS};
-            
+
             if let Err(e) = negotiate(LOCAL_CAP_IDS, caps) {
                 match e {
                     CapabilityError::UnsupportedRequired(cap_id) => {
@@ -410,7 +410,7 @@ impl SessionManager {
         session.traffic_keys = Some(traffic_keys);
         session.state = SessionState::Established;
         session.touch();
-        
+
         let handshake_duration = start.elapsed();
         session.metrics.handshake_duration = Some(handshake_duration);
         session.metrics.established_at = Some(Instant::now());
@@ -439,7 +439,7 @@ impl SessionManager {
         client_capabilities: Option<Vec<Capability>>,
     ) -> Result<Vec<u8>, SessionError> {
         let mut sessions = self.sessions.write().await;
-        
+
         let session = sessions
             .get_mut(&session_id)
             .ok_or(SessionError::SessionNotFound)?;
@@ -455,7 +455,7 @@ impl SessionManager {
         if let Some(caps) = &client_capabilities {
             // Use capability module directly to preserve error details
             use nyx_stream::capability::{negotiate, CapabilityError, LOCAL_CAP_IDS};
-            
+
             if let Err(e) = negotiate(LOCAL_CAP_IDS, caps) {
                 match e {
                     CapabilityError::UnsupportedRequired(cap_id) => {
@@ -502,7 +502,7 @@ impl SessionManager {
         session_id: SessionId,
     ) -> Result<(), SessionError> {
         let mut sessions = self.sessions.write().await;
-        
+
         let session = sessions
             .get_mut(&session_id)
             .ok_or(SessionError::SessionNotFound)?;
@@ -560,7 +560,7 @@ impl SessionManager {
     /// Close a session
     pub async fn close_session(&self, session_id: SessionId) -> Result<(), SessionError> {
         let mut sessions = self.sessions.write().await;
-        
+
         let session = sessions
             .get_mut(&session_id)
             .ok_or(SessionError::SessionNotFound)?;
@@ -585,18 +585,18 @@ impl SessionManager {
     /// Triggers HPKE rekey and resets anti-replay protection.
     pub async fn rekey_session(&self, session_id: SessionId) -> Result<(), SessionError> {
         let mut sessions = self.sessions.write().await;
-        
+
         let session = sessions
             .get_mut(&session_id)
             .ok_or(SessionError::SessionNotFound)?;
-        
+
         // Rekey the session: rotate cryptographic keys to maintain forward secrecy
         // Maps any rekey error to HandshakeFailed for consistent error handling
         session
             .rekey()
             .await
             .map_err(SessionError::HandshakeFailed)?;
-        
+
         info!(session_id, "Session rekey triggered");
         Ok(())
     }
@@ -648,16 +648,19 @@ impl SessionManager {
     pub async fn active_session_count(&self) -> usize {
         self.sessions.read().await.len()
     }
-    
+
     /// Get session count (alias for active_session_count for compatibility)
     pub fn session_count(&self) -> usize {
         // This is a synchronous version that uses try_read for non-blocking access
         self.sessions.try_read().map(|s| s.len()).unwrap_or(0)
     }
-    
+
     /// Get session state by ID
     pub fn get_session_state(&self, session_id: u64) -> Result<SessionState, SessionError> {
-        let sessions = self.sessions.try_read().map_err(|_| SessionError::SessionNotFound)?;
+        let sessions = self
+            .sessions
+            .try_read()
+            .map_err(|_| SessionError::SessionNotFound)?;
         sessions
             .get(&(session_id as u32))
             .map(|s| s.state)
@@ -682,25 +685,25 @@ pub struct SessionStatus {
 pub enum SessionError {
     #[error("Session not found")]
     SessionNotFound,
-    
+
     #[error("Too many sessions")]
     TooManySessions,
-    
+
     #[error("Invalid session state for operation")]
     InvalidState,
-    
+
     #[error("Invalid role for operation")]
     InvalidRole,
-    
+
     #[error("Handshake not initialized")]
     HandshakeNotInitialized,
-    
+
     #[error("Handshake failed: {0}")]
     HandshakeFailed(String),
-    
+
     #[error("Capability negotiation failed: {0}")]
     CapabilityNegotiationFailed(String),
-    
+
     /// Unsupported required capability error
     ///
     /// Contains the capability ID for CLOSE 0x07 frame generation.
@@ -753,11 +756,11 @@ mod tests {
     #[tokio::test]
     async fn test_session_id_allocation() {
         let manager = SessionManager::new(SessionManagerConfig::default());
-        
+
         let id1 = manager.create_client_session().await.unwrap();
         let id2 = manager.create_client_session().await.unwrap();
         let id3 = manager.create_server_session().await.unwrap();
-        
+
         assert_eq!(id1, 1);
         assert_eq!(id2, 2);
         assert_eq!(id3, 3);
@@ -770,10 +773,10 @@ mod tests {
             ..Default::default()
         };
         let manager = SessionManager::new(config);
-        
+
         assert!(manager.create_client_session().await.is_ok());
         assert!(manager.create_client_session().await.is_ok());
-        
+
         // Third should fail
         let result = manager.create_client_session().await;
         assert!(matches!(result, Err(SessionError::TooManySessions)));
@@ -783,21 +786,21 @@ mod tests {
     async fn test_close_session() {
         let manager = SessionManager::new(SessionManagerConfig::default());
         let session_id = manager.create_client_session().await.unwrap();
-        
+
         assert!(manager.get_session_status(session_id).await.is_some());
-        
+
         manager.close_session(session_id).await.unwrap();
-        
+
         assert!(manager.get_session_status(session_id).await.is_none());
     }
 
     #[tokio::test]
     async fn test_metrics_collection() {
         let manager = SessionManager::new(SessionManagerConfig::default());
-        
+
         let _id1 = manager.create_client_session().await.unwrap();
         let _id2 = manager.create_server_session().await.unwrap();
-        
+
         let metrics = manager.get_metrics().await;
         assert_eq!(metrics.total_sessions_created, 2);
     }
@@ -805,15 +808,15 @@ mod tests {
     #[tokio::test]
     async fn test_active_session_count() {
         let manager = SessionManager::new(SessionManagerConfig::default());
-        
+
         assert_eq!(manager.active_session_count().await, 0);
-        
+
         let id1 = manager.create_client_session().await.unwrap();
         assert_eq!(manager.active_session_count().await, 1);
-        
+
         let _id2 = manager.create_client_session().await.unwrap();
         assert_eq!(manager.active_session_count().await, 2);
-        
+
         manager.close_session(id1).await.unwrap();
         assert_eq!(manager.active_session_count().await, 1);
     }
@@ -826,13 +829,13 @@ mod tests {
             ..Default::default()
         };
         let manager = SessionManager::new(config);
-        
+
         let _id = manager.create_client_session().await.unwrap();
         assert_eq!(manager.active_session_count().await, 1);
-        
+
         // Wait for timeout
         tokio::time::sleep(Duration::from_millis(150)).await;
-        
+
         let removed = manager.cleanup_idle_sessions().await;
         assert_eq!(removed, 1);
         assert_eq!(manager.active_session_count().await, 0);
@@ -841,19 +844,19 @@ mod tests {
     #[tokio::test]
     async fn test_unsupported_capability_error() {
         use nyx_stream::capability::{Capability, FLAG_REQUIRED};
-        
+
         let manager = SessionManager::new(SessionManagerConfig::default());
         let session_id = manager.create_server_session().await.unwrap();
-        
+
         // Create a capability that is not supported (arbitrary high ID)
         let unsupported_cap = Capability::new(0x99999999, FLAG_REQUIRED, vec![]);
         let client_caps = vec![unsupported_cap];
-        
+
         // Attempt to process client hello with unsupported capability
         let result = manager
             .process_client_hello(session_id, &[0u8; 64], Some(client_caps))
             .await;
-        
+
         // Should fail with UnsupportedCapability error
         assert!(matches!(
             result,
@@ -865,17 +868,19 @@ mod tests {
     async fn test_unsupported_capability_close_frame() {
         let cap_id = 0x12345678u32;
         let error = SessionError::UnsupportedCapability(cap_id);
-        
+
         // Should generate CLOSE frame
-        let close_frame = error.to_close_frame().expect("Should return Some for UnsupportedCapability");
-        
+        let close_frame = error
+            .to_close_frame()
+            .expect("Should return Some for UnsupportedCapability");
+
         // Verify frame structure: 2 bytes error code + 4 bytes capability ID
         assert_eq!(close_frame.len(), 6);
-        
+
         // Verify error code (0x0007)
         let error_code = u16::from_be_bytes([close_frame[0], close_frame[1]]);
         assert_eq!(error_code, 0x0007);
-        
+
         // Verify capability ID
         let parsed_cap_id = u32::from_be_bytes([
             close_frame[2],
@@ -890,7 +895,7 @@ mod tests {
     async fn test_other_errors_no_close_frame() {
         let error = SessionError::SessionNotFound;
         assert!(error.to_close_frame().is_none());
-        
+
         let error = SessionError::HandshakeFailed("test".into());
         assert!(error.to_close_frame().is_none());
     }

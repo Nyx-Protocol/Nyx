@@ -394,6 +394,9 @@ service NyxControl {
   // Network topology
   rpc GetTopology (Empty) returns (NetworkTopology);
   rpc GetPeers (Empty) returns (stream PeerInfo);
+  
+  // Compliance reporting (added in v1.0)
+  rpc GetComplianceReport (ComplianceReportRequest) returns (ComplianceReportResponse);
 }
 
 // Session management messages
@@ -441,4 +444,38 @@ service SessionService {
   
   // Close a specific session
   rpc CloseSession (SessionStatusRequest) returns (Empty);
+}
+
+// Compliance reporting messages
+message ComplianceReportRequest {
+  // Empty for now, can be extended with filters
+}
+
+message ComplianceReportResponse {
+  string compliance_level = 1;  // "core", "plus", "full", "custom"
+  repeated string detected_features = 2;  // List of detected features
+  repeated string missing_features = 3;   // List of missing features for current level
+  repeated string available_features = 4; // All available features
+  
+  // Feature categorization
+  ComplianceFeatures core_features = 5;
+  ComplianceFeatures plus_features = 6;
+  ComplianceFeatures full_features = 7;
+  
+  // Detailed report
+  string summary = 8;
+  Timestamp report_generated_at = 9;
+}
+
+message ComplianceFeatures {
+  repeated string required = 1;    // Required features for this tier
+  repeated string recommended = 2; // Recommended features for this tier
+  repeated string detected = 3;    // Actually detected features in this tier
+  repeated string missing = 4;     // Missing features in this tier
+}
+
+// Compliance service
+service ComplianceService {
+  // Get comprehensive compliance report
+  rpc GetComplianceReport (ComplianceReportRequest) returns (ComplianceReportResponse);
 } 

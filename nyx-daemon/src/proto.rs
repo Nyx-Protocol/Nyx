@@ -1,16 +1,16 @@
-﻿//! Proto Definition Management
-//! 
+//! Proto Definition Management
+//!
 //! This module provides centralized management of Protocol Buffer definitions
 //! for the Nyx daemon, including message type conversions and re-exports.
 
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use anyhow::{Result, Context};
-use serde::{Deserialize, Serialize};
-use prost::Message;
+// Message trait imported via proto module
 
 /// Re-export commonly used protobuf types for convenience
-pub use prost_types::{Timestamp, Duration as ProtoDuration, Any as ProtoAny};
+pub use prost_types::{Any as ProtoAny, Duration as ProtoDuration, Timestamp};
 
 /// Nyx protocol message envelope
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -203,7 +203,7 @@ impl ProtoManager {
             type_registry: HashMap::new(),
             sequence_counter: std::sync::atomic::AtomicU64::new(0),
         };
-        
+
         // Register built-in message types
         manager.register_builtin_types();
         manager
@@ -213,10 +213,20 @@ impl ProtoManager {
     fn register_builtin_types(&mut self) {
         let types = vec![
             ("session_message", "Session management messages", true, 1),
-            ("stream_message", "Stream data and control messages", true, 1),
+            (
+                "stream_message",
+                "Stream data and control messages",
+                true,
+                1,
+            ),
             ("dht_message", "DHT operation messages", true, 1),
             ("push_notification", "Push notification messages", true, 1),
-            ("telemetry_message", "Telemetry and metrics messages", true, 1),
+            (
+                "telemetry_message",
+                "Telemetry and metrics messages",
+                true,
+                1,
+            ),
             ("control_message", "System control messages", true, 1),
         ];
 
@@ -242,7 +252,10 @@ impl ProtoManager {
         version: u32,
     ) -> Result<()> {
         if self.type_registry.contains_key(&name) {
-            return Err(anyhow::anyhow!("Message type '{}' already registered", name));
+            return Err(anyhow::anyhow!(
+                "Message type '{}' already registered",
+                name
+            ));
         }
 
         self.type_registry.insert(
@@ -275,8 +288,10 @@ impl ProtoManager {
         payload: Vec<u8>,
         priority: MessagePriority,
     ) -> NyxMessage {
-        let sequence = self.sequence_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        
+        let sequence = self
+            .sequence_counter
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
         NyxMessage {
             message_type,
             timestamp: SystemTime::now(),
@@ -299,9 +314,10 @@ impl ProtoManager {
 
     /// Convert SystemTime to protobuf Timestamp
     pub fn system_time_to_proto(&self, time: SystemTime) -> Result<Timestamp> {
-        let duration = time.duration_since(UNIX_EPOCH)
+        let duration = time
+            .duration_since(UNIX_EPOCH)
             .context("Time is before UNIX epoch")?;
-        
+
         Ok(Timestamp {
             seconds: duration.as_secs() as i64,
             nanos: duration.subsec_nanos() as i32,
@@ -310,11 +326,8 @@ impl ProtoManager {
 
     /// Convert protobuf Timestamp to SystemTime
     pub fn proto_to_system_time(&self, timestamp: &Timestamp) -> Result<SystemTime> {
-        let duration = Duration::new(
-            timestamp.seconds as u64,
-            timestamp.nanos as u32,
-        );
-        
+        let duration = Duration::new(timestamp.seconds as u64, timestamp.nanos as u32);
+
         Ok(UNIX_EPOCH + duration)
     }
 
@@ -331,7 +344,7 @@ impl ProtoManager {
         if proto_duration.seconds < 0 || proto_duration.nanos < 0 {
             return Err(anyhow::anyhow!("Invalid duration: negative values"));
         }
-        
+
         Ok(Duration::new(
             proto_duration.seconds as u64,
             proto_duration.nanos as u32,
@@ -342,19 +355,25 @@ impl ProtoManager {
     pub fn validate_message(&self, message: &NyxMessage) -> Result<()> {
         // Check if message type is registered
         if !self.type_registry.contains_key(&message.message_type) {
-            return Err(anyhow::anyhow!("Unknown message type: {}", message.message_type));
+            return Err(anyhow::anyhow!(
+                "Unknown message type: {}",
+                message.message_type
+            ));
         }
 
         // Check payload size (max 64MB)
         if message.payload.len() > 64 * 1024 * 1024 {
-            return Err(anyhow::anyhow!("Message payload too large: {} bytes", message.payload.len()));
+            return Err(anyhow::anyhow!(
+                "Message payload too large: {} bytes",
+                message.payload.len()
+            ));
         }
 
         // Check timestamp is reasonable (within last 24 hours and next 1 hour)
         let now = SystemTime::now();
         let day_ago = now - Duration::from_secs(86400);
         let hour_ahead = now + Duration::from_secs(3600);
-        
+
         if message.timestamp < day_ago || message.timestamp > hour_ahead {
             return Err(anyhow::anyhow!("Message timestamp out of acceptable range"));
         }
@@ -366,7 +385,9 @@ impl ProtoManager {
     pub fn get_stats(&self) -> ProtoManagerStats {
         ProtoManagerStats {
             registered_types: self.type_registry.len(),
-            current_sequence: self.sequence_counter.load(std::sync::atomic::Ordering::SeqCst),
+            current_sequence: self
+                .sequence_counter
+                .load(std::sync::atomic::Ordering::SeqCst),
         }
     }
 }
@@ -465,7 +486,7 @@ mod tests {
     fn test_proto_manager_creation() {
         let manager = ProtoManager::new();
         assert!(!manager.type_registry.is_empty());
-        
+
         // Check built-in types are registered
         assert!(manager.get_message_type("session_message").is_some());
         assert!(manager.get_message_type("stream_message").is_some());
@@ -475,7 +496,7 @@ mod tests {
     #[test]
     fn test_message_type_registration() {
         let mut manager = ProtoManager::new();
-        
+
         let result = manager.register_message_type(
             "test_message".to_string(),
             "Test message type".to_string(),
@@ -483,7 +504,7 @@ mod tests {
             1,
         );
         assert!(result.is_ok());
-        
+
         let type_info = manager.get_message_type("test_message");
         assert!(type_info.is_some());
         assert_eq!(type_info.unwrap().name, "test_message");
@@ -492,7 +513,7 @@ mod tests {
     #[test]
     fn test_duplicate_message_type_registration() {
         let mut manager = ProtoManager::new();
-        
+
         let result1 = manager.register_message_type(
             "test_message".to_string(),
             "Test message type".to_string(),
@@ -500,7 +521,7 @@ mod tests {
             1,
         );
         assert!(result1.is_ok());
-        
+
         let result2 = manager.register_message_type(
             "test_message".to_string(),
             "Duplicate test message type".to_string(),
@@ -513,13 +534,13 @@ mod tests {
     #[test]
     fn test_message_creation() {
         let manager = ProtoManager::new();
-        
+
         let message = manager.create_message(
             "test_message".to_string(),
             b"test payload".to_vec(),
             MessagePriority::High,
         );
-        
+
         assert_eq!(message.message_type, "test_message");
         assert_eq!(message.payload, b"test payload");
         assert_eq!(message.priority, MessagePriority::High);
@@ -529,10 +550,10 @@ mod tests {
     #[test]
     fn test_sequence_increment() {
         let manager = ProtoManager::new();
-        
+
         let msg1 = manager.create_message("test".to_string(), vec![], MessagePriority::Normal);
         let msg2 = manager.create_message("test".to_string(), vec![], MessagePriority::Normal);
-        
+
         assert_eq!(msg1.sequence, 0);
         assert_eq!(msg2.sequence, 1);
     }
@@ -541,14 +562,14 @@ mod tests {
     fn test_time_conversion() {
         let manager = ProtoManager::new();
         let now = SystemTime::now();
-        
+
         let proto_time = manager.system_time_to_proto(now).unwrap();
         let converted_back = manager.proto_to_system_time(&proto_time).unwrap();
-        
+
         // Should be close (within 1 second due to precision loss)
-        let diff = now.duration_since(converted_back).unwrap_or_else(|_| {
-            converted_back.duration_since(now).unwrap()
-        });
+        let diff = now
+            .duration_since(converted_back)
+            .unwrap_or_else(|_| converted_back.duration_since(now).unwrap());
         assert!(diff < Duration::from_secs(1));
     }
 
@@ -556,17 +577,17 @@ mod tests {
     fn test_duration_conversion() {
         let manager = ProtoManager::new();
         let duration = Duration::from_secs(3600);
-        
+
         let proto_duration = manager.duration_to_proto(duration);
         let converted_back = manager.proto_to_duration(&proto_duration).unwrap();
-        
+
         assert_eq!(duration, converted_back);
     }
 
     #[test]
     fn test_message_validation() {
         let manager = ProtoManager::new();
-        
+
         // Valid message
         let valid_message = manager.create_message(
             "session_message".to_string(),
@@ -574,7 +595,7 @@ mod tests {
             MessagePriority::Normal,
         );
         assert!(manager.validate_message(&valid_message).is_ok());
-        
+
         // Invalid message type
         let invalid_message = NyxMessage {
             message_type: "unknown_type".to_string(),
@@ -590,17 +611,17 @@ mod tests {
     #[test]
     fn test_message_serialization() {
         let manager = ProtoManager::new();
-        
+
         let message = utils::create_session_message(
             "session123".to_string(),
             "conn456".to_string(),
             SessionMessageType::HandshakeInit,
             b"handshake data".to_vec(),
         );
-        
+
         let serialized = manager.serialize_message(&message).unwrap();
         let deserialized: SessionMessage = manager.deserialize_message(&serialized).unwrap();
-        
+
         assert_eq!(message.session_id, deserialized.session_id);
         assert_eq!(message.connection_id, deserialized.connection_id);
         assert_eq!(message.data, deserialized.data);
@@ -616,7 +637,7 @@ mod tests {
             b"data".to_vec(),
         );
         assert_eq!(session_msg.session_id, "session1");
-        
+
         // Test stream message creation
         let stream_msg = utils::create_stream_message(
             42,
@@ -625,7 +646,7 @@ mod tests {
             None,
         );
         assert_eq!(stream_msg.stream_id, 42);
-        
+
         // Test DHT message creation
         let dht_msg = utils::create_dht_message(
             "node1".to_string(),
@@ -636,7 +657,7 @@ mod tests {
         );
         assert_eq!(dht_msg.source_node, "node1");
         assert_eq!(dht_msg.ttl, 64);
-        
+
         // Test push notification creation
         let push_msg = utils::create_push_notification(
             "device123".to_string(),
@@ -660,10 +681,10 @@ mod tests {
     fn test_manager_stats() {
         let manager = ProtoManager::new();
         let stats = manager.get_stats();
-        
+
         assert!(stats.registered_types > 0);
         assert_eq!(stats.current_sequence, 0);
-        
+
         // Create a message to increment sequence
         let _msg = manager.create_message("test".to_string(), vec![], MessagePriority::Normal);
         let updated_stats = manager.get_stats();

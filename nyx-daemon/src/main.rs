@@ -59,6 +59,7 @@ enum Request {
     },
     GetSystemInfo,
     Health,
+    GetComplianceReport,
     #[cfg(feature = "low_power")]
     SetPowerState {
         state: u32,
@@ -139,7 +140,7 @@ async fn main() -> io::Result<()> {
     let args: Vec<String> = std::env::args().collect();
     let mut bind_addr: Option<String> = None;
     let mut config_path_arg: Option<PathBuf> = None;
-    
+
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -169,8 +170,12 @@ async fn main() -> io::Result<()> {
                 println!("  --config <path>      Configuration file path");
                 println!("  --help, -h           Show this help message");
                 println!("\nEnvironment:");
-                println!("  NYX_CONFIG                Configuration file path (overridden by --config)");
-                println!("  NYX_PROMETHEUS_ADDR       Prometheus metrics endpoint (e.g., 0.0.0.0:9100)");
+                println!(
+                    "  NYX_CONFIG                Configuration file path (overridden by --config)"
+                );
+                println!(
+                    "  NYX_PROMETHEUS_ADDR       Prometheus metrics endpoint (e.g., 0.0.0.0:9100)"
+                );
                 println!("  NYX_OTLP=1                Enable OTLP tracing");
                 println!("  RUST_LOG                  Log level (default: info)");
                 std::process::exit(0);
@@ -182,7 +187,7 @@ async fn main() -> io::Result<()> {
             }
         }
     }
-    
+
     // tracing init (env controlled)
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "info");
@@ -191,9 +196,10 @@ async fn main() -> io::Result<()> {
 
     let mut node_id = [0u8; 32];
     rand::thread_rng().fill_bytes(&mut node_id);
-    
+
     // Config path: --config arg takes precedence over NYX_CONFIG env
-    let config_path = config_path_arg.or_else(|| std::env::var("NYX_CONFIG").ok().map(PathBuf::from));
+    let config_path =
+        config_path_arg.or_else(|| std::env::var("NYX_CONFIG").ok().map(PathBuf::from));
     let cfg_mgr = ConfigManager::new(NyxConfig::default(), config_path);
     // If a config file is configured, attempt an initial reload to apply static settings (e.g., max_frame_len_bytes)
     if cfg_mgr.getconfig().await != NyxConfig::default() {
@@ -245,7 +251,10 @@ async fn main() -> io::Result<()> {
     // Determine listener type based on --bind argument
     let use_tcp = bind_addr.is_some();
     if use_tcp {
-        info!("starting nyx-daemon (TCP) at {}", bind_addr.as_ref().unwrap());
+        info!(
+            "starting nyx-daemon (TCP) at {}",
+            bind_addr.as_ref().unwrap()
+        );
     } else {
         info!("starting nyx-daemon (plain IPC) at {}", DEFAULT_ENDPOINT);
     }
@@ -257,7 +266,10 @@ async fn main() -> io::Result<()> {
     if let Ok(addr) = std::env::var("NYX_PROMETHEUS_ADDR") {
         match addr.parse() {
             Ok(sock) => {
-                let cfg = nyx_telemetry::Config { exporter: nyx_telemetry::Exporter::Prometheus, servicename: None };
+                let cfg = nyx_telemetry::Config {
+                    exporter: nyx_telemetry::Exporter::Prometheus,
+                    servicename: None,
+                };
                 if let Err(e) = nyx_telemetry::init(&cfg) {
                     warn!("failed to init prometheus telemetry: {e:?}");
                 } else {
@@ -287,7 +299,10 @@ async fn main() -> io::Result<()> {
     // OpenTelemetry OTLP tracing to Tempo when NYX_OTLP=1 (feature="otlp")
     if std::env::var("NYX_OTLP").as_deref() == Ok("1") {
         let svc = std::env::var("NYX_SERVICE_NAME").ok();
-        let cfg = nyx_telemetry::Config { exporter: nyx_telemetry::Exporter::Otlp, servicename: svc };
+        let cfg = nyx_telemetry::Config {
+            exporter: nyx_telemetry::Exporter::Otlp,
+            servicename: svc,
+        };
         if let Err(e) = nyx_telemetry::init(&cfg) {
             warn!("failed to init OTLP tracing: {e:?}");
         } else {
@@ -299,30 +314,32 @@ async fn main() -> io::Result<()> {
     // Detect and report protocol compliance level at daemon startup
     // Reference: spec/Nyx_Protocol_v1.0_Spec_EN.md §10
     {
-        use nyx_core::compliance::{determine_compliance_level, validate_compliance_level, FeatureDetector};
-        
+        use nyx_core::compliance::{
+            determine_compliance_level, validate_compliance_level, FeatureDetector,
+        };
+
         let detector = FeatureDetector::new();
         let detected_level = determine_compliance_level(&detector);
-        
+
         // Log the detected compliance level
         info!(
             level = %detected_level,
             features = detector.available_features().len(),
             "Nyx Protocol compliance level detected"
         );
-        
+
         // Perform validation and log detailed report if debugging enabled
         match validate_compliance_level(detected_level, &detector) {
             Ok(report) => {
                 info!("{}", report.summary());
-                
+
                 // Log detailed report at debug level
                 if tracing::enabled!(tracing::Level::DEBUG) {
                     for feature in detector.available_features() {
                         tracing::debug!("Available feature: {}", feature);
                     }
                 }
-                
+
                 // Record compliance level in telemetry
                 #[cfg(feature = "telemetry")]
                 {
@@ -340,7 +357,7 @@ async fn main() -> io::Result<()> {
                         }
                     }
                 }
-                
+
                 // Emit compliance event
                 let _ = state.events.sender().send(Event {
                     _ty: "system".into(),
@@ -358,12 +375,15 @@ async fn main() -> io::Result<()> {
         // TCP listener for integration tests and remote access
         let bind_addr_str = bind_addr.clone().unwrap();
         let addr: std::net::SocketAddr = bind_addr_str.parse().map_err(|e| {
-            io::Error::new(io::ErrorKind::InvalidInput, format!("Invalid bind address: {}", e))
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("Invalid bind address: {}", e),
+            )
         })?;
-        
+
         let listener = tokio::net::TcpListener::bind(addr).await?;
         info!("TCP listener bound to {}", listener.local_addr()?);
-        
+
         loop {
             match listener.accept().await {
                 Ok((stream, peer_addr)) => {
@@ -402,34 +422,34 @@ async fn main() -> io::Result<()> {
         #[cfg(windows)]
         {
             loop {
-            // 1 outstanding instance waiting for ConnectNamedPipe at any time.
-            let server = match ServerOptions::new().create(DEFAULT_ENDPOINT) {
-                Ok(s) => s,
-                Err(e) => {
-                    error!("failed to create named pipe: {}", e);
-                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                    continue;
-                }
-            };
+                // 1 outstanding instance waiting for ConnectNamedPipe at any time.
+                let server = match ServerOptions::new().create(DEFAULT_ENDPOINT) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        error!("failed to create named pipe: {}", e);
+                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                        continue;
+                    }
+                };
 
-            // Await connection before spawning handler to avoid unbounded instance creation
-            match server.connect().await {
-                Ok(()) => {
-                    let st = state.clone();
-                    // Move the connected server into a task to handle this client
-                    tokio::spawn(async move {
-                        let mut server = server;
-                        if let Err(e) = handle_pipe_client(&mut server, st).await {
-                            warn!("client error: {}", e);
-                        }
-                    });
+                // Await connection before spawning handler to avoid unbounded instance creation
+                match server.connect().await {
+                    Ok(()) => {
+                        let st = state.clone();
+                        // Move the connected server into a task to handle this client
+                        tokio::spawn(async move {
+                            let mut server = server;
+                            if let Err(e) = handle_pipe_client(&mut server, st).await {
+                                warn!("client error: {}", e);
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        warn!("pipe connect error: {}", e);
+                        // brief backoff to avoid tight error loop
+                        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                    }
                 }
-                Err(e) => {
-                    warn!("pipe connect error: {}", e);
-                    // brief backoff to avoid tight error loop
-                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-                }
-            }
             }
         }
     }
@@ -949,6 +969,46 @@ async fn process_request(
                 Err(e) => (Response::err_with_id(id, 500, e.to_string()), None, None),
             }
         }
+        Ok(RpcRequest {
+            id,
+            auth,
+            req: Request::GetComplianceReport,
+        }) => {
+            if !is_authorized(state, auth.as_deref()) {
+                return (Response::err_with_id(id, 401, "unauthorized"), None, None);
+            }
+
+            use nyx_core::compliance::{
+                determine_compliance_level, ComplianceLevel, ComplianceRequirements,
+                FeatureDetector,
+            };
+
+            let detector = FeatureDetector::default();
+            let available = detector.available_features();
+            let level = determine_compliance_level(&detector);
+            let requirements = match level {
+                ComplianceLevel::Core => ComplianceRequirements::core(),
+                ComplianceLevel::Plus => ComplianceRequirements::plus(),
+                ComplianceLevel::Full => ComplianceRequirements::full(),
+            };
+
+            let missing: Vec<_> = requirements
+                .required_features
+                .iter()
+                .filter(|f| !available.contains(*f))
+                .map(|f| format!("{:?}", f))
+                .collect();
+            let available_vec: Vec<_> = available.iter().map(|f| format!("{:?}", f)).collect();
+
+            let report = serde_json::json!({
+                "compliance_level": format!("{:?}", level),
+                "detected_features": available_vec,
+                "missing_features": missing,
+                "summary": format!("Level: {:?}, Features: {}/{}", level, available.len(), requirements.required_features.len()),
+            });
+
+            (Response::ok_with_id(id, report), None, None)
+        }
         Err(e) => {
             #[cfg(feature = "telemetry")]
             nyx_telemetry::record_counter("nyx_daemon_bad_request", 1);
@@ -1286,5 +1346,36 @@ mod tests {
             let is_auth = is_authorized(&state, Some("valid_token"));
             assert!(is_auth, "Auth should succeed with valid token");
         });
+    }
+
+    #[tokio::test]
+    async fn compliance_report_via_ipc() {
+        let state = make_state_with_token(Some("test-token"));
+        let req = serde_json::json!({
+            "id": "c1",
+            "auth": "test-token",
+            "op": "get_compliance_report"
+        })
+        .to_string();
+        let (resp, _rx, _filter) = process_request(&req, &state).await;
+        assert!(resp.ok, "Compliance report should succeed with valid auth");
+        assert_eq!(resp.id.as_deref(), Some("c1"));
+        let data = resp.data.unwrap();
+        assert!(data.get("compliance_level").is_some());
+        assert!(data.get("detected_features").is_some());
+        assert!(data.get("summary").is_some());
+    }
+
+    #[tokio::test]
+    async fn compliance_report_unauthorized() {
+        let state = make_state_with_token(Some("secret"));
+        let req = serde_json::json!({
+            "id": "c2",
+            "op": "get_compliance_report"
+        })
+        .to_string();
+        let (resp, _rx, _filter) = process_request(&req, &state).await;
+        assert!(!resp.ok, "Should require auth");
+        assert_eq!(resp.code, 401);
     }
 }

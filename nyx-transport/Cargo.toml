@@ -50,6 +50,7 @@ hkdf = "0.12"
 futures = { workspace = true }
 anyhow = { workspace = true }
 nom = { version = "7", default-features = false, features = ["std"] }
+chacha20 = { version = "0.9.1", features = ["std"] }
 
 [dev-dependencies]
 tracing-test = "0.2"

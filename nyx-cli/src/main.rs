@@ -265,9 +265,7 @@ async fn main() -> anyhow::Result<()> {
                 eprintln!("wrote {}", pathbuf.display());
                 Ok(())
             }
-            ConfigCmd::Validate { path, strict } => {
-                validate_config(path, strict).await
-            }
+            ConfigCmd::Validate { path, strict } => validate_config(path, strict).await,
         },
         Commands::FrameLimit { set } => {
             if let Some(n) = set {
@@ -359,6 +357,9 @@ struct CliFileConfig {
 async fn auto_discover() -> (SdkConfig, Option<String>) {
     let mut cfg = SdkConfig::default();
     let mut token: Option<String> = None;
+    // Track whether user explicitly set token via env var (even if empty)
+    // This prevents falling back to cookie/config when user wants no token
+    let mut token_env_explicitly_set = false;
 
     // 1) Env vars
     if let Ok(ep) = std::env::var("NYX_DAEMON_ENDPOINT") {
@@ -373,21 +374,25 @@ async fn auto_discover() -> (SdkConfig, Option<String>) {
         }
     }
     // Prefer NYX_CONTROL_TOKEN (charts/values.yaml hint) then NYX_TOKEN
+    // Note: Presence of env var (even if whitespace-only) signals explicit intent
+    // to override cookie/config token. Empty/whitespace means "no token".
     if let Ok(tok) = std::env::var("NYX_CONTROL_TOKEN") {
+        token_env_explicitly_set = true;
         if !tok.trim().is_empty() {
             token = Some(tok.trim().to_string());
         }
     }
-    if token.is_none() {
+    if !token_env_explicitly_set {
         if let Ok(tok) = std::env::var("NYX_TOKEN") {
+            token_env_explicitly_set = true;
             if !tok.trim().is_empty() {
                 token = Some(tok.trim().to_string());
             }
         }
     }
 
-    // 2) Cookie file (Tor-style). If present, use it unless env already provided token
-    if token.is_none() {
+    // 2) Cookie file (Tor-style). Only use if env var was NOT explicitly set
+    if token.is_none() && !token_env_explicitly_set {
         if let Some(tok) = read_cookie_token().await {
             token = Some(tok);
         }
@@ -403,7 +408,8 @@ async fn auto_discover() -> (SdkConfig, Option<String>) {
         if let Some(ms) = file_cfg.timeout_ms {
             cfg.request_timeout_ms = ms;
         }
-        if token.is_none() {
+        // Only use config file token if env var was NOT explicitly set
+        if token.is_none() && !token_env_explicitly_set {
             token = file_cfg.token.filter(|s| !s.trim().is_empty());
         }
     }
@@ -540,7 +546,10 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
 
     // Check if file exists
     if !pathbuf.exists() {
-        eprintln!("❌ Error: Configuration file not found: {}", pathbuf.display());
+        eprintln!(
+            "❌ Error: Configuration file not found: {}",
+            pathbuf.display()
+        );
         std::process::exit(1);
     }
 
@@ -590,7 +599,10 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
                     errors.push("security.max_connections must be greater than 0".to_string());
                 }
             }
-            if let Some(timeout) = security.get("connection_timeout").and_then(|v| v.as_integer()) {
+            if let Some(timeout) = security
+                .get("connection_timeout")
+                .and_then(|v| v.as_integer())
+            {
                 if timeout <= 0 {
                     errors.push("security.connection_timeout must be greater than 0".to_string());
                 }
@@ -599,7 +611,10 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
             // and ensure reasonable memory usage
             if let Some(frame_size) = security.get("max_frame_size").and_then(|v| v.as_integer()) {
                 if !(1024..=67108864).contains(&frame_size) {
-                    errors.push("security.max_frame_size must be between 1024 and 67108864 (64MB)".to_string());
+                    errors.push(
+                        "security.max_frame_size must be between 1024 and 67108864 (64MB)"
+                            .to_string(),
+                    );
                 }
             }
         }
@@ -620,11 +635,20 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
 
         // Validate [crypto] section
         if let Some(crypto) = table.get("crypto").and_then(|v| v.as_table()) {
-            if let Some(interval) = crypto.get("key_rotation_interval").and_then(|v| v.as_integer()) {
+            if let Some(interval) = crypto
+                .get("key_rotation_interval")
+                .and_then(|v| v.as_integer())
+            {
                 if interval <= 0 {
-                    warnings.push("crypto.key_rotation_interval is 0 or negative; key rotation disabled".to_string());
+                    warnings.push(
+                        "crypto.key_rotation_interval is 0 or negative; key rotation disabled"
+                            .to_string(),
+                    );
                 } else if interval < 300 {
-                    warnings.push("crypto.key_rotation_interval < 5 minutes may impact performance".to_string());
+                    warnings.push(
+                        "crypto.key_rotation_interval < 5 minutes may impact performance"
+                            .to_string(),
+                    );
                 }
             }
             if let Some(timeout) = crypto.get("session_timeout").and_then(|v| v.as_integer()) {
@@ -640,7 +664,10 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
             // and stay within valid port range
             if let Some(port) = dht.get("port").and_then(|v| v.as_integer()) {
                 if !(1024..=65535).contains(&port) {
-                    warnings.push(format!("dht.port {} is outside recommended range 1024-65535", port));
+                    warnings.push(format!(
+                        "dht.port {} is outside recommended range 1024-65535",
+                        port
+                    ));
                 }
             }
             if let Some(cache_size) = dht.get("peer_cache_size").and_then(|v| v.as_integer()) {
@@ -654,19 +681,30 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
         if let Some(endpoints) = table.get("endpoints").and_then(|v| v.as_table()) {
             if let Some(grpc_addr) = endpoints.get("grpc_addr").and_then(|v| v.as_str()) {
                 if let Err(e) = grpc_addr.parse::<std::net::SocketAddr>() {
-                    errors.push(format!("Invalid endpoints.grpc_addr '{}': {}", grpc_addr, e));
+                    errors.push(format!(
+                        "Invalid endpoints.grpc_addr '{}': {}",
+                        grpc_addr, e
+                    ));
                 }
             }
             if let Some(prom_addr) = endpoints.get("prometheus_addr").and_then(|v| v.as_str()) {
                 if let Err(e) = prom_addr.parse::<std::net::SocketAddr>() {
-                    errors.push(format!("Invalid endpoints.prometheus_addr '{}': {}", prom_addr, e));
+                    errors.push(format!(
+                        "Invalid endpoints.prometheus_addr '{}': {}",
+                        prom_addr, e
+                    ));
                 }
             }
             // Validate TLS configuration: if enabled, both certificate and key must be provided
             // for secure gRPC communication
             if let Some(tls_enabled) = endpoints.get("tls_enabled").and_then(|v| v.as_bool()) {
-                if tls_enabled && (!endpoints.contains_key("tls_cert") || !endpoints.contains_key("tls_key")) {
-                    errors.push("endpoints.tls_enabled is true but tls_cert or tls_key is missing".to_string());
+                if tls_enabled
+                    && (!endpoints.contains_key("tls_cert") || !endpoints.contains_key("tls_key"))
+                {
+                    errors.push(
+                        "endpoints.tls_enabled is true but tls_cert or tls_key is missing"
+                            .to_string(),
+                    );
                 }
             }
         }
@@ -682,7 +720,8 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
             // used for multipath routing decisions
             if let Some(quality) = multipath.get("min_path_quality").and_then(|v| v.as_float()) {
                 if !(0.0..=1.0).contains(&quality) {
-                    errors.push("multipath.min_path_quality must be between 0.0 and 1.0".to_string());
+                    errors
+                        .push("multipath.min_path_quality must be between 0.0 and 1.0".to_string());
                 }
             }
         }
@@ -692,9 +731,12 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
             if let Some(endpoint) = telemetry.get("otlp_endpoint").and_then(|v| v.as_str()) {
                 // Basic URL validation
                 if !endpoint.starts_with("http://") && !endpoint.starts_with("https://") {
-                    warnings.push(format!("telemetry.otlp_endpoint '{}' should start with http:// or https://", endpoint));
+                    warnings.push(format!(
+                        "telemetry.otlp_endpoint '{}' should start with http:// or https://",
+                        endpoint
+                    ));
                 }
-                
+
                 // Strict mode: check if endpoint is reachable (using ureq for Pure Rust)
                 if strict {
                     print!("🔍 Checking OTLP endpoint connectivity... ");
@@ -705,16 +747,24 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
                         Ok(_) => println!("✅ reachable"),
                         Err(e) => {
                             println!("⚠️  unreachable");
-                            warnings.push(format!("telemetry.otlp_endpoint '{}' is unreachable: {}", endpoint, e));
+                            warnings.push(format!(
+                                "telemetry.otlp_endpoint '{}' is unreachable: {}",
+                                endpoint, e
+                            ));
                         }
                     }
                 }
             }
             // Validate OTLP sampling rate: percentage of traces to export (0.0=none, 1.0=all)
             // to control telemetry overhead and costs
-            if let Some(rate) = telemetry.get("otlp_sampling_rate").and_then(|v| v.as_float()) {
+            if let Some(rate) = telemetry
+                .get("otlp_sampling_rate")
+                .and_then(|v| v.as_float())
+            {
                 if !(0.0..=1.0).contains(&rate) {
-                    errors.push("telemetry.otlp_sampling_rate must be between 0.0 and 1.0".to_string());
+                    errors.push(
+                        "telemetry.otlp_sampling_rate must be between 0.0 and 1.0".to_string(),
+                    );
                 }
             }
         }
@@ -737,11 +787,30 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
 
         // Check for unknown/deprecated top-level keys
         let known_keys: HashSet<&str> = [
-            "listen_port", "node_id", "log_level", "log_format",
-            "security", "bootstrap_peers", "network", "crypto", "dht",
-            "endpoints", "cli", "performance", "plugins", "multipath",
-            "telemetry", "mix", "low_power", "development", "limits", "monitoring"
-        ].iter().copied().collect();
+            "listen_port",
+            "node_id",
+            "log_level",
+            "log_format",
+            "security",
+            "bootstrap_peers",
+            "network",
+            "crypto",
+            "dht",
+            "endpoints",
+            "cli",
+            "performance",
+            "plugins",
+            "multipath",
+            "telemetry",
+            "mix",
+            "low_power",
+            "development",
+            "limits",
+            "monitoring",
+        ]
+        .iter()
+        .copied()
+        .collect();
 
         for key in table.keys() {
             if !known_keys.contains(key.as_str()) {
@@ -752,7 +821,7 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
 
     // Print validation results
     println!("✅ TOML Syntax: Valid");
-    
+
     if !warnings.is_empty() {
         println!("\n⚠️  Warnings ({}):", warnings.len());
         for (i, warning) in warnings.iter().enumerate() {
@@ -765,67 +834,84 @@ async fn validate_config(path: Option<String>, strict: bool) -> anyhow::Result<(
         for (i, error) in errors.iter().enumerate() {
             println!("   {}. {}", i + 1, error);
         }
-        eprintln!("\n❌ Configuration validation failed with {} error(s)", errors.len());
+        eprintln!(
+            "\n❌ Configuration validation failed with {} error(s)",
+            errors.len()
+        );
         std::process::exit(1);
     }
 
     if warnings.is_empty() {
         println!("\n✅ Configuration is valid!");
     } else {
-        println!("\n✅ Configuration is valid (with {} warning(s))", warnings.len());
+        println!(
+            "\n✅ Configuration is valid (with {} warning(s))",
+            warnings.len()
+        );
     }
-    
+
     Ok(())
 }
 
 /// Handle compliance report command
-async fn handle_compliance(client: &DaemonClient, format: &str, detailed: bool) -> anyhow::Result<()> {
+async fn handle_compliance(
+    client: &DaemonClient,
+    format: &str,
+    detailed: bool,
+) -> anyhow::Result<()> {
     let report = client.get_compliance_report().await?;
-    
+
     match format {
         "json" => {
             // JSON output for machine consumption
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
-        "human" | _ => {
+        _ => {
             // Human-readable table format
             println!("╔════════════════════════════════════════════════════════════╗");
             println!("║           Nyx Protocol Compliance Report                  ║");
             println!("╚════════════════════════════════════════════════════════════╝");
             println!();
-            
+
             // Summary section
-            println!("📊 Compliance Level: {}", report.get("compliance_level")
-                .and_then(|v| v.as_str())
-                .unwrap_or("unknown")
-                .to_uppercase());
-            
-            let detected_count = report.get("detected_features")
+            println!(
+                "📊 Compliance Level: {}",
+                report
+                    .get("compliance_level")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .to_uppercase()
+            );
+
+            let detected_count = report
+                .get("detected_features")
                 .and_then(|v| v.as_array())
                 .map(|a| a.len())
                 .unwrap_or(0);
-            let available_count = report.get("available_features")
+            let available_count = report
+                .get("available_features")
                 .and_then(|v| v.as_array())
                 .map(|a| a.len())
                 .unwrap_or(0);
-            let missing_count = report.get("missing_features")
+            let missing_count = report
+                .get("missing_features")
                 .and_then(|v| v.as_array())
                 .map(|a| a.len())
                 .unwrap_or(0);
-            
+
             println!("✅ Detected Features: {}", detected_count);
             println!("📦 Available Features: {}", available_count);
             if missing_count > 0 {
                 println!("⚠️  Missing Features: {}", missing_count);
             }
             println!();
-            
+
             // Detailed breakdown if requested
             if detailed {
                 println!("─────────────────────────────────────────────────────────────");
                 println!("Tier Breakdown:");
                 println!();
-                
+
                 if let Some(core) = report.get("core_features") {
                     print_tier_features("CORE", core);
                 }
@@ -836,33 +922,36 @@ async fn handle_compliance(client: &DaemonClient, format: &str, detailed: bool) 
                     print_tier_features("FULL", full);
                 }
             }
-            
+
             // Summary text
             if let Some(summary) = report.get("summary").and_then(|v| v.as_str()) {
                 println!("─────────────────────────────────────────────────────────────");
                 println!("Summary:");
                 println!("{}", summary);
             }
-            
+
             // Timestamp
             if let Some(timestamp) = report.get("report_generated_at") {
                 println!();
-                println!("Generated at: {}", 
-                    timestamp.get("seconds")
+                println!(
+                    "Generated at: {}",
+                    timestamp
+                        .get("seconds")
                         .and_then(|v| v.as_i64())
                         .map(|s| format!("{}", s))
-                        .unwrap_or_else(|| "unknown".to_string()));
+                        .unwrap_or_else(|| "unknown".to_string())
+                );
             }
         }
     }
-    
+
     Ok(())
 }
 
 /// Print features for a compliance tier
 fn print_tier_features(tier_name: &str, tier_data: &serde_json::Value) {
     println!("  {} Tier:", tier_name);
-    
+
     if let Some(required) = tier_data.get("required").and_then(|v| v.as_array()) {
         println!("    Required: {}", required.len());
         if !required.is_empty() {
@@ -876,9 +965,10 @@ fn print_tier_features(tier_name: &str, tier_data: &serde_json::Value) {
             }
         }
     }
-    
+
     if let Some(detected) = tier_data.get("detected").and_then(|v| v.as_array()) {
-        let missing_in_tier = tier_data.get("missing")
+        let missing_in_tier = tier_data
+            .get("missing")
             .and_then(|v| v.as_array())
             .map(|a| a.len())
             .unwrap_or(0);
@@ -887,6 +977,6 @@ fn print_tier_features(tier_name: &str, tier_data: &serde_json::Value) {
             println!("    Missing: {} ⚠️", missing_in_tier);
         }
     }
-    
+
     println!();
 }

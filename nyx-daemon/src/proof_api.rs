@@ -15,9 +15,9 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::info;
 
 /// API error response
 #[derive(Debug, Serialize)]
@@ -101,7 +101,10 @@ async fn verify_proof(
     State(distributor): State<Arc<ProofDistributor>>,
     Json(proof): Json<BatchProof>,
 ) -> Result<Json<VerificationResult>, ProofApiError> {
-    info!("API request: POST /proofs/verify for batch {}", proof.batch_id);
+    info!(
+        "API request: POST /proofs/verify for batch {}",
+        proof.batch_id
+    );
 
     let result = distributor.verify_proof(&proof).await;
     Ok(Json(result))
@@ -110,10 +113,10 @@ async fn verify_proof(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proof_distributor::ProofDistributorConfig;
     use axum::body::Body;
     use axum::http::Request;
     use nyx_mix::accumulator::{Accumulator, AccumulatorConfig};
-    use crate::proof_distributor::ProofDistributorConfig;
     use tokio::sync::RwLock;
     use tower::ServiceExt;
 
@@ -174,7 +177,10 @@ mod tests {
         // Generate multiple proofs
         for batch_id in 1..=3 {
             let elements = vec![format!("element{}", batch_id).into_bytes()];
-            distributor.generate_proof(batch_id, &elements).await.unwrap();
+            distributor
+                .generate_proof(batch_id, &elements)
+                .await
+                .unwrap();
         }
 
         let app = create_proof_api(distributor);

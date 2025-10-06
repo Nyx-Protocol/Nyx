@@ -1,0 +1,28 @@
+{{- if .Values.grpc.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nyx.fullname" . }}-grpc
+  labels:
+{{ include "nyx.labels" . | indent 4 }}
+    component: grpc
+  annotations:
+{{ toYaml (.Values.grpc.service.annotations | default (dict)) | indent 4 }}
+spec:
+  type: {{ .Values.grpc.service.type }}
+  selector:
+{{ include "nyx.selectorLabels" . | indent 4 }}
+  ports:
+    - name: grpc
+      port: {{ .Values.grpc.port }}
+      targetPort: grpc
+      protocol: TCP
+{{- if and (.Values.grpc.service.loadBalancerSourceRanges) (eq .Values.grpc.service.type "LoadBalancer") }}
+  loadBalancerSourceRanges:
+{{ toYaml .Values.grpc.service.loadBalancerSourceRanges | indent 4 }}
+{{- end }}
+{{- if or (eq .Values.grpc.service.type "LoadBalancer") (eq .Values.grpc.service.type "NodePort") }}
+  externalTrafficPolicy: {{ .Values.grpc.service.externalTrafficPolicy | default "Cluster" }}
+{{- end }}
+  sessionAffinity: {{ .Values.grpc.service.sessionAffinity | default "None" }}
+{{- end }}

@@ -51,10 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     record_rekey_event(&truncate_id("session-forced", 8), "forced", 120.0);
-    record_rekey_failure(
-        &truncate_id("session-rekey-fail", 8),
-        "crypto_error",
-    );
+    record_rekey_failure(&truncate_id("session-rekey-fail", 8), "crypto_error");
 
     println!("Sample metrics recorded successfully!");
     println!("\nOpen http://127.0.0.1:9090/metrics to view the metrics");

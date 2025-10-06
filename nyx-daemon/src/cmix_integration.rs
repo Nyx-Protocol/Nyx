@@ -9,8 +9,8 @@
 //! - Adaptive cover traffic integration
 //! - Configuration management via nyx.toml
 
-use nyx_mix::cmix::{Batcher, BatchStats, VerifiedBatch};
-use nyx_mix::adaptive::{AdaptiveMixConfig, AdaptiveMixEngine, NetworkConditions};
+use nyx_mix::adaptive::{AdaptiveMixConfig, AdaptiveMixEngine};
+use nyx_mix::cmix::{BatchStats, Batcher, VerifiedBatch};
 use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error;
@@ -91,16 +91,10 @@ pub struct CmixStats {
 
 impl CmixIntegrationManager {
     /// Create new cMix integration manager
-    pub fn new(
-        config: CmixConfig,
-        batch_output_tx: mpsc::UnboundedSender<VerifiedBatch>,
-    ) -> Self {
+    pub fn new(config: CmixConfig, batch_output_tx: mpsc::UnboundedSender<VerifiedBatch>) -> Self {
         // Create batcher
-        let batcher = Batcher::with_vdf_delay(
-            config.batch_size,
-            config.batch_timeout,
-            config.vdf_delay_ms,
-        );
+        let batcher =
+            Batcher::with_vdf_delay(config.batch_size, config.batch_timeout, config.vdf_delay_ms);
 
         // Create adaptive engine if cover traffic enabled
         let adaptive_engine = if config.enable_cover_traffic {
@@ -191,7 +185,11 @@ impl CmixIntegrationManager {
             match batcher.push(packet.data) {
                 Ok(Some(batch)) => {
                     // Batch is ready
-                    debug!("Batch {} ready with {} packets", batch.id, batch.packets.len());
+                    debug!(
+                        "Batch {} ready with {} packets",
+                        batch.id,
+                        batch.packets.len()
+                    );
 
                     // Update stats
                     {
@@ -338,7 +336,7 @@ mod tests {
         };
 
         let manager = Arc::new(CmixIntegrationManager::new(config, batch_tx));
-        
+
         // Start processing loop
         let manager_clone = manager.clone();
         tokio::spawn(async move {
@@ -360,7 +358,11 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(200)).await;
 
         let stats = manager.get_stats().await;
-        assert!(stats.total_packets >= 5, "Expected at least 5 packets, got {}", stats.total_packets);
+        assert!(
+            stats.total_packets >= 5,
+            "Expected at least 5 packets, got {}",
+            stats.total_packets
+        );
     }
 
     #[tokio::test]

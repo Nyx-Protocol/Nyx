@@ -336,7 +336,10 @@ impl IntegratedFrameProcessor {
                 .get_context()
                 .add_span_attribute(sid, "frames.reordered", &reordered_frames.len().to_string())
                 .await;
-            self.telemetry.get_context().end_span(sid, SpanStatus::Ok).await;
+            self.telemetry
+                .get_context()
+                .end_span(sid, SpanStatus::Ok)
+                .await;
         }
 
         Ok(reordered_frames)
@@ -378,7 +381,10 @@ impl IntegratedFrameProcessor {
                 .get_context()
                 .add_span_attribute(sid, "encoded.bytes", &result.len().to_string())
                 .await;
-            self.telemetry.get_context().end_span(sid, SpanStatus::Ok).await;
+            self.telemetry
+                .get_context()
+                .end_span(sid, SpanStatus::Ok)
+                .await;
         }
 
         Ok(result)

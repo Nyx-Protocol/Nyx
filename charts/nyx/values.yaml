@@ -35,6 +35,173 @@ service:
   port: 43300
   metricsPort: 9090
 
+# gRPC control API configuration
+grpc:
+  enabled: true
+  port: 50051
+  service:
+    type: ClusterIP
+    annotations: {}
+  # TLS configuration (optional)
+  tls:
+    enabled: false
+    certSecretName: nyx-grpc-tls
+    # If using cert-manager, uncomment:
+    # certManager:
+    #   issuerName: letsencrypt-prod
+    #   issuerKind: ClusterIssuer
+
+# Telemetry and observability configuration
+telemetry:
+  # OTLP exporter settings
+  otlp:
+    enabled: false
+    # OTLP collector endpoint (e.g., Jaeger, Tempo)
+    endpoint: "http://tempo.monitoring.svc.cluster.local:4317"
+    # Sampling rate (0.0-1.0): 1.0 = 100%, 0.1 = 10%
+    samplingRate: 1.0
+    # Service name for traces/metrics
+    serviceName: nyx-daemon
+  
+  # Prometheus metrics export
+  prometheus:
+    enabled: true
+    # If using ServiceMonitor, metrics are scraped from metricsPort
+    # Additional OTLP-based Prometheus export
+    otlpExport: false
+
+# Push notification relay configuration (mobile support)
+pushNotification:
+  enabled: false
+  # Firebase Cloud Messaging (FCM) credentials
+  fcm:
+    # Secret name containing FCM service account JSON
+    # Expected key: fcm-service-account.json
+    credentialsSecretName: nyx-fcm-credentials
+    # FCM project ID
+    projectId: ""
+  
+  # Apple Push Notification Service (APNS) credentials  
+  apns:
+    # Secret name containing APNS certificate and key
+    # Expected keys: apns-cert.pem, apns-key.pem
+    credentialsSecretName: nyx-apns-credentials
+    # APNS environment: production or sandbox
+    environment: production
+    # APNS topic (bundle ID)
+    topic: ""
+
+# Nyx configuration (nyx.toml via ConfigMap)
+config:
+  enabled: true
+  fileName: nyx.toml
+  # Configuration data - see examples/full_config.toml for full reference
+  data: |
+    # Root configuration
+    listen_port = 43300
+    node_id = "auto"
+    log_level = "info"
+    log_format = "json"
+    bootstrap_peers = []
+    
+    [security]
+    max_connections = 1000
+    connection_timeout = 30
+    max_frame_size = 8388608
+    rate_limit_requests = 100
+    rate_limit_bytes = 10485760
+    
+    [network]
+    bind_addr = "0.0.0.0:43300"
+    ipv6_enabled = true
+    development = false
+    max_peers = 100
+    peer_timeout = 30
+    
+    [crypto]
+    pq_enabled = true
+    key_rotation_interval = 3600
+    session_timeout = 7200
+    
+    [dht]
+    enabled = true
+    port = 43301
+    peer_cache_size = 1000
+    discovery_timeout = 30
+    refresh_interval = 300
+    
+    [endpoints]
+    grpc_addr = "0.0.0.0:50051"
+    prometheus_addr = "0.0.0.0:9090"
+    tls_enabled = false
+    
+    [cli]
+    max_reconnect_attempts = 5
+    command_timeout = 30
+    output_format = "table"
+    colored_output = false
+    
+    [performance]
+    worker_threads = 0
+    read_buffer_size = 65536
+    write_buffer_size = 65536
+    max_memory_usage = 1073741824
+    
+    [plugins]
+    enabled = false
+    plugin_dir = "./plugins"
+    sandbox_level = "strict"
+    max_plugin_memory = 104857600
+    
+    [monitoring]
+    metrics_enabled = true
+    metrics_interval = 60
+    tracing_enabled = false
+    
+    [limits]
+    max_frame_len_bytes = 8388608
+    max_concurrent_connections = 1000
+    max_request_size = 16777216
+    idle_timeout = 300
+    
+    [development]
+    dev_mode = false
+    debug_endpoints = false
+    disable_auth = false
+    verbose_logging = false
+    
+    [multipath]
+    max_paths = 4
+    min_path_quality = 0.5
+    failover_timeout_ms = 1000
+    quality_monitoring_enabled = true
+    probe_interval = 30
+    
+    [mix]
+    cmix_enabled = false
+    batch_size = 128
+    vdf_delay_ms = 100
+    mix_layers = 3
+    cover_traffic_enabled = true
+    cover_traffic_ratio = 0.3
+    
+    [telemetry]
+    # OTLP endpoint injected via environment variable NYX_OTLP_ENDPOINT
+    otlp_sampling_rate = 1.0
+    prometheus_enabled = true
+    service_name = "nyx-daemon"
+    span_export_enabled = false
+    
+    [low_power]
+    enabled = true
+    background_cover_traffic_ratio = 0.08
+    active_cover_traffic_ratio = 0.4
+    battery_critical_threshold = 10
+    battery_low_threshold = 20
+    battery_hysteresis = 5
+    screen_off_cooldown_ms = 5000
+    app_background_timeout = 10
+
 bench:
   enabled: false
   image: alpine:3.19

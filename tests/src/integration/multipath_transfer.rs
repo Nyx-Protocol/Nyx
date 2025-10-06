@@ -12,24 +12,25 @@
 // - Automated quality verification
 // - Comprehensive error handling
 
-use crate::test_harness::{
-    ClientHandle, DaemonConfig, NetworkConfig, TestHarness, TestResult,
-};
+use crate::test_harness::{ClientHandle, DaemonConfig, NetworkConfig, TestHarness, TestResult};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tracing::{info, warn};
 
 /// Test payload size for throughput measurement (1 MB)
+#[allow(dead_code)]
 const TEST_PAYLOAD_SIZE: usize = 1024 * 1024;
 
 /// Expected failover time threshold (5 seconds)
+#[allow(dead_code)]
 const FAILOVER_THRESHOLD: Duration = Duration::from_secs(5);
 
 /// Minimum acceptable throughput ratio compared to single-path (80%)
+#[allow(dead_code)]
 const MIN_THROUGHPUT_RATIO: f64 = 0.8;
 
 /// Path metrics tracked during testing
+#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 struct PathMetrics {
     bytes_sent: u64,
@@ -41,6 +42,7 @@ struct PathMetrics {
 }
 
 impl PathMetrics {
+    #[allow(dead_code)]
     fn loss_rate(&self) -> f64 {
         if self.packets_sent == 0 {
             return 0.0;
@@ -48,6 +50,7 @@ impl PathMetrics {
         self.packets_lost as f64 / self.packets_sent as f64
     }
 
+    #[allow(dead_code)]
     fn avg_rtt(&self) -> Option<Duration> {
         if self.rtt_samples.is_empty() {
             return None;
@@ -68,12 +71,14 @@ impl PathMetrics {
 }
 
 /// Multipath transfer test context
+#[allow(dead_code)]
 struct MultipathTestContext {
     harness: TestHarness,
     path_metrics: Arc<RwLock<Vec<PathMetrics>>>,
 }
 
 impl MultipathTestContext {
+    #[allow(dead_code)]
     async fn new(network_configs: Vec<NetworkConfig>) -> TestResult<Self> {
         let mut harness = TestHarness::new();
         let mut path_metrics = Vec::new();
@@ -96,6 +101,7 @@ impl MultipathTestContext {
         })
     }
 
+    #[allow(dead_code)]
     async fn connect_clients(&mut self) -> TestResult<Vec<ClientHandle>> {
         let mut clients = Vec::new();
 
@@ -103,9 +109,7 @@ impl MultipathTestContext {
             let daemon_id = format!("daemon_{}", i);
             let client_id = format!("client_{}", i);
 
-            self.harness
-                .connect_client(&client_id, &daemon_id)
-                .await?;
+            self.harness.connect_client(&client_id, &daemon_id).await?;
 
             // SAFETY: We just connected the client, so it must exist
             let client = self
@@ -122,6 +126,7 @@ impl MultipathTestContext {
         Ok(clients)
     }
 
+    #[allow(dead_code)]
     async fn shutdown(mut self) -> TestResult<()> {
         self.harness.shutdown_all().await
     }
@@ -132,9 +137,7 @@ impl MultipathTestContext {
 #[ignore] // Requires running daemon
 async fn test_dual_path_concurrent_transfer() -> TestResult<()> {
     // Initialize tracing for test debugging
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
     info!("Starting dual-path concurrent transfer test");
 
@@ -147,9 +150,7 @@ async fn test_dual_path_concurrent_transfer() -> TestResult<()> {
     let mut ctx = MultipathTestContext::new(network_configs).await?;
 
     // Generate test payload
-    let payload: Vec<u8> = (0..TEST_PAYLOAD_SIZE)
-        .map(|i| (i % 256) as u8)
-        .collect();
+    let payload: Vec<u8> = (0..TEST_PAYLOAD_SIZE).map(|i| (i % 256) as u8).collect();
 
     info!("Test payload size: {} bytes", payload.len());
 
@@ -239,9 +240,7 @@ async fn test_dual_path_concurrent_transfer() -> TestResult<()> {
 #[tokio::test]
 #[ignore] // Requires running daemon
 async fn test_path_failover() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
     info!("Starting path failover test");
 
@@ -303,9 +302,7 @@ async fn test_path_failover() -> TestResult<()> {
 #[tokio::test]
 #[ignore] // Requires running daemon
 async fn test_path_quality_metrics() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
     info!("Starting path quality metrics test");
 
@@ -371,8 +368,14 @@ async fn test_path_quality_metrics() -> TestResult<()> {
         info!("Path 0 avg RTT: {:?}", path0_rtt);
         info!("Path 1 avg RTT: {:?}", path1_rtt);
 
-        assert!(path0_rtt < Duration::from_millis(20), "Path 0 should have low RTT");
-        assert!(path1_rtt >= Duration::from_millis(40), "Path 1 should have higher RTT");
+        assert!(
+            path0_rtt < Duration::from_millis(20),
+            "Path 0 should have low RTT"
+        );
+        assert!(
+            path1_rtt >= Duration::from_millis(40),
+            "Path 1 should have higher RTT"
+        );
     } // Drop metrics_read here
 
     // Cleanup
@@ -385,9 +388,7 @@ async fn test_path_quality_metrics() -> TestResult<()> {
 #[tokio::test]
 #[ignore] // Requires running daemon and PathBuilder integration
 async fn test_multipath_scheduling() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
     info!("Starting multipath scheduling test");
 
@@ -428,7 +429,10 @@ async fn test_multipath_scheduling() -> TestResult<()> {
         }
     }
 
-    info!("Packet distribution: {} on path0, {} on path1", path0_count, path1_count);
+    info!(
+        "Packet distribution: {} on path0, {} on path1",
+        path0_count, path1_count
+    );
 
     // Verify scheduling favors high-quality path
     assert!(

@@ -473,10 +473,10 @@ async fn endpoint_task(
                                 closed_remote = true;
                             }
                             FrameType::Crypto => {
-                                // Handle CRYPTO frame - should be processed by handshake layer
-                                // In async_stream, we just forward it to upper layer
-                                tracing::debug!("Received CRYPTO frame for stream {}", frame.header.stream_id);
-                                // TODO: Forward to handshake manager
+                                // CRYPTO frames are handled at the session layer by handshake manager
+                                // AsyncStream is a low-level transport abstraction and doesn't interpret crypto frames
+                                // The upper layer (session manager) should intercept these before they reach here
+                                tracing::debug!("Received CRYPTO frame for stream {} - should be handled by session layer", frame.header.stream_id);
                             }
                             FrameType::Custom(_) => {
                                 // Handle custom/plugin frames

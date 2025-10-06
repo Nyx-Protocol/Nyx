@@ -1,4 +1,4 @@
-﻿//! Stream Manager
+//! Stream Manager
 //!
 //! Manages multiplexed streams within connections:
 //! - Stream ID allocation (odd/even separation per QUIC model)
@@ -47,7 +47,7 @@ impl Default for StreamManagerConfig {
     fn default() -> Self {
         Self {
             max_streams_per_connection: 100,
-            max_recv_buffer_size: 1_048_576, // 1 MB
+            max_recv_buffer_size: 1_048_576,    // 1 MB
             initial_flow_control_window: 65536, // 64 KB
             max_bidi_streams: 100,
             max_uni_streams: 100,
@@ -94,18 +94,22 @@ pub struct Stream {
     pub state: StreamState,
     pub created_at: Instant,
     pub last_activity: Instant,
-    
+
     // Send state
     pub send_offset: u64,
     pub send_buffer: VecDeque<u8>,
     pub send_closed: bool,
-    
+
     // Receive state
     pub recv_offset: u64,
     pub recv_buffer: VecDeque<u8>,
     pub recv_closed: bool,
     pub flow_control_window: u64,
-    
+
+    // Out-of-order frame reassembly
+    // Maps frame offset -> frame data for frames received ahead of time
+    pub pending_frames: HashMap<u64, Vec<u8>>,
+
     // Statistics
     pub bytes_sent: u64,
     pub bytes_received: u64,
@@ -134,6 +138,7 @@ impl Stream {
             recv_buffer: VecDeque::new(),
             recv_closed: false,
             flow_control_window: initial_window,
+            pending_frames: HashMap::new(),
             bytes_sent: 0,
             bytes_received: 0,
             frames_sent: 0,
@@ -167,39 +172,109 @@ impl Stream {
         }
 
         let to_read = buf.len().min(self.recv_buffer.len());
-        for i in 0..to_read {
-            buf[i] = self.recv_buffer.pop_front().unwrap();
+        for item in buf.iter_mut().take(to_read) {
+            *item = self.recv_buffer.pop_front().unwrap();
         }
 
         self.last_activity = Instant::now();
         Ok(to_read)
     }
 
-    /// Process incoming frame
+    /// Process incoming frame with out-of-order handling
+    ///
+    /// This method handles frames arriving in any order by:
+    /// 1. Checking if the frame offset matches the expected recv_offset (in-order)
+    /// 2. If in-order, appending to recv_buffer immediately
+    /// 3. If out-of-order (offset > recv_offset), storing in pending_frames
+    /// 4. After each frame, attempting to reassemble consecutive pending frames
+    ///
+    /// Edge cases:
+    /// - Duplicate frames (same offset): ignored
+    /// - Overlapping frames: not supported, returns error
+    /// - Flow control: enforced on total buffered data including pending
     pub fn on_frame_received(&mut self, frame: StreamFrame) -> Result<(), StreamError> {
         if self.recv_closed {
             return Err(StreamError::RecvClosed);
         }
 
-        // Check flow control
-        if !self.can_receive(frame.data.len()) {
+        let frame_end = frame.offset + frame.data.len() as u64;
+
+        // Reject frames that are behind our current recv_offset (duplicates or retransmissions)
+        if frame_end <= self.recv_offset {
+            // Duplicate/old frame, silently ignore
+            return Ok(());
+        }
+
+        // Check flow control: total pending data must not exceed window
+        let pending_total: usize = self.pending_frames.values().map(|v| v.len()).sum();
+        let total_buffered = self.recv_buffer.len() + pending_total + frame.data.len();
+        if total_buffered > self.flow_control_window as usize {
             return Err(StreamError::FlowControlViolation);
         }
 
-        // TODO: Handle out-of-order frames with offset
-        // For now, assume in-order delivery
-        self.recv_buffer.extend(&frame.data);
-        self.recv_offset += frame.data.len() as u64;
-        self.bytes_received += frame.data.len() as u64;
-        self.frames_received += 1;
+        // Case 1: In-order frame (offset matches expected recv_offset)
+        if frame.offset == self.recv_offset {
+            self.recv_buffer.extend(&frame.data);
+            self.recv_offset += frame.data.len() as u64;
+            self.bytes_received += frame.data.len() as u64;
+            self.frames_received += 1;
 
-        if frame.fin {
-            self.recv_closed = true;
-            self.update_state();
+            if frame.fin {
+                self.recv_closed = true;
+            }
+
+            // Try to reassemble any pending frames that are now consecutive
+            self.reassemble_pending_frames();
+
+            if self.recv_closed {
+                self.update_state();
+            }
+
+            self.last_activity = Instant::now();
+            return Ok(());
         }
 
-        self.last_activity = Instant::now();
-        Ok(())
+        // Case 2: Out-of-order frame (offset > recv_offset)
+        if frame.offset > self.recv_offset {
+            // Check for overlapping frames (not supported)
+            if frame.offset < self.recv_offset + self.recv_buffer.len() as u64 {
+                return Err(StreamError::OverlappingFrame);
+            }
+
+            // Store in pending frames for later reassembly
+            self.pending_frames.insert(frame.offset, frame.data);
+            self.frames_received += 1;
+
+            // Store FIN flag if present (will be applied when frame is reassembled)
+            if frame.fin {
+                self.recv_closed = true;
+            }
+
+            self.last_activity = Instant::now();
+            return Ok(());
+        }
+
+        // Case 3: Partial overlap (should not happen with proper frame boundaries)
+        Err(StreamError::OverlappingFrame)
+    }
+
+    /// Reassemble consecutive pending frames into recv_buffer
+    ///
+    /// This method is called after receiving an in-order frame to check if
+    /// any previously received out-of-order frames can now be appended.
+    /// It iterates through pending_frames in order and appends any that
+    /// are now consecutive with the recv_offset.
+    fn reassemble_pending_frames(&mut self) {
+        loop {
+            if let Some(data) = self.pending_frames.remove(&self.recv_offset) {
+                self.recv_buffer.extend(&data);
+                self.recv_offset += data.len() as u64;
+                self.bytes_received += data.len() as u64;
+            } else {
+                // No more consecutive frames
+                break;
+            }
+        }
     }
 
     /// Close send side
@@ -226,7 +301,8 @@ impl Stream {
 
     /// Get available receive buffer space
     pub fn recv_window_available(&self) -> u64 {
-        self.flow_control_window.saturating_sub(self.recv_buffer.len() as u64)
+        self.flow_control_window
+            .saturating_sub(self.recv_buffer.len() as u64)
     }
 }
 
@@ -276,7 +352,7 @@ impl StreamManager {
     /// Unregister a connection (closes all streams)
     pub async fn unregister_connection(&self, conn_id: ConnectionId) -> Result<(), StreamError> {
         let mut conns = self.connections.write().await;
-        
+
         if let Some(conn_streams) = conns.remove(&conn_id) {
             info!(
                 "Unregistered connection {} (closed {} streams)",
@@ -296,7 +372,7 @@ impl StreamManager {
         stream_type: StreamType,
     ) -> Result<StreamId, StreamError> {
         let mut conns = self.connections.write().await;
-        
+
         let conn_streams = conns
             .get_mut(&conn_id)
             .ok_or(StreamError::ConnectionNotFound)?;
@@ -328,7 +404,7 @@ impl StreamManager {
         );
 
         conn_streams.streams.insert(stream_id, stream);
-        
+
         debug!(
             "Created client stream {} on connection {} (type: {:?})",
             stream_id, conn_id, stream_type
@@ -344,7 +420,7 @@ impl StreamManager {
         stream_type: StreamType,
     ) -> Result<StreamId, StreamError> {
         let mut conns = self.connections.write().await;
-        
+
         let conn_streams = conns
             .get_mut(&conn_id)
             .ok_or(StreamError::ConnectionNotFound)?;
@@ -376,7 +452,7 @@ impl StreamManager {
         );
 
         conn_streams.streams.insert(stream_id, stream);
-        
+
         debug!(
             "Created server stream {} on connection {} (type: {:?})",
             stream_id, conn_id, stream_type
@@ -392,7 +468,7 @@ impl StreamManager {
         stream_id: StreamId,
     ) -> Result<(), StreamError> {
         let mut conns = self.connections.write().await;
-        
+
         let conn_streams = conns
             .get_mut(&conn_id)
             .ok_or(StreamError::ConnectionNotFound)?;
@@ -400,19 +476,22 @@ impl StreamManager {
         if let Some(stream) = conn_streams.streams.get_mut(&stream_id) {
             stream.close_send();
             stream.close_recv();
-            
+
             if stream.state == StreamState::Closed {
                 let stream_type = stream.stream_type;
                 conn_streams.streams.remove(&stream_id);
-                
+
                 match stream_type {
                     StreamType::Bidirectional => conn_streams.bidi_count -= 1,
                     StreamType::Unidirectional => conn_streams.uni_count -= 1,
                 }
-                
-                debug!("Closed and removed stream {} on connection {}", stream_id, conn_id);
+
+                debug!(
+                    "Closed and removed stream {} on connection {}",
+                    stream_id, conn_id
+                );
             }
-            
+
             Ok(())
         } else {
             Err(StreamError::StreamNotFound)
@@ -426,7 +505,7 @@ impl StreamManager {
         frame: StreamFrame,
     ) -> Result<(), StreamError> {
         let mut conns = self.connections.write().await;
-        
+
         let conn_streams = conns
             .get_mut(&conn_id)
             .ok_or(StreamError::ConnectionNotFound)?;
@@ -447,7 +526,7 @@ impl StreamManager {
         data: &[u8],
     ) -> Result<usize, StreamError> {
         let mut conns = self.connections.write().await;
-        
+
         let conn_streams = conns
             .get_mut(&conn_id)
             .ok_or(StreamError::ConnectionNotFound)?;
@@ -468,7 +547,7 @@ impl StreamManager {
         buf: &mut [u8],
     ) -> Result<usize, StreamError> {
         let mut conns = self.connections.write().await;
-        
+
         let conn_streams = conns
             .get_mut(&conn_id)
             .ok_or(StreamError::ConnectionNotFound)?;
@@ -488,34 +567,100 @@ impl StreamManager {
         stream_id: StreamId,
     ) -> Option<StreamStatus> {
         let conns = self.connections.read().await;
-        
+
         conns.get(&conn_id).and_then(|conn_streams| {
-            conn_streams.streams.get(&stream_id).map(|stream| StreamStatus {
-                id: stream.id,
-                connection_id: stream.connection_id,
-                stream_type: stream.stream_type,
-                state: stream.state,
-                age: stream.created_at.elapsed(),
-                idle_time: stream.last_activity.elapsed(),
-                bytes_sent: stream.bytes_sent,
-                bytes_received: stream.bytes_received,
-                frames_sent: stream.frames_sent,
-                frames_received: stream.frames_received,
-                send_buffer_len: stream.send_buffer.len(),
-                recv_buffer_len: stream.recv_buffer.len(),
-                recv_window_available: stream.recv_window_available(),
-            })
+            conn_streams
+                .streams
+                .get(&stream_id)
+                .map(|stream| StreamStatus {
+                    id: stream.id,
+                    connection_id: stream.connection_id,
+                    stream_type: stream.stream_type,
+                    state: stream.state,
+                    age: stream.created_at.elapsed(),
+                    idle_time: stream.last_activity.elapsed(),
+                    bytes_sent: stream.bytes_sent,
+                    bytes_received: stream.bytes_received,
+                    frames_sent: stream.frames_sent,
+                    frames_received: stream.frames_received,
+                    send_buffer_len: stream.send_buffer.len(),
+                    recv_buffer_len: stream.recv_buffer.len(),
+                    recv_window_available: stream.recv_window_available(),
+                })
         })
     }
 
     /// List all streams for a connection
     pub async fn list_streams(&self, conn_id: ConnectionId) -> Vec<StreamId> {
         let conns = self.connections.read().await;
-        
+
         conns
             .get(&conn_id)
             .map(|conn_streams| conn_streams.streams.keys().copied().collect())
             .unwrap_or_default()
+    }
+
+    /// Get total stream count across all connections
+    pub fn stream_count(&self) -> usize {
+        // Non-blocking access for synchronous contexts
+        self.connections
+            .try_read()
+            .map(|conns| conns.values().map(|cs| cs.streams.len()).sum())
+            .unwrap_or(0)
+    }
+
+    /// Iterate all streams across all connections
+    ///
+    /// Returns a vector of StreamStatus for all active streams.
+    /// This is useful for monitoring, debugging, and gRPC API exposure.
+    ///
+    /// Note: This creates a snapshot of all streams at the time of call.
+    /// Streams may be created or destroyed after this call returns.
+    pub async fn iter_all_streams(&self) -> Vec<StreamStatus> {
+        let conns = self.connections.read().await;
+        let mut all_streams = Vec::new();
+
+        for conn_streams in conns.values() {
+            for stream in conn_streams.streams.values() {
+                all_streams.push(StreamStatus {
+                    id: stream.id,
+                    connection_id: stream.connection_id,
+                    stream_type: stream.stream_type,
+                    state: stream.state,
+                    age: stream.created_at.elapsed(),
+                    idle_time: stream.last_activity.elapsed(),
+                    bytes_sent: stream.bytes_sent,
+                    bytes_received: stream.bytes_received,
+                    frames_sent: stream.frames_sent,
+                    frames_received: stream.frames_received,
+                    send_buffer_len: stream.send_buffer.len(),
+                    recv_buffer_len: stream.recv_buffer.len(),
+                    recv_window_available: stream.recv_window_available(),
+                });
+            }
+        }
+
+        all_streams
+    }
+
+    /// Create a reverse index for efficient stream_id -> connection_id lookup
+    ///
+    /// Returns a HashMap mapping stream_id to connection_id.
+    /// This is useful for operations like close_stream when only stream_id is known.
+    ///
+    /// Note: This is an O(n) operation where n is the total number of streams.
+    /// Consider caching this index if called frequently.
+    pub async fn build_stream_index(&self) -> HashMap<StreamId, ConnectionId> {
+        let conns = self.connections.read().await;
+        let mut index = HashMap::new();
+
+        for (conn_id, conn_streams) in conns.iter() {
+            for stream_id in conn_streams.streams.keys() {
+                index.insert(*stream_id, *conn_id);
+            }
+        }
+
+        index
     }
 }
 
@@ -560,6 +705,9 @@ pub enum StreamError {
 
     #[error("Would block")]
     WouldBlock,
+
+    #[error("Overlapping frame detected")]
+    OverlappingFrame,
 }
 
 #[cfg(test)]
@@ -651,7 +799,10 @@ mod tests {
 
         // Read data
         let mut buf = [0u8; 100];
-        let read = manager.read_stream(conn_id, stream_id, &mut buf).await.unwrap();
+        let read = manager
+            .read_stream(conn_id, stream_id, &mut buf)
+            .await
+            .unwrap();
         assert_eq!(read, 9);
         assert_eq!(&buf[..9], b"test data");
     }
@@ -769,5 +920,136 @@ mod tests {
         assert_eq!(streams.len(), 2);
         assert!(streams.contains(&stream1));
         assert!(streams.contains(&stream2));
+    }
+
+    #[tokio::test]
+    async fn test_out_of_order_frames() {
+        let manager = StreamManager::new(StreamManagerConfig::default());
+        let conn_id = 1;
+
+        manager.register_connection(conn_id).await;
+
+        let stream_id = manager
+            .create_client_stream(conn_id, StreamType::Bidirectional)
+            .await
+            .unwrap();
+
+        // Send frame 2 first (out of order)
+        let frame2 = StreamFrame {
+            stream_id,
+            offset: 5,
+            data: b"world".to_vec(),
+            fin: false,
+        };
+        manager.on_frame_received(conn_id, frame2).await.unwrap();
+
+        // Data should not be readable yet (waiting for frame 1)
+        let mut buf = [0u8; 100];
+        let result = manager.read_stream(conn_id, stream_id, &mut buf).await;
+        assert!(matches!(result, Err(StreamError::WouldBlock)));
+
+        // Send frame 1 (fills the gap)
+        let frame1 = StreamFrame {
+            stream_id,
+            offset: 0,
+            data: b"hello".to_vec(),
+            fin: false,
+        };
+        manager.on_frame_received(conn_id, frame1).await.unwrap();
+
+        // Now both frames should be readable in order
+        let read = manager
+            .read_stream(conn_id, stream_id, &mut buf)
+            .await
+            .unwrap();
+        assert_eq!(read, 10);
+        assert_eq!(&buf[..10], b"helloworld");
+    }
+
+    #[tokio::test]
+    async fn test_duplicate_frame_handling() {
+        let manager = StreamManager::new(StreamManagerConfig::default());
+        let conn_id = 1;
+
+        manager.register_connection(conn_id).await;
+
+        let stream_id = manager
+            .create_client_stream(conn_id, StreamType::Bidirectional)
+            .await
+            .unwrap();
+
+        // Send same frame twice
+        let frame = StreamFrame {
+            stream_id,
+            offset: 0,
+            data: b"test".to_vec(),
+            fin: false,
+        };
+
+        manager
+            .on_frame_received(conn_id, frame.clone())
+            .await
+            .unwrap();
+        manager.on_frame_received(conn_id, frame).await.unwrap(); // Should be silently ignored
+
+        // Should only have one copy of the data
+        let mut buf = [0u8; 100];
+        let read = manager
+            .read_stream(conn_id, stream_id, &mut buf)
+            .await
+            .unwrap();
+        assert_eq!(read, 4);
+        assert_eq!(&buf[..4], b"test");
+    }
+
+    #[tokio::test]
+    async fn test_iter_all_streams() {
+        let manager = StreamManager::new(StreamManagerConfig::default());
+
+        // Create multiple connections with streams
+        manager.register_connection(1).await;
+        manager.register_connection(2).await;
+
+        manager
+            .create_client_stream(1, StreamType::Bidirectional)
+            .await
+            .unwrap();
+        manager
+            .create_server_stream(1, StreamType::Bidirectional)
+            .await
+            .unwrap();
+        manager
+            .create_client_stream(2, StreamType::Bidirectional)
+            .await
+            .unwrap();
+
+        let all_streams = manager.iter_all_streams().await;
+        assert_eq!(all_streams.len(), 3);
+
+        // Verify connection IDs are correct
+        assert!(all_streams.iter().any(|s| s.connection_id == 1));
+        assert!(all_streams.iter().any(|s| s.connection_id == 2));
+    }
+
+    #[tokio::test]
+    async fn test_stream_index() {
+        let manager = StreamManager::new(StreamManagerConfig::default());
+
+        manager.register_connection(1).await;
+        manager.register_connection(2).await;
+
+        let stream1 = manager
+            .create_client_stream(1, StreamType::Bidirectional)
+            .await
+            .unwrap();
+        let stream2 = manager
+            .create_client_stream(2, StreamType::Bidirectional)
+            .await
+            .unwrap();
+
+        let index = manager.build_stream_index().await;
+
+        assert_eq!(index.get(&stream1), Some(&1));
+        assert_eq!(index.get(&stream2), Some(&2));
     }
 }

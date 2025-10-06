@@ -1,0 +1,484 @@
+# Nyx Network - Comprehensive Configuration Example
+# ==================================================
+# This file demonstrates ALL available configuration options with inline documentation.
+# Copy and customize this file for your deployment needs.
+#
+# Documentation: docs/configuration.md
+# Validation: nyx-cli config validate /path/to/config.toml
+
+# ============================================================================
+# ROOT CONFIGURATION
+# ============================================================================
+
+# Primary QUIC transport listening port
+# Type: u16, Range: 1024-65535, Default: 43300
+listen_port = 43300
+
+# Node identifier - set to "auto" to generate Ed25519-based ID at startup
+# Type: string, Default: "auto"
+# Manual ID format: "12D3KooW..." (libp2p peer ID)
+node_id = "auto"
+
+# Global logging verbosity (overridable via RUST_LOG environment variable)
+# Type: string, Options: error|warn|info|debug|trace, Default: info
+log_level = "info"
+
+# Log output format - use "json" for production structured logging
+# Type: string, Options: json|pretty|compact, Default: json
+log_format = "json"
+
+# Initial peer multiaddrs for network bootstrapping
+# Type: array<string>, Format: libp2p multiaddr, Default: []
+# Example formats:
+#   - /dns4/validator1.nymtech.net/tcp/1789/p2p/12D3KooWNyxMainnet1
+#   - /ip4/192.168.1.100/tcp/43300/p2p/12D3KooWPeer1
+#   - /ip6/2001:db8::1/tcp/43300/p2p/12D3KooWPeer2
+bootstrap_peers = [
+    "/dns4/validator1.nymtech.net/tcp/1789/p2p/12D3KooWNyxMainnet1",
+    "/dns4/validator2.nymtech.net/tcp/1789/p2p/12D3KooWNyxMainnet2",
+    "/dns4/validator3.nymtech.net/tcp/1789/p2p/12D3KooWNyxMainnet3"
+]
+
+# ============================================================================
+# SECURITY SETTINGS
+# ============================================================================
+[security]
+
+# Maximum concurrent peer connections (each connection ~1MB memory)
+# Type: u32, Range: 10-10000, Default: 1000
+# Recommendation: Scale based on available memory
+max_connections = 1000
+
+# TCP/QUIC handshake timeout
+# Type: u32 (seconds), Range: 5-300, Default: 30
+connection_timeout = 30
+
+# Maximum frame size for stream protocol (lower values reduce DoS attack surface)
+# Type: usize (bytes), Range: 1024-67108864 (1KB-64MB), Default: 8388608 (8MB)
+max_frame_size = 8388608
+
+# Per-peer request rate limit
+# Type: u32 (requests/second), Range: 1-10000, Default: 100
+rate_limit_requests = 100
+
+# Per-peer bandwidth rate limit
+# Type: u64 (bytes/second), Range: 1024-1073741824 (1KB/s-1GB/s), Default: 10485760 (10MB/s)
+rate_limit_bytes = 10485760
+
+# ============================================================================
+# NETWORK CONFIGURATION
+# ============================================================================
+[network]
+
+# Socket address for QUIC transport binding
+# Type: string (socket address)
+# Development: "127.0.0.1:43300" (localhost only)
+# Production: "0.0.0.0:43300" (all interfaces)
+# IPv6: "[::]:43300"
+bind_addr = "127.0.0.1:43300"
+
+# Enable IPv6 dual-stack support
+# Type: bool, Default: true
+ipv6_enabled = true
+
+# Enable development mode (relaxed security, verbose logging)
+# Type: bool, Default: false
+# ⚠️ WARNING: Never use in production
+development = false
+
+# Maximum peer table size
+# Type: u32, Range: 10-10000, Default: 100
+max_peers = 100
+
+# Idle peer connection timeout
+# Type: u32 (seconds), Range: 10-300, Default: 30
+peer_timeout = 30
+
+# ============================================================================
+# CRYPTOGRAPHY
+# ============================================================================
+[crypto]
+
+# Enable post-quantum hybrid handshake (X25519 + Kyber1024)
+# Type: bool, Default: true
+# Recommendation: Always enable for future-proofing
+pq_enabled = true
+
+# Automatic session key rotation interval for forward secrecy
+# Type: u32 (seconds), Range: 300-86400 (5 min - 24 hours), Default: 3600 (1 hour)
+key_rotation_interval = 3600
+
+# Maximum session lifetime before re-handshake required
+# Type: u32 (seconds), Range: 600-86400 (10 min - 24 hours), Default: 7200 (2 hours)
+session_timeout = 7200
+
+# ============================================================================
+# DHT (DISTRIBUTED HASH TABLE)
+# ============================================================================
+[dht]
+
+# Enable Kademlia DHT peer discovery
+# Type: bool, Default: true
+enabled = true
+
+# DHT bind port (separate from main listen_port)
+# Type: u16, Range: 1024-65535, Default: 43301
+port = 43301
+
+# Maximum entries in peer routing table
+# Type: usize, Range: 100-100000, Default: 1000
+peer_cache_size = 1000
+
+# DHT lookup timeout
+# Type: u32 (seconds), Range: 5-300, Default: 30
+discovery_timeout = 30
+
+# Periodic routing table refresh interval
+# Type: u32 (seconds), Range: 60-3600, Default: 300 (5 minutes)
+refresh_interval = 300
+
+# ============================================================================
+# SERVICE ENDPOINTS
+# ============================================================================
+[endpoints]
+
+# gRPC control API address (NyxControl service)
+# Type: string (socket address), Default: "127.0.0.1:50051"
+# ⚠️ Production: Bind to localhost or use mTLS authentication
+grpc_addr = "127.0.0.1:50051"
+
+# Prometheus metrics HTTP endpoint (/metrics)
+# Type: string (socket address), Default: "127.0.0.1:9090"
+# ⚠️ Production: Restrict to monitoring network
+prometheus_addr = "127.0.0.1:9090"
+
+# Enable TLS for gRPC endpoint
+# Type: bool, Default: false
+tls_enabled = false
+
+# Path to TLS certificate (PEM format)
+# Type: string (file path), Required if tls_enabled = true
+# tls_cert = "/etc/nyx/tls/cert.pem"
+
+# Path to TLS private key (PEM format)
+# Type: string (file path), Required if tls_enabled = true
+# tls_key = "/etc/nyx/tls/key.pem"
+
+# ============================================================================
+# CLI CONFIGURATION
+# ============================================================================
+[cli]
+
+# Maximum reconnection attempts for gRPC streams
+# Type: u32, Range: 1-100, Default: 5
+max_reconnect_attempts = 5
+
+# RPC command timeout
+# Type: u32 (seconds), Range: 5-300, Default: 30
+command_timeout = 30
+
+# Default output format for CLI commands
+# Type: string, Options: json|yaml|table, Default: table
+output_format = "table"
+
+# Enable ANSI color codes in terminal output
+# Type: bool, Default: true
+colored_output = true
+
+# ============================================================================
+# PERFORMANCE TUNING
+# ============================================================================
+[performance]
+
+# Tokio worker thread count (0 = auto-detect based on CPU cores)
+# Type: u32, Range: 0-256, Default: 0
+# Recommendation: 0 for typical deployments, explicit value for containers
+worker_threads = 0
+
+# Socket read buffer size
+# Type: usize (bytes), Range: 4096-1048576 (4KB-1MB), Default: 65536 (64KB)
+read_buffer_size = 65536
+
+# Socket write buffer size
+# Type: usize (bytes), Range: 4096-1048576 (4KB-1MB), Default: 65536 (64KB)
+write_buffer_size = 65536
+
+# Soft memory limit for heap allocation monitoring
+# Type: u64 (bytes), Range: 104857600-17179869184 (100MB-16GB), Default: 1073741824 (1GB)
+max_memory_usage = 1073741824
+
+# ============================================================================
+# PLUGIN SYSTEM
+# ============================================================================
+[plugins]
+
+# Enable plugin system (⚠️ Experimental feature)
+# Type: bool, Default: false
+enabled = false
+
+# Plugin WASM binary directory
+# Type: string (directory path), Default: "./plugins"
+plugin_dir = "./plugins"
+
+# Plugin isolation level
+# Type: string, Options: none|basic|strict, Default: strict
+#   - none: Full host access (unsafe)
+#   - basic: Limited syscalls
+#   - strict: Full WASM sandbox
+sandbox_level = "strict"
+
+# Per-plugin memory limit
+# Type: u64 (bytes), Range: 1048576-1073741824 (1MB-1GB), Default: 104857600 (100MB)
+max_plugin_memory = 104857600
+
+# ============================================================================
+# MONITORING AND TELEMETRY (LEGACY)
+# ============================================================================
+# Note: See [telemetry] section for OTLP-based observability
+[monitoring]
+
+# Enable internal metrics collection
+# Type: bool, Default: true
+metrics_enabled = true
+
+# Metrics aggregation interval
+# Type: u32 (seconds), Range: 1-3600, Default: 60
+metrics_interval = 60
+
+# Enable distributed tracing (requires tracing_endpoint)
+# Type: bool, Default: false
+tracing_enabled = false
+
+# Jaeger/Zipkin HTTP endpoint
+# Type: string (URL), Required if tracing_enabled = true
+# tracing_endpoint = "http://localhost:14268"
+
+# ============================================================================
+# SAFETY LIMITS
+# ============================================================================
+[limits]
+
+# Maximum codec frame length (see also [security].max_frame_size)
+# Type: usize (bytes), Range: 1024-67108864 (1KB-64MB), Default: 8388608 (8MB)
+max_frame_len_bytes = 8388608
+
+# Hard limit on concurrent connections
+# Type: u32, Range: 10-100000, Default: 1000
+max_concurrent_connections = 1000
+
+# Maximum gRPC request body size
+# Type: usize (bytes), Range: 1024-134217728 (1KB-128MB), Default: 16777216 (16MB)
+max_request_size = 16777216
+
+# Connection idle timeout before cleanup
+# Type: u32 (seconds), Range: 10-3600, Default: 300 (5 minutes)
+idle_timeout = 300
+
+# ============================================================================
+# DEVELOPMENT SETTINGS
+# ============================================================================
+# ⚠️ WARNING: Never enable in production environments
+[development]
+
+# Master development mode switch
+# Type: bool, Default: false
+dev_mode = false
+
+# Expose /debug/pprof HTTP endpoints
+# Type: bool, Default: false
+debug_endpoints = false
+
+# Disable gRPC authentication (⚠️ UNSAFE)
+# Type: bool, Default: false
+disable_auth = false
+
+# Force log_level = "trace" for all modules
+# Type: bool, Default: false
+verbose_logging = false
+
+# ============================================================================
+# MULTIPATH ROUTING
+# ============================================================================
+[multipath]
+
+# Maximum concurrent paths per connection
+# Type: u32, Range: 1-16, Default: 4
+# Recommendations:
+#   - Mobile (WiFi + cellular): 2-4
+#   - Desktop: 2-4
+#   - Server (load balancing): 8+
+max_paths = 4
+
+# Minimum quality threshold for path activation
+# Type: f64, Range: 0.0-1.0, Default: 0.5
+# Calculation: Quality = (1 - packet_loss_rate) × (1 / normalized_rtt)
+min_path_quality = 0.5
+
+# Path failure detection timeout
+# Type: u64 (milliseconds), Range: 100-10000, Default: 1000
+failover_timeout_ms = 1000
+
+# Enable continuous path quality measurement
+# Type: bool, Default: true
+quality_monitoring_enabled = true
+
+# PATH_CHALLENGE probe interval for connectivity testing
+# Type: u32 (seconds), Range: 5-300, Default: 30
+probe_interval = 30
+
+# ============================================================================
+# MIX NETWORK (cMix)
+# ============================================================================
+[mix]
+
+# Enable cMix batch mixing protocol
+# Type: bool, Default: false
+cmix_enabled = false
+
+# Messages per mix batch (larger = better anonymity, higher latency)
+# Type: u32, Range: 32-1024, Default: 128
+batch_size = 128
+
+# Verifiable Delay Function computation time per mix round
+# Type: u64 (milliseconds), Range: 10-1000, Default: 100
+vdf_delay_ms = 100
+
+# Number of mix cascade layers (3 = standard onion routing)
+# Type: u32, Range: 1-10, Default: 3
+mix_layers = 3
+
+# Enable adaptive cover traffic generation
+# Type: bool, Default: true
+cover_traffic_enabled = true
+
+# Target ratio of cover traffic to real traffic
+# Type: f64, Range: 0.0-1.0, Default: 0.3
+# Example: 0.3 = 30% cover packets
+cover_traffic_ratio = 0.3
+
+# ============================================================================
+# TELEMETRY AND OBSERVABILITY
+# ============================================================================
+[telemetry]
+
+# OTLP gRPC collector endpoint (leave commented to disable OTLP export)
+# Type: string (URL)
+# Example: "http://localhost:4317" (Jaeger/Tempo collector)
+# otlp_endpoint = "http://localhost:4317"
+
+# Span sampling rate
+# Type: f64, Range: 0.0-1.0, Default: 1.0
+#   - 1.0 = 100% (all spans exported)
+#   - 0.1 = 10% (probabilistic sampling)
+# Recommendation: Use 0.1 in high-traffic production environments
+otlp_sampling_rate = 1.0
+
+# Enable Prometheus metrics export via OTLP (requires otlp_endpoint)
+# Type: bool, Default: false
+prometheus_enabled = false
+
+# Alternative Prometheus HTTP scrape endpoint (if not using OTLP)
+# Type: string (socket address)
+# prometheus_addr = "127.0.0.1:9100"
+
+# Service identifier for traces/metrics
+# Type: string, Default: "nyx-daemon"
+service_name = "nyx-daemon"
+
+# Enable span export (requires otlp_endpoint)
+# Type: bool, Default: false
+span_export_enabled = false
+
+# ============================================================================
+# LOW-POWER MODE (MOBILE OPTIMIZATION)
+# ============================================================================
+[low_power]
+
+# Enable low-power mode features for battery optimization
+# Type: bool, Default: true
+enabled = true
+
+# Cover traffic ratio when screen is off or app backgrounded
+# Type: f64, Range: 0.05-0.1, Default: 0.08
+background_cover_traffic_ratio = 0.08
+
+# Cover traffic ratio when screen is on and app foregrounded
+# Type: f64, Range: 0.3-0.5, Default: 0.4
+active_cover_traffic_ratio = 0.4
+
+# Triggers aggressive power saving (minimal cover traffic)
+# Type: u8 (percentage), Range: 5-20, Default: 10
+# Recommendations by device capacity:
+#   - High-capacity (>4000mAh): 15%
+#   - Standard (3000-4000mAh): 10%
+#   - Low-capacity (<3000mAh): 10%
+battery_critical_threshold = 10
+
+# Triggers moderate power saving
+# Type: u8 (percentage), Range: 10-30, Default: 20
+# Recommendations by device capacity:
+#   - High-capacity (>4000mAh): 30%
+#   - Standard (3000-4000mAh): 20%
+#   - Low-capacity (<3000mAh): 20%
+battery_low_threshold = 20
+
+# Prevents rapid state oscillation
+# Type: u8 (percentage), Range: 1-10, Default: 5
+# Example: 10% threshold with 5% hysteresis = transition at 10% down, 15% up
+battery_hysteresis = 5
+
+# Debounce interval for screen state changes (prevents transient toggles)
+# Type: u64 (milliseconds), Range: 1000-30000, Default: 5000
+screen_off_cooldown_ms = 5000
+
+# Delay before considering app truly backgrounded (prevents app switcher transients)
+# Type: u32 (seconds), Range: 5-60, Default: 10
+app_background_timeout = 10
+
+# ============================================================================
+# ENVIRONMENT VARIABLES (Override any setting above)
+# ============================================================================
+# Authentication:
+#   NYX_DAEMON_TOKEN          - gRPC API authentication token
+#   NYX_DAEMON_COOKIE         - Path to cookie file (default: ~/.nyx/daemon.cookie)
+#   NYX_DAEMON_STRICT_AUTH    - Require token for all privileged ops (set to 1)
+#
+# Networking:
+#   NYX_PROMETHEUS_ADDR       - Override prometheus_addr (e.g., 127.0.0.1:0 for random port)
+#   NYX_BIND_ADDR             - Override [network].bind_addr
+#
+# Configuration:
+#   NYX_CONFIG                - Path to custom nyx.toml (default: ./nyx.toml)
+#   RUST_LOG                  - Override log_level (e.g., RUST_LOG=debug,tokio=info)
+#
+# Development (⚠️ UNSAFE in production):
+#   NYX_DEV_MODE              - Force development mode (set to 1)
+#   NYX_DISABLE_AUTH          - Disable authentication (set to 1)
+#
+# ============================================================================
+# VALIDATION
+# ============================================================================
+# Validate this configuration file before deployment:
+#
+#   # Basic validation (syntax and types)
+#   nyx-cli config validate /path/to/this/file.toml
+#
+#   # Strict validation (includes endpoint connectivity checks)
+#   nyx-cli config validate --strict /path/to/this/file.toml
+#
+# Exit codes:
+#   0 = Configuration valid
+#   1 = Validation failed (errors printed to stderr)
+#
+# ============================================================================
+# DOCUMENTATION
+# ============================================================================
+# Full documentation: docs/configuration.md
+# API reference: docs/api.md
+# Architecture: docs/architecture.md
+# Deployment guide: docs/quickstart-ubuntu-k8s.md
+# Protocol spec: spec/Nyx_Protocol_v1.0_Spec_EN.md
+#
+# ============================================================================
+# END OF CONFIGURATION
+# ============================================================================

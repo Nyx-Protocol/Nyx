@@ -250,10 +250,10 @@ mod test_s {
 
             // ウォームアップ（失敗時はテスト失敗）
             for _ in 0..100 {
-                let ct = cipher.seal(nonce, aad, message).expect("seal failed in warmup");
-                let _pt = cipher
-                    .open(nonce, aad, &ct)
-                    .expect("open failed in warmup");
+                let ct = cipher
+                    .seal(nonce, aad, message)
+                    .expect("seal failed in warmup");
+                let _pt = cipher.open(nonce, aad, &ct).expect("open failed in warmup");
             }
 
             // ベンチマーク実行

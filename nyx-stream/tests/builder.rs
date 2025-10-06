@@ -8,7 +8,6 @@
     clippy::uninlined_format_args,
     clippy::unreachable
 )]
-
 #![allow(unused_imports)]
 use bytes::BytesMut;
 use nyx_stream::frame::{Frame, FrameHeader, FrameType};

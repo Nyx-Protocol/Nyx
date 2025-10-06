@@ -8,6 +8,75 @@ use serde::{Deserialize, Serialize};
 use tokio::{fs, sync::RwLock};
 use tracing::{debug, info, warn};
 
+/// Low-power mode configuration (§7.1 Screen-off Detector).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct LowPowerConfig {
+    /// Enable low-power mode features (mobile battery optimization)
+    #[serde(default = "default_low_power_enabled")]
+    pub enabled: bool,
+    /// Background cover traffic ratio (screen off, app backgrounded): 0.05-0.1
+    #[serde(default = "default_background_cover_traffic_ratio")]
+    pub background_cover_traffic_ratio: f64,
+    /// Active cover traffic ratio (screen on, app foregrounded): 0.3-0.5
+    #[serde(default = "default_active_cover_traffic_ratio")]
+    pub active_cover_traffic_ratio: f64,
+    /// Battery critical threshold (percentage 0-100): triggers aggressive power saving
+    #[serde(default = "default_battery_critical_threshold")]
+    pub battery_critical_threshold: u8,
+    /// Battery low threshold (percentage 0-100): triggers moderate power saving
+    #[serde(default = "default_battery_low_threshold")]
+    pub battery_low_threshold: u8,
+    /// Battery hysteresis (percentage): prevents rapid state oscillation
+    #[serde(default = "default_battery_hysteresis")]
+    pub battery_hysteresis: u8,
+    /// Screen state change cooldown (milliseconds): prevents transient screen toggles
+    #[serde(default = "default_screen_off_cooldown_ms")]
+    pub screen_off_cooldown_ms: u64,
+    /// App foreground/background detection timeout (seconds)
+    #[serde(default = "default_app_background_timeout")]
+    pub app_background_timeout: u64,
+}
+
+fn default_low_power_enabled() -> bool {
+    true
+}
+fn default_background_cover_traffic_ratio() -> f64 {
+    0.08
+}
+fn default_active_cover_traffic_ratio() -> f64 {
+    0.4
+}
+fn default_battery_critical_threshold() -> u8 {
+    10
+}
+fn default_battery_low_threshold() -> u8 {
+    20
+}
+fn default_battery_hysteresis() -> u8 {
+    5
+}
+fn default_screen_off_cooldown_ms() -> u64 {
+    5000
+}
+fn default_app_background_timeout() -> u64 {
+    10
+}
+
+impl Default for LowPowerConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_low_power_enabled(),
+            background_cover_traffic_ratio: default_background_cover_traffic_ratio(),
+            active_cover_traffic_ratio: default_active_cover_traffic_ratio(),
+            battery_critical_threshold: default_battery_critical_threshold(),
+            battery_low_threshold: default_battery_low_threshold(),
+            battery_hysteresis: default_battery_hysteresis(),
+            screen_off_cooldown_ms: default_screen_off_cooldown_ms(),
+            app_background_timeout: default_app_background_timeout(),
+        }
+    }
+}
+
 /// Static configuration structure loaded from TOML.
 /// - Start with a minimal set of field_s and extend progressively
 /// - Ensure forward-compatibility: unknown field_s are ignored via serde default_s
@@ -27,6 +96,9 @@ pub struct NyxConfig {
     /// Optional static max frame length (byte_s) applied on reload/startup
     #[serde(default)]
     pub max_frame_len_byte_s: Option<u64>,
+    /// Low-power mode configuration (§7.1 Screen-off Detector)
+    #[serde(default)]
+    pub low_power: LowPowerConfig,
 }
 
 /// Dynamic setting_s that can be changed at runtime via IPC.
@@ -184,6 +256,34 @@ impl ConfigManager {
             if !hex::decode(id).map(|b| b.len() == 32).unwrap_or(false) {
                 err_s.push("node_id must be 32-byte hex".into());
             }
+        }
+        // Validate low_power configuration
+        let lp = &config.low_power;
+        if !(0.0..=1.0).contains(&lp.background_cover_traffic_ratio) {
+            err_s.push("low_power.background_cover_traffic_ratio must be 0.0..=1.0".into());
+        }
+        if !(0.0..=1.0).contains(&lp.active_cover_traffic_ratio) {
+            err_s.push("low_power.active_cover_traffic_ratio must be 0.0..=1.0".into());
+        }
+        if lp.battery_critical_threshold > 100 {
+            err_s.push("low_power.battery_critical_threshold must be 0..=100".into());
+        }
+        if lp.battery_low_threshold > 100 {
+            err_s.push("low_power.battery_low_threshold must be 0..=100".into());
+        }
+        if lp.battery_critical_threshold >= lp.battery_low_threshold {
+            err_s.push(
+                "low_power.battery_critical_threshold must be < battery_low_threshold".into(),
+            );
+        }
+        if lp.battery_hysteresis > 20 {
+            err_s.push("low_power.battery_hysteresis must be 0..=20".into());
+        }
+        if lp.screen_off_cooldown_ms > 60_000 {
+            err_s.push("low_power.screen_off_cooldown_ms must be 0..=60000".into());
+        }
+        if lp.app_background_timeout > 300 {
+            err_s.push("low_power.app_background_timeout must be 0..=300".into());
         }
         err_s
     }

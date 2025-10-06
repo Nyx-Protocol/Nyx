@@ -55,7 +55,7 @@ impl Default for LarmixConfig {
             min_hop_count: 3,
             max_hop_count: 7,
             target_latency_ms: 200,
-            loss_threshold: 0.05, // 5%
+            loss_threshold: 0.05,                 // 5%
             bandwidth_degradation_threshold: 0.5, // 50% drop
             metrics_update_interval: Duration::from_secs(5),
             degradation_window: Duration::from_secs(10),
@@ -157,7 +157,9 @@ impl LarmixFeedbackLoop {
                     });
 
                     // Add to history (keep last 20 samples)
-                    state.metrics_history.push((Instant::now(), transport_metrics.clone()));
+                    state
+                        .metrics_history
+                        .push((Instant::now(), transport_metrics.clone()));
                     if state.metrics_history.len() > 20 {
                         state.metrics_history.remove(0);
                     }
@@ -283,7 +285,10 @@ impl LarmixFeedbackLoop {
                 }
 
                 // Calculate average packet loss
-                let avg_loss: f64 = recent_metrics.iter().map(|m| m.packet_loss_rate).sum::<f64>()
+                let avg_loss: f64 = recent_metrics
+                    .iter()
+                    .map(|m| m.packet_loss_rate)
+                    .sum::<f64>()
                     / recent_metrics.len() as f64;
 
                 // Calculate average bandwidth

@@ -52,56 +52,43 @@ jobs:
       - name: nyx-sdk-wasm tests (node)
         run: cargo test -p nyx-sdk-wasm --target wasm32-unknown-unknown --no-fail-fast
 
-name: Nyx CI
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  build-test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        features: ["", "pq", "pq_only"]
-    name: cargo test (${{ matrix.os }}, features="${{ matrix.features }}")
+  # HTTP Proxy (Go) - Added 2025-10-05 for Task 25 completion
+  http-proxy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: nyx-http-proxy
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          toolchain: stable
-          override: true
-      - name: Cache cargo registry
-        uses: actions/cache@v3
+          go-version: '1.23.0'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Build & Test
-        run: |
-          if [ "${{ matrix.features }}" = "" ]; then
-            cargo test --all --all-features
-          else
-            cargo test --all --no-default-features --features "${{ matrix.features }}"
-          fi
-        shell: bash 
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
-  wasm-build:
-    runs-on: ubuntu-latest
-    name: wasm32 build
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust (wasm target)
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          targets: wasm32-unknown-unknown
-          override: true
-      - name: Build nyx-sdk-wasm
-        run: |
-          cargo build -p nyx-sdk-wasm --target wasm32-unknown-unknown --release 
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Build HTTP Proxy
+        run: go build -o nyx-http-proxy
+
+      - name: Run tests with coverage
+        run: go test -short -cover -coverprofile=coverage.out ./...
+
+      - name: Display coverage summary
+        run: go tool cover -func=coverage.out | tail -n 1 

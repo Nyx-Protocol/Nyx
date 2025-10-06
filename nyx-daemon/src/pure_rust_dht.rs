@@ -1,4 +1,4 @@
-﻿//! Pure Rust DHT Implementation
+//! Pure Rust DHT Implementation
 //!
 //! Kademlia-based Distributed Hash Table implementation with zero C/C++ dependencies.
 //! Provides peer discovery, data storage/retrieval, and network resilience for Nyx protocol.
@@ -18,6 +18,7 @@
 #![forbid(unsafe_code)]
 
 use serde::{Deserialize, Serialize};
+use sha1::{Digest, Sha1};
 use std::collections::{HashMap, VecDeque};
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -26,7 +27,6 @@ use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, RwLock};
 use tokio::time::{interval, timeout};
 use tracing::{debug, error, info, warn};
-use sha1::{Digest, Sha1};
 
 /// Node ID size in bytes (160 bits for SHA-1 compatibility)
 pub const NODE_ID_SIZE: usize = 20;
@@ -71,8 +71,8 @@ impl NodeId {
     /// Calculate XOR distance to another node
     pub fn distance(&self, other: &NodeId) -> NodeId {
         let mut result = [0u8; NODE_ID_SIZE];
-        for i in 0..NODE_ID_SIZE {
-            result[i] = self.0[i] ^ other.0[i];
+        for (i, item) in result.iter_mut().enumerate().take(NODE_ID_SIZE) {
+            *item = self.0[i] ^ other.0[i];
         }
         NodeId(result)
     }
@@ -100,11 +100,7 @@ impl NodeId {
     /// Calculate bucket index for this distance from local node
     pub fn bucket_index(&self) -> usize {
         let zeros = self.leading_zeros();
-        if zeros >= NODE_ID_BITS - 1 {
-            0
-        } else {
-            NODE_ID_BITS - 1 - zeros
-        }
+        (NODE_ID_BITS - 1).saturating_sub(zeros)
     }
 }
 
@@ -172,14 +168,14 @@ impl NodeInfo {
 
     /// Check if node is considered "good" (responsive)
     pub fn is_good(&self) -> bool {
-        self.failed_requests < 3 && 
-        self.last_seen.elapsed() < Duration::from_secs(15 * 60) // 15 minutes
+        self.failed_requests < 3 && self.last_seen.elapsed() < Duration::from_secs(15 * 60)
+        // 15 minutes
     }
 
     /// Check if node is "bad" (should be removed)
     pub fn is_bad(&self) -> bool {
-        self.failed_requests >= 5 || 
-        self.last_seen.elapsed() > Duration::from_secs(60 * 60) // 1 hour
+        self.failed_requests >= 5 || self.last_seen.elapsed() > Duration::from_secs(60 * 60)
+        // 1 hour
     }
 
     /// Update node activity (reset fail counter, update last_seen)
@@ -202,6 +198,12 @@ impl NodeInfo {
 pub struct KBucket {
     nodes: VecDeque<NodeInfo>,
     last_updated: Instant,
+}
+
+impl Default for KBucket {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl KBucket {
@@ -283,19 +285,54 @@ impl KBucket {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DhtMessage {
     // Queries
-    Ping { id: NodeId, token: u64 },
-    FindNode { id: NodeId, target: NodeId, token: u64 },
-    FindValue { id: NodeId, key: String, token: u64 },
-    Store { id: NodeId, key: String, value: Vec<u8>, token: u64 },
+    Ping {
+        id: NodeId,
+        token: u64,
+    },
+    FindNode {
+        id: NodeId,
+        target: NodeId,
+        token: u64,
+    },
+    FindValue {
+        id: NodeId,
+        key: String,
+        token: u64,
+    },
+    Store {
+        id: NodeId,
+        key: String,
+        value: Vec<u8>,
+        token: u64,
+    },
 
     // Responses
-    PingResponse { id: NodeId, token: u64 },
-    FindNodeResponse { id: NodeId, nodes: Vec<SerializableNodeInfo>, token: u64 },
-    FindValueResponse { id: NodeId, value: Option<Vec<u8>>, nodes: Vec<SerializableNodeInfo>, token: u64 },
-    StoreResponse { id: NodeId, stored: bool, token: u64 },
+    PingResponse {
+        id: NodeId,
+        token: u64,
+    },
+    FindNodeResponse {
+        id: NodeId,
+        nodes: Vec<SerializableNodeInfo>,
+        token: u64,
+    },
+    FindValueResponse {
+        id: NodeId,
+        value: Option<Vec<u8>>,
+        nodes: Vec<SerializableNodeInfo>,
+        token: u64,
+    },
+    StoreResponse {
+        id: NodeId,
+        stored: bool,
+        token: u64,
+    },
 
     // Errors
-    Error { message: String, token: u64 },
+    Error {
+        message: String,
+        token: u64,
+    },
 }
 
 impl DhtMessage {
@@ -406,8 +443,12 @@ impl PureRustDht {
     pub async fn new(config: DhtConfig) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let local_id = NodeId::random();
         let socket = UdpSocket::bind(&config.bind_addr).await?;
-        
-        info!("DHT started with ID {} on {}", local_id, socket.local_addr()?);
+
+        info!(
+            "DHT started with ID {} on {}",
+            local_id,
+            socket.local_addr()?
+        );
 
         // Initialize routing table with empty buckets
         let mut routing_table = Vec::with_capacity(NODE_ID_BITS);
@@ -449,7 +490,8 @@ impl PureRustDht {
                 local_id,
                 config,
                 &mut shutdown_rx,
-            ).await;
+            )
+            .await;
         });
 
         // Maintenance task
@@ -467,7 +509,8 @@ impl PureRustDht {
                     storage_clone.clone(),
                     pending_requests_clone.clone(),
                     local_id,
-                ).await;
+                )
+                .await;
             }
         });
 
@@ -488,7 +531,10 @@ impl PureRustDht {
 
     /// Bootstrap from seed nodes
     async fn bootstrap(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        info!("Bootstrapping from {} nodes", self.config.bootstrap_nodes.len());
+        info!(
+            "Bootstrapping from {} nodes",
+            self.config.bootstrap_nodes.len()
+        );
 
         for &addr in &self.config.bootstrap_nodes {
             // Send ping to discover node ID
@@ -524,14 +570,23 @@ impl PureRustDht {
     }
 
     /// Send ping to discover/verify node
-    async fn send_ping(&self, addr: SocketAddr) -> Result<DhtMessage, Box<dyn std::error::Error + Send + Sync>> {
+    async fn send_ping(
+        &self,
+        addr: SocketAddr,
+    ) -> Result<DhtMessage, Box<dyn std::error::Error + Send + Sync>> {
         let token = self.next_token().await;
-        let message = DhtMessage::Ping { id: self.local_id, token };
+        let message = DhtMessage::Ping {
+            id: self.local_id,
+            token,
+        };
         self.send_request(message, addr).await
     }
 
     /// Find nodes closest to target
-    pub async fn find_node(&self, target: NodeId) -> Result<Vec<NodeInfo>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn find_node(
+        &self,
+        target: NodeId,
+    ) -> Result<Vec<NodeInfo>, Box<dyn std::error::Error + Send + Sync>> {
         let mut closest_nodes = self.get_closest_nodes(&target, K_BUCKET_SIZE).await;
         let mut queried = std::collections::HashSet::new();
         let mut active_queries = 0;
@@ -557,7 +612,11 @@ impl PureRustDht {
                 let _routing_table_clone = self.routing_table.clone();
                 tokio::spawn(async move {
                     let _token = 12345; // Should use proper token generation
-                    let _message = DhtMessage::FindNode { id: _local_id, target: _target_copy, token: _token };
+                    let _message = DhtMessage::FindNode {
+                        id: _local_id,
+                        target: _target_copy,
+                        token: _token,
+                    };
                     // Send and process response...
                     // This is simplified - full implementation would handle responses
                 });
@@ -572,7 +631,10 @@ impl PureRustDht {
     }
 
     /// Find value by key
-    pub async fn find_value(&self, key: &str) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn find_value(
+        &self,
+        key: &str,
+    ) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error + Send + Sync>> {
         // Check local storage first
         {
             let storage = self.storage.read().await;
@@ -591,18 +653,20 @@ impl PureRustDht {
         };
 
         let closest_nodes = self.get_closest_nodes(&key_hash, K_BUCKET_SIZE).await;
-        
+
         for node in closest_nodes {
             let token = self.next_token().await;
-            let message = DhtMessage::FindValue { 
-                id: self.local_id, 
-                key: key.to_string(), 
-                token 
+            let message = DhtMessage::FindValue {
+                id: self.local_id,
+                key: key.to_string(),
+                token,
             };
-            
+
             if let Ok(response) = self.send_request(message, node.addr).await {
                 match response {
-                    DhtMessage::FindValueResponse { value: Some(value), .. } => {
+                    DhtMessage::FindValueResponse {
+                        value: Some(value), ..
+                    } => {
                         return Ok(Some(value));
                     }
                     _ => continue,
@@ -614,15 +678,19 @@ impl PureRustDht {
     }
 
     /// Store value in DHT
-    pub async fn store(&self, key: &str, value: Vec<u8>) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn store(
+        &self,
+        key: &str,
+        value: Vec<u8>,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         // Store locally first
         if self.config.enable_storage {
             let mut storage = self.storage.write().await;
-            
+
             // Clean up expired values if at capacity
             if storage.len() >= self.config.max_stored_values {
                 storage.retain(|_, v| !v.is_expired());
-                
+
                 // Still at capacity - remove oldest
                 if storage.len() >= self.config.max_stored_values {
                     if let Some(oldest_key) = storage.keys().next().cloned() {
@@ -630,8 +698,11 @@ impl PureRustDht {
                     }
                 }
             }
-            
-            storage.insert(key.to_string(), StoredValue::new(value.clone(), self.config.value_ttl));
+
+            storage.insert(
+                key.to_string(),
+                StoredValue::new(value.clone(), self.config.value_ttl),
+            );
         }
 
         // Replicate to closest nodes
@@ -646,14 +717,16 @@ impl PureRustDht {
 
         for node in closest_nodes {
             let token = self.next_token().await;
-            let message = DhtMessage::Store { 
-                id: self.local_id, 
-                key: key.to_string(), 
-                value: value.clone(), 
-                token 
+            let message = DhtMessage::Store {
+                id: self.local_id,
+                key: key.to_string(),
+                value: value.clone(),
+                token,
             };
-            
-            if let Ok(DhtMessage::StoreResponse { stored: true, .. }) = self.send_request(message, node.addr).await {
+
+            if let Ok(DhtMessage::StoreResponse { stored: true, .. }) =
+                self.send_request(message, node.addr).await
+            {
                 stored_count += 1;
             }
         }
@@ -688,20 +761,23 @@ impl PureRustDht {
 
     /// Send RPC request and wait for response
     async fn send_request(
-        &self, 
-        message: DhtMessage, 
-        addr: SocketAddr
+        &self,
+        message: DhtMessage,
+        addr: SocketAddr,
     ) -> Result<DhtMessage, Box<dyn std::error::Error + Send + Sync>> {
         let token = message.token();
         let (response_tx, mut response_rx) = mpsc::unbounded_channel();
-        
+
         // Register pending request
         {
             let mut pending = self.pending_requests.write().await;
-            pending.insert(token, PendingRequest {
-                response_tx,
-                timeout: Instant::now() + self.config.rpc_timeout,
-            });
+            pending.insert(
+                token,
+                PendingRequest {
+                    response_tx,
+                    timeout: Instant::now() + self.config.rpc_timeout,
+                },
+            );
         }
 
         // Send message
@@ -731,7 +807,7 @@ impl PureRustDht {
         shutdown_rx: &mut mpsc::UnboundedReceiver<()>,
     ) {
         let mut buffer = vec![0u8; 65536];
-        
+
         loop {
             tokio::select! {
                 _ = shutdown_rx.recv() => break,
@@ -760,6 +836,7 @@ impl PureRustDht {
     }
 
     /// Handle incoming DHT message
+    #[allow(clippy::too_many_arguments)]
     async fn handle_message(
         message: DhtMessage,
         sender_addr: SocketAddr,
@@ -771,13 +848,13 @@ impl PureRustDht {
         config: &DhtConfig,
     ) {
         let sender_id = message.sender_id();
-        
+
         // Update routing table with sender
         if sender_id != local_id {
             let node_info = NodeInfo::new(sender_id, sender_addr);
             let distance = local_id.distance(&sender_id);
             let bucket_idx = distance.bucket_index();
-            
+
             let mut routing_table = routing_table.write().await;
             if bucket_idx < routing_table.len() {
                 routing_table[bucket_idx].add_node(node_info);
@@ -787,39 +864,63 @@ impl PureRustDht {
         match message {
             // Handle queries
             DhtMessage::Ping { token, .. } => {
-                let response = DhtMessage::PingResponse { id: local_id, token };
+                let response = DhtMessage::PingResponse {
+                    id: local_id,
+                    token,
+                };
                 Self::send_response(response, sender_addr, socket).await;
             }
-            
+
             DhtMessage::FindNode { target, token, .. } => {
-                let closest_nodes = Self::get_closest_nodes_sync(routing_table, &target, K_BUCKET_SIZE).await;
-                let serializable_nodes: Vec<SerializableNodeInfo> = closest_nodes.iter().map(|n| n.into()).collect();
-                let response = DhtMessage::FindNodeResponse { id: local_id, nodes: serializable_nodes, token };
+                let closest_nodes =
+                    Self::get_closest_nodes_sync(routing_table, &target, K_BUCKET_SIZE).await;
+                let serializable_nodes: Vec<SerializableNodeInfo> =
+                    closest_nodes.iter().map(|n| n.into()).collect();
+                let response = DhtMessage::FindNodeResponse {
+                    id: local_id,
+                    nodes: serializable_nodes,
+                    token,
+                };
                 Self::send_response(response, sender_addr, socket).await;
             }
-            
+
             DhtMessage::FindValue { key, token, .. } => {
                 let storage = storage.read().await;
-                let value = storage.get(&key)
+                let value = storage
+                    .get(&key)
                     .filter(|v| !v.is_expired())
                     .map(|v| v.data.clone());
-                
+
                 let response = if value.is_some() {
-                    DhtMessage::FindValueResponse { id: local_id, value, nodes: Vec::new(), token }
+                    DhtMessage::FindValueResponse {
+                        id: local_id,
+                        value,
+                        nodes: Vec::new(),
+                        token,
+                    }
                 } else {
                     let key_hash = {
                         let mut hasher = Sha1::new();
                         hasher.update(key.as_bytes());
                         NodeId::from_bytes(hasher.finalize().into())
                     };
-                    let closest_nodes = Self::get_closest_nodes_sync(routing_table, &key_hash, K_BUCKET_SIZE).await;
-                    let serializable_nodes: Vec<SerializableNodeInfo> = closest_nodes.iter().map(|n| n.into()).collect();
-                    DhtMessage::FindValueResponse { id: local_id, value: None, nodes: serializable_nodes, token }
+                    let closest_nodes =
+                        Self::get_closest_nodes_sync(routing_table, &key_hash, K_BUCKET_SIZE).await;
+                    let serializable_nodes: Vec<SerializableNodeInfo> =
+                        closest_nodes.iter().map(|n| n.into()).collect();
+                    DhtMessage::FindValueResponse {
+                        id: local_id,
+                        value: None,
+                        nodes: serializable_nodes,
+                        token,
+                    }
                 };
                 Self::send_response(response, sender_addr, socket).await;
             }
-            
-            DhtMessage::Store { key, value, token, .. } => {
+
+            DhtMessage::Store {
+                key, value, token, ..
+            } => {
                 let stored = if config.enable_storage {
                     let mut storage = storage.write().await;
                     // Same cleanup logic as in store method
@@ -836,11 +937,15 @@ impl PureRustDht {
                 } else {
                     false
                 };
-                
-                let response = DhtMessage::StoreResponse { id: local_id, stored, token };
+
+                let response = DhtMessage::StoreResponse {
+                    id: local_id,
+                    stored,
+                    token,
+                };
                 Self::send_response(response, sender_addr, socket).await;
             }
-            
+
             // Handle responses
             response => {
                 let token = response.token();
@@ -950,16 +1055,16 @@ pub struct DhtStats {
 pub enum DhtError {
     #[error("Network error: {0}")]
     Network(#[from] std::io::Error),
-    
+
     #[error("Serialization error: {0}")]
     Serialization(#[from] bincode::Error),
-    
+
     #[error("Timeout")]
     Timeout,
-    
+
     #[error("Node not found")]
     NodeNotFound,
-    
+
     #[error("Value not found")]
     ValueNotFound,
 }
@@ -983,7 +1088,7 @@ mod tests {
         let mut id2_bytes = [0x00; NODE_ID_SIZE];
         id2_bytes[0] = 0x80; // Set MSB
         let id2 = NodeId::from_bytes(id2_bytes);
-        
+
         let distance = id1.distance(&id2);
         assert_eq!(distance.bucket_index(), NODE_ID_BITS - 1);
     }
@@ -993,13 +1098,13 @@ mod tests {
         let mut bucket = KBucket::new();
         let node = NodeInfo::new(
             NodeId::random(),
-            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080)
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 8080),
         );
-        
+
         assert!(bucket.add_node(node.clone()));
         assert_eq!(bucket.len(), 1);
         assert_eq!(bucket.good_nodes().len(), 1);
-        
+
         assert!(bucket.remove_node(&node.id));
         assert_eq!(bucket.len(), 0);
     }
@@ -1022,12 +1127,12 @@ mod tests {
     async fn test_dht_storage() {
         let config = DhtConfig::default();
         let mut dht = PureRustDht::new(config).await.unwrap();
-        
+
         let key = "test_key";
         let value = vec![1, 2, 3, 4];
-        
+
         assert!(dht.store(key, value.clone()).await.is_ok());
-        
+
         let retrieved = dht.find_value(key).await.unwrap();
         assert_eq!(retrieved, Some(value));
     }
@@ -1037,7 +1142,7 @@ mod tests {
         let config = DhtConfig::default();
         let dht = PureRustDht::new(config).await.unwrap();
         let stats = dht.get_stats().await;
-        
+
         assert_eq!(stats.total_nodes, 0);
         assert_eq!(stats.stored_values, 0);
     }

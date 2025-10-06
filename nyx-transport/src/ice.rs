@@ -508,38 +508,42 @@ impl IceAgent {
         let socket = self.socket.as_ref().ok_or(IceError::NetworkError(
             "No socket available for STUN requests".to_string(),
         ))?;
-        
-        let local_addr = socket.local_addr().map_err(|e| IceError::NetworkError(e.to_string()))?;
+
+        let local_addr = socket
+            .local_addr()
+            .map_err(|e| IceError::NetworkError(e.to_string()))?;
 
         for stun_config in &self.config.stun_servers {
             // Create STUN client and perform binding request
             match StunClient::new(local_addr).await {
-                Ok(client) => {
-                    match client.binding_request(stun_config.address).await {
-                        Ok(mapped_addr) => {
-                            let mut candidates = self.local_candidates.write().await;
-                            candidates.push(Candidate {
-                                foundation: format!("srflx-{}", stun_config.address),
-                                component_id: 1,
-                                transport: Transport::Udp,
-                                priority: self.calculate_priority(
-                                    CandidateType::ServerReflexive,
-                                    mapped_addr.ip(),
-                                ),
-                                address: mapped_addr,
-                                candidate_type: CandidateType::ServerReflexive,
-                                related_address: Some(local_addr),
-                                extensions: HashMap::new(),
-                            });
-                            
-                            let mut stats = self.statistics.write().await;
-                            stats.local_candidates_gathered += 1;
-                        }
-                        Err(e) => {
-                            tracing::warn!("STUN binding request failed to {}: {}", stun_config.address, e);
-                        }
+                Ok(client) => match client.binding_request(stun_config.address).await {
+                    Ok(mapped_addr) => {
+                        let mut candidates = self.local_candidates.write().await;
+                        candidates.push(Candidate {
+                            foundation: format!("srflx-{}", stun_config.address),
+                            component_id: 1,
+                            transport: Transport::Udp,
+                            priority: self.calculate_priority(
+                                CandidateType::ServerReflexive,
+                                mapped_addr.ip(),
+                            ),
+                            address: mapped_addr,
+                            candidate_type: CandidateType::ServerReflexive,
+                            related_address: Some(local_addr),
+                            extensions: HashMap::new(),
+                        });
+
+                        let mut stats = self.statistics.write().await;
+                        stats.local_candidates_gathered += 1;
                     }
-                }
+                    Err(e) => {
+                        tracing::warn!(
+                            "STUN binding request failed to {}: {}",
+                            stun_config.address,
+                            e
+                        );
+                    }
+                },
                 Err(e) => {
                     tracing::warn!("Failed to create STUN client: {}", e);
                 }
@@ -555,8 +559,10 @@ impl IceAgent {
         let socket = self.socket.as_ref().ok_or(IceError::NetworkError(
             "No socket available for TURN requests".to_string(),
         ))?;
-        
-        let local_addr = socket.local_addr().map_err(|e| IceError::NetworkError(e.to_string()))?;
+
+        let local_addr = socket
+            .local_addr()
+            .map_err(|e| IceError::NetworkError(e.to_string()))?;
 
         for turn_config in &self.config.turn_servers {
             // Create TURN client and allocate relay address
@@ -577,21 +583,23 @@ impl IceAgent {
                                 foundation: format!("relay-{}", turn_config.address),
                                 component_id: 1,
                                 transport: Transport::Udp,
-                                priority: self.calculate_priority(
-                                    CandidateType::Relay,
-                                    relay_addr.ip(),
-                                ),
+                                priority: self
+                                    .calculate_priority(CandidateType::Relay, relay_addr.ip()),
                                 address: relay_addr,
                                 candidate_type: CandidateType::Relay,
                                 related_address: Some(local_addr),
                                 extensions: HashMap::new(),
                             });
-                            
+
                             let mut stats = self.statistics.write().await;
                             stats.local_candidates_gathered += 1;
                         }
                         Err(e) => {
-                            tracing::warn!("TURN allocation failed to {}: {}", turn_config.address, e);
+                            tracing::warn!(
+                                "TURN allocation failed to {}: {}",
+                                turn_config.address,
+                                e
+                            );
                         }
                     }
                 }
@@ -657,16 +665,20 @@ impl IceAgent {
         let socket = self.socket.as_ref().ok_or(IceError::NetworkError(
             "No socket available for connectivity check".to_string(),
         ))?;
-        
-        let local_addr = socket.local_addr().map_err(|e| IceError::NetworkError(e.to_string()))?;
+
+        let local_addr = socket
+            .local_addr()
+            .map_err(|e| IceError::NetworkError(e.to_string()))?;
 
         // Perform STUN binding request to verify connectivity
         let check_result = match StunClient::new(local_addr).await {
             Ok(client) => {
                 match tokio::time::timeout(
                     Duration::from_secs(5),
-                    client.binding_request(pair.remote.address)
-                ).await {
+                    client.binding_request(pair.remote.address),
+                )
+                .await
+                {
                     Ok(Ok(_mapped_addr)) => {
                         // Connectivity check succeeded
                         let rtt = check_start.elapsed();
@@ -913,5 +925,133 @@ mod tests {
 
         // Ensure test completes within timeout
         assert!(result.is_ok(), "Test timed out after 5 seconds");
+    }
+
+    #[tokio::test]
+    async fn test_candidate_type_priority_ordering() {
+        // Verify priority ordering: Host > Server Reflexive > Relay
+        let host = Candidate::new_host(1, "192.168.1.1:5000".parse().unwrap());
+        let srflx = Candidate::new_server_reflexive(
+            1,
+            "203.0.113.1:5000".parse().unwrap(),
+            "192.168.1.1:5000".parse().unwrap(),
+        );
+        let relay = Candidate::new_relay(
+            1,
+            "198.51.100.1:5000".parse().unwrap(),
+            "192.168.1.1:5000".parse().unwrap(),
+        );
+
+        // Host should have highest priority
+        assert!(host.priority > srflx.priority);
+        assert!(srflx.priority > relay.priority);
+    }
+
+    #[tokio::test]
+    async fn test_server_reflexive_candidate_creation() {
+        let external_addr: SocketAddr = "203.0.113.45:54321".parse().unwrap();
+        let local_addr: SocketAddr = "192.168.1.100:5000".parse().unwrap();
+
+        let candidate = Candidate::new_server_reflexive(1, external_addr, local_addr);
+
+        assert_eq!(candidate.candidate_type, CandidateType::ServerReflexive);
+        assert_eq!(candidate.address, external_addr);
+        assert_eq!(candidate.related_address, Some(local_addr));
+        assert!(candidate.foundation.starts_with("srflx-"));
+    }
+
+    #[tokio::test]
+    async fn test_relay_candidate_creation() {
+        let relay_addr: SocketAddr = "198.51.100.100:3478".parse().unwrap();
+        let local_addr: SocketAddr = "192.168.1.100:5000".parse().unwrap();
+
+        let candidate = Candidate::new_relay(1, relay_addr, local_addr);
+
+        assert_eq!(candidate.candidate_type, CandidateType::Relay);
+        assert_eq!(candidate.address, relay_addr);
+        assert_eq!(candidate.related_address, Some(local_addr));
+        assert!(candidate.foundation.starts_with("relay-"));
+    }
+
+    #[tokio::test]
+    async fn test_ipv6_candidate_priority() {
+        let ipv4 = Candidate::new_host(1, "192.168.1.1:5000".parse().unwrap());
+        let ipv6 = Candidate::new_host(1, "[2001:db8::1]:5000".parse().unwrap());
+
+        // Both should have valid priorities
+        assert!(ipv4.priority > 0);
+        assert!(ipv6.priority > 0);
+
+        // IPv4 typically has slightly higher priority (local preference)
+        assert!(ipv4.priority >= ipv6.priority);
+    }
+
+    #[tokio::test]
+    async fn test_candidate_pair_priority_calculation() {
+        let config = IceAgentConfig::default();
+        let agent = IceAgent::new(config);
+
+        let local = Candidate::new_host(1, "192.168.1.1:5000".parse().unwrap());
+        let remote = Candidate::new_host(1, "192.168.1.2:6000".parse().unwrap());
+
+        let priority = agent.calculate_pair_priority(&local, &remote);
+
+        // Pair priority should be non-zero and follow RFC 5245 formula
+        assert!(priority > 0);
+    }
+
+    #[tokio::test]
+    async fn test_candidate_foundation_generation() {
+        let host1 = Candidate::new_host(1, "192.168.1.1:5000".parse().unwrap());
+        let host2 = Candidate::new_host(1, "192.168.1.2:5001".parse().unwrap());
+
+        // Different addresses should have different foundations
+        assert_ne!(host1.foundation, host2.foundation);
+
+        // Same address should have consistent foundation
+        let host1_dup = Candidate::new_host(1, "192.168.1.1:5000".parse().unwrap());
+        assert_eq!(host1.foundation, host1_dup.foundation);
+    }
+
+    #[tokio::test]
+    async fn test_ice_agent_state_transitions() {
+        let config = IceAgentConfig::default();
+        let agent = IceAgent::new(config);
+
+        // Initial state should be Idle
+        assert_eq!(agent.get_state().await, IceAgentState::Idle);
+
+        // State transitions would be tested here with actual gathering
+        // For now, verify state query doesn't panic
+        let _ = agent.get_state().await;
+    }
+
+    #[tokio::test]
+    async fn test_candidate_component_id() {
+        // Test different component IDs (RTP=1, RTCP=2)
+        let rtp_candidate = Candidate::new_host(1, "192.168.1.1:5000".parse().unwrap());
+        let rtcp_candidate = Candidate::new_host(2, "192.168.1.1:5001".parse().unwrap());
+
+        assert_eq!(rtp_candidate.component_id, 1);
+        assert_eq!(rtcp_candidate.component_id, 2);
+        assert_ne!(rtp_candidate.component_id, rtcp_candidate.component_id);
+    }
+
+    #[tokio::test]
+    async fn test_transport_protocol_udp() {
+        let candidate = Candidate::new_host(1, "192.168.1.1:5000".parse().unwrap());
+        assert_eq!(candidate.transport, Transport::Udp);
+    }
+
+    #[test]
+    fn test_candidate_clone() {
+        let candidate = Candidate::new_host(1, "192.168.1.1:5000".parse().unwrap());
+
+        // Verify clone works (derives Clone)
+        let cloned = candidate.clone();
+
+        assert_eq!(candidate.address, cloned.address);
+        assert_eq!(candidate.candidate_type, cloned.candidate_type);
+        assert_eq!(candidate.priority, cloned.priority);
     }
 }

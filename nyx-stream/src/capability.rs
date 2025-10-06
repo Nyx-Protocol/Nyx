@@ -165,7 +165,11 @@ pub async fn negotiate_with_telemetry(
     if let Some(sid) = span_id {
         telemetry
             .get_context()
-            .add_span_attribute(sid, "local.capabilities", &local_supported.len().to_string())
+            .add_span_attribute(
+                sid,
+                "local.capabilities",
+                &local_supported.len().to_string(),
+            )
             .await;
         telemetry
             .get_context()
@@ -199,7 +203,11 @@ pub async fn negotiate_with_telemetry(
         if let Err(CapabilityError::UnsupportedRequired(cap_id)) = &result {
             telemetry
                 .get_context()
-                .add_span_attribute(sid, "error.unsupported_cap_id", &format!("0x{:08x}", cap_id))
+                .add_span_attribute(
+                    sid,
+                    "error.unsupported_cap_id",
+                    &format!("0x{:08x}", cap_id),
+                )
                 .await;
         }
 
@@ -405,7 +413,10 @@ mod tests {
         // Verify error contains the unsupported capability ID
         match result {
             Err(CapabilityError::UnsupportedRequired(id)) => {
-                assert_eq!(id, CAP_PLUGIN_FRAMEWORK, "Expected CAP_PLUGIN_FRAMEWORK to be unsupported");
+                assert_eq!(
+                    id, CAP_PLUGIN_FRAMEWORK,
+                    "Expected CAP_PLUGIN_FRAMEWORK to be unsupported"
+                );
 
                 // Build CLOSE frame as would be done by daemon
                 let close_frame = build_close_unsupported_cap(id);
@@ -418,8 +429,16 @@ mod tests {
                 assert_eq!(error_code, ERR_UNSUPPORTED_CAP, "Error code should be 0x07");
 
                 // Verify capability ID matches
-                let cap_id = u32::from_be_bytes([close_frame[2], close_frame[3], close_frame[4], close_frame[5]]);
-                assert_eq!(cap_id, CAP_PLUGIN_FRAMEWORK, "Capability ID in CLOSE frame should match");
+                let cap_id = u32::from_be_bytes([
+                    close_frame[2],
+                    close_frame[3],
+                    close_frame[4],
+                    close_frame[5],
+                ]);
+                assert_eq!(
+                    cap_id, CAP_PLUGIN_FRAMEWORK,
+                    "Capability ID in CLOSE frame should match"
+                );
             }
             Ok(_) => {
                 panic!("Expected negotiation to fail with UnsupportedRequired error");
@@ -443,7 +462,7 @@ mod tests {
         let peer = vec![
             Capability::required(CAP_CORE, vec![]),
             Capability::optional(CAP_PLUGIN_FRAMEWORK, b"v1.0".to_vec()), // Optional
-            Capability::optional(0x9999, b"experimental".to_vec()), // Unknown optional
+            Capability::optional(0x9999, b"experimental".to_vec()),       // Unknown optional
         ];
 
         // Perform negotiation - should succeed
@@ -479,9 +498,9 @@ mod tests {
     fn test_mixed_required_optional() {
         let local = &[CAP_CORE, CAP_PLUGIN_FRAMEWORK];
         let peer = vec![
-            Capability::required(CAP_CORE, vec![]),                 // Required & supported
-            Capability::optional(CAP_PLUGIN_FRAMEWORK, vec![]),     // Optional & supported
-            Capability::optional(0xFFFF, b"unknown".to_vec()),      // Optional & unsupported
+            Capability::required(CAP_CORE, vec![]), // Required & supported
+            Capability::optional(CAP_PLUGIN_FRAMEWORK, vec![]), // Optional & supported
+            Capability::optional(0xFFFF, b"unknown".to_vec()), // Optional & unsupported
         ];
 
         // Should succeed: all required caps match, optional are ignored

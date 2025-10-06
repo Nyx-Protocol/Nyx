@@ -1,4 +1,4 @@
-﻿//! Pure Rust P2P Implementation
+//! Pure Rust P2P Implementation
 //!
 //! Peer-to-peer networking module with zero C/C++ dependencies.
 //! Provides peer discovery, connection management, and message framing for Nyx protocol.
@@ -63,38 +63,44 @@ pub enum PeerState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum P2pMessage {
     // Handshake messages
-    Hello { 
-        peer_id: NodeId, 
+    Hello {
+        peer_id: NodeId,
         protocol_version: u32,
         capabilities: Vec<String>,
         timestamp: u64,
     },
-    HelloAck { 
-        peer_id: NodeId, 
+    HelloAck {
+        peer_id: NodeId,
         accepted_capabilities: Vec<String>,
         timestamp: u64,
     },
-    
+
     // Discovery messages
-    PeerRequest { 
+    PeerRequest {
         count: usize,
         filter: Option<PeerFilter>,
     },
-    PeerResponse { 
+    PeerResponse {
         peers: Vec<PeerInfo>,
     },
-    
+
     // Application messages
-    Data { 
+    Data {
         channel: String,
         payload: Vec<u8>,
         sequence: u64,
     },
-    
+
     // Control messages
-    Ping { timestamp: u64 },
-    Pong { timestamp: u64 },
-    Disconnect { reason: String },
+    Ping {
+        timestamp: u64,
+    },
+    Pong {
+        timestamp: u64,
+    },
+    Disconnect {
+        reason: String,
+    },
 }
 
 /// Peer filtering criteria
@@ -111,7 +117,7 @@ pub struct PeerInfo {
     pub id: NodeId,
     pub address: SocketAddr,
     pub capabilities: Vec<String>,
-    pub last_seen: u64, // Unix timestamp
+    pub last_seen: u64,     // Unix timestamp
     pub quality_score: f64, // 0.0 - 1.0
 }
 
@@ -128,7 +134,7 @@ impl PeerInfo {
             quality_score: 0.5,
         }
     }
-    
+
     /// Update peer quality based on connection metrics
     pub fn update_quality(&mut self, rtt: Duration, success_rate: f64) {
         // Quality score based on RTT and success rate
@@ -169,9 +175,9 @@ pub struct PeerConnection {
 
 impl PeerConnection {
     pub fn new(
-        peer_id: NodeId, 
+        peer_id: NodeId,
         address: SocketAddr,
-        message_tx: mpsc::UnboundedSender<P2pMessage>
+        message_tx: mpsc::UnboundedSender<P2pMessage>,
     ) -> Self {
         Self {
             peer_id,
@@ -184,32 +190,34 @@ impl PeerConnection {
             sequence_number: 0,
         }
     }
-    
+
     /// Send message to peer
     pub async fn send_message(&mut self, message: P2pMessage) -> Result<(), P2pError> {
         if self.state != PeerState::Connected {
             return Err(P2pError::NotConnected);
         }
-        
+
         let _ = self.message_tx.send(message);
         self.stats.messages_sent += 1;
         self.stats.last_activity = Some(Instant::now());
         Ok(())
     }
-    
+
     /// Update connection statistics
     pub fn update_stats(&mut self, bytes_sent: u64, bytes_received: u64) {
         self.stats.bytes_sent += bytes_sent;
         self.stats.bytes_received += bytes_received;
         self.stats.last_activity = Some(Instant::now());
     }
-    
+
     /// Check if connection is healthy
     pub fn is_healthy(&self) -> bool {
-        self.state == PeerState::Connected &&
-        self.stats.last_activity
-            .map(|last| last.elapsed() < Duration::from_secs(120))
-            .unwrap_or(false)
+        self.state == PeerState::Connected
+            && self
+                .stats
+                .last_activity
+                .map(|last| last.elapsed() < Duration::from_secs(120))
+                .unwrap_or(false)
     }
 }
 
@@ -264,11 +272,12 @@ pub struct PureRustP2p {
 impl PureRustP2p {
     /// Create new P2P manager
     pub async fn new(config: P2pConfig) -> Result<Self, P2pError> {
-        let listener = TcpListener::bind(&config.listen_addr).await
+        let listener = TcpListener::bind(&config.listen_addr)
+            .await
             .map_err(P2pError::Io)?;
-        
+
         info!("P2P listening on {}", listener.local_addr().unwrap());
-        
+
         Ok(Self {
             config: config.clone(),
             connections: Arc::new(RwLock::new(HashMap::new())),
@@ -280,24 +289,24 @@ impl PureRustP2p {
             message_handlers: Arc::new(RwLock::new(HashMap::new())),
         })
     }
-    
+
     /// Set DHT instance for peer discovery
     pub fn set_dht(&mut self, dht: Arc<PureRustDht>) {
         self.dht = Some(dht);
     }
-    
+
     /// Start P2P network
     pub async fn start(&mut self) -> Result<(), P2pError> {
         let (shutdown_tx, mut shutdown_rx) = mpsc::unbounded_channel();
         self.shutdown_tx = Some(shutdown_tx);
-        
+
         // Accept incoming connections
         if let Some(listener) = self.listener.take() {
             let connections = self.connections.clone();
             let config = self.config.clone();
             let semaphore = self.connection_semaphore.clone();
             let message_handlers = self.message_handlers.clone();
-            
+
             tokio::spawn(async move {
                 Self::accept_connections(
                     listener,
@@ -306,25 +315,27 @@ impl PureRustP2p {
                     semaphore,
                     message_handlers,
                     &mut shutdown_rx,
-                ).await;
+                )
+                .await;
             });
         }
-        
+
         // Start peer discovery if enabled
         if self.config.enable_discovery {
             let known_peers = self.known_peers.clone();
             let connections = self.connections.clone();
             let dht = self.dht.clone();
-            
+
             tokio::spawn(async move {
                 let mut discovery_interval = interval(DISCOVERY_INTERVAL);
                 loop {
                     discovery_interval.tick().await;
-                    Self::discover_peers(known_peers.clone(), connections.clone(), dht.clone()).await;
+                    Self::discover_peers(known_peers.clone(), connections.clone(), dht.clone())
+                        .await;
                 }
             });
         }
-        
+
         // Start connection maintenance
         let connections = self.connections.clone();
         tokio::spawn(async move {
@@ -334,68 +345,74 @@ impl PureRustP2p {
                 Self::maintain_connections(connections.clone()).await;
             }
         });
-        
+
         // Bootstrap from configured peers
         for peer_addr in &self.config.bootstrap_peers {
             let _ = self.connect_to_peer(*peer_addr).await;
         }
-        
+
         Ok(())
     }
-    
+
     /// Stop P2P network
     pub async fn stop(&mut self) {
         if let Some(shutdown_tx) = self.shutdown_tx.take() {
             let _ = shutdown_tx.send(());
         }
-        
+
         // Disconnect all peers
         let mut connections = self.connections.write().await;
         for (_, mut connection) in connections.drain() {
-            let _ = connection.send_message(P2pMessage::Disconnect {
-                reason: "Shutting down".to_string(),
-            }).await;
+            let _ = connection
+                .send_message(P2pMessage::Disconnect {
+                    reason: "Shutting down".to_string(),
+                })
+                .await;
         }
     }
-    
+
     /// Connect to a peer
     pub async fn connect_to_peer(&self, addr: SocketAddr) -> Result<NodeId, P2pError> {
         // Acquire connection permit
-        let _permit = self.connection_semaphore.clone()
+        let _permit = self
+            .connection_semaphore
+            .clone()
             .acquire_owned()
             .await
             .map_err(|_| P2pError::TooManyConnections)?;
-        
+
         // Establish TCP connection
         let stream = timeout(self.config.connection_timeout, TcpStream::connect(addr))
             .await
             .map_err(|_| P2pError::Timeout)?
             .map_err(P2pError::Io)?;
-        
+
         // Perform handshake
         let peer_id = self.perform_handshake(stream, addr, true).await?;
-        
+
         info!("Connected to peer {} at {}", peer_id, addr);
         Ok(peer_id)
     }
-    
+
     /// Disconnect from a peer
     pub async fn disconnect_peer(&self, peer_id: &NodeId) -> Result<(), P2pError> {
         let mut connections = self.connections.write().await;
         if let Some(mut connection) = connections.remove(peer_id) {
-            let _ = connection.send_message(P2pMessage::Disconnect {
-                reason: "Requested disconnect".to_string(),
-            }).await;
+            let _ = connection
+                .send_message(P2pMessage::Disconnect {
+                    reason: "Requested disconnect".to_string(),
+                })
+                .await;
         }
         Ok(())
     }
-    
+
     /// Send message to a peer
     pub async fn send_to_peer(
-        &self, 
-        peer_id: &NodeId, 
-        channel: &str, 
-        payload: Vec<u8>
+        &self,
+        peer_id: &NodeId,
+        channel: &str,
+        payload: Vec<u8>,
     ) -> Result<(), P2pError> {
         let mut connections = self.connections.write().await;
         if let Some(connection) = connections.get_mut(peer_id) {
@@ -410,12 +427,12 @@ impl PureRustP2p {
             Err(P2pError::PeerNotFound)
         }
     }
-    
+
     /// Broadcast message to all connected peers
     pub async fn broadcast_message(&self, channel: &str, payload: Vec<u8>) -> usize {
         let mut connections = self.connections.write().await;
         let mut sent_count = 0;
-        
+
         for (_, connection) in connections.iter_mut() {
             if connection.state == PeerState::Connected {
                 connection.sequence_number += 1;
@@ -429,55 +446,57 @@ impl PureRustP2p {
                 }
             }
         }
-        
+
         sent_count
     }
-    
+
     /// Register message handler for a channel
     pub async fn register_handler(
-        &self, 
+        &self,
         channel: String,
-        handler_tx: mpsc::UnboundedSender<P2pMessage>
+        handler_tx: mpsc::UnboundedSender<P2pMessage>,
     ) {
         let mut handlers = self.message_handlers.write().await;
         handlers.insert(channel, handler_tx);
     }
-    
+
     /// Get connected peers
     pub async fn get_connected_peers(&self) -> Vec<NodeId> {
         let connections = self.connections.read().await;
-        connections.keys()
+        connections
+            .keys()
             .filter(|&id| {
-                connections.get(id)
+                connections
+                    .get(id)
                     .map(|c| c.state == PeerState::Connected)
                     .unwrap_or(false)
             })
             .cloned()
             .collect()
     }
-    
+
     /// Get network statistics
     pub async fn get_stats(&self) -> P2pStats {
         let connections = self.connections.read().await;
         let known_peers = self.known_peers.read().await;
-        
+
         let mut total_bytes_sent = 0;
         let mut total_bytes_received = 0;
         let mut total_messages_sent = 0;
         let mut total_messages_received = 0;
         let mut connected_count = 0;
-        
+
         for connection in connections.values() {
             total_bytes_sent += connection.stats.bytes_sent;
             total_bytes_received += connection.stats.bytes_received;
             total_messages_sent += connection.stats.messages_sent;
             total_messages_received += connection.stats.messages_received;
-            
+
             if connection.state == PeerState::Connected {
                 connected_count += 1;
             }
         }
-        
+
         P2pStats {
             connected_peers: connected_count,
             known_peers: known_peers.len(),
@@ -488,7 +507,7 @@ impl PureRustP2p {
             messages_received: total_messages_received,
         }
     }
-    
+
     /// Accept incoming connections
     async fn accept_connections(
         listener: TcpListener,
@@ -508,7 +527,7 @@ impl PureRustP2p {
                                 let connections = connections.clone();
                                 let config = config.clone();
                                 let handlers = message_handlers.clone();
-                                
+
                                 tokio::spawn(async move {
                                     if let Err(e) = Self::handle_incoming_connection(
                                         stream,
@@ -532,7 +551,7 @@ impl PureRustP2p {
             }
         }
     }
-    
+
     /// Handle incoming connection
     async fn handle_incoming_connection(
         stream: TcpStream,
@@ -552,12 +571,12 @@ impl PureRustP2p {
             shutdown_tx: None,
             message_handlers: message_handlers.clone(),
         };
-        
+
         let peer_id = temp_p2p.perform_handshake(stream, addr, false).await?;
         info!("Accepted connection from peer {} at {}", peer_id, addr);
         Ok(())
     }
-    
+
     /// Perform handshake with peer
     async fn perform_handshake(
         &self,
@@ -566,7 +585,7 @@ impl PureRustP2p {
         is_outgoing: bool,
     ) -> Result<NodeId, P2pError> {
         let (message_tx, message_rx) = mpsc::unbounded_channel();
-        
+
         // Send/receive hello messages
         let peer_id = if is_outgoing {
             // Send hello first
@@ -579,9 +598,9 @@ impl PureRustP2p {
                     .unwrap()
                     .as_secs(),
             };
-            
+
             Self::send_message(&mut stream, &hello).await?;
-            
+
             // Receive hello ack
             match timeout(HANDSHAKE_TIMEOUT, Self::receive_message(&mut stream)).await {
                 Ok(Ok(P2pMessage::HelloAck { peer_id, .. })) => peer_id,
@@ -591,12 +610,18 @@ impl PureRustP2p {
             }
         } else {
             // Receive hello first
-            let peer_id = match timeout(HANDSHAKE_TIMEOUT, Self::receive_message(&mut stream)).await {
-                Ok(Ok(P2pMessage::Hello { peer_id, capabilities, .. })) => {
+            let peer_id = match timeout(HANDSHAKE_TIMEOUT, Self::receive_message(&mut stream)).await
+            {
+                Ok(Ok(P2pMessage::Hello {
+                    peer_id,
+                    capabilities,
+                    ..
+                })) => {
                     // Send hello ack
                     let hello_ack = P2pMessage::HelloAck {
                         peer_id: self.config.node_id,
-                        accepted_capabilities: capabilities.into_iter()
+                        accepted_capabilities: capabilities
+                            .into_iter()
                             .filter(|cap| self.config.capabilities.contains(cap))
                             .collect(),
                         timestamp: std::time::SystemTime::now()
@@ -604,7 +629,7 @@ impl PureRustP2p {
                             .unwrap()
                             .as_secs(),
                     };
-                    
+
                     Self::send_message(&mut stream, &hello_ack).await?;
                     peer_id
                 }
@@ -614,83 +639,85 @@ impl PureRustP2p {
             };
             peer_id
         };
-        
+
         // Create connection
         let mut connection = PeerConnection::new(peer_id, addr, message_tx);
         connection.state = PeerState::Connected;
         connection.stream = Some(stream);
         connection.stats.connect_time = Some(Instant::now());
-        
+
         // Add to connections map
         {
             let mut connections = self.connections.write().await;
             connections.insert(peer_id, connection);
         }
-        
+
         // Start message handling for this connection
         let connections = self.connections.clone();
         let handlers = self.message_handlers.clone();
         tokio::spawn(async move {
             Self::handle_peer_messages(peer_id, connections, handlers, message_rx).await;
         });
-        
+
         Ok(peer_id)
     }
-    
+
     /// Send framed message (generic over AsyncWrite + AsyncRead)
-    async fn send_message<T>(stream: &mut T, message: &P2pMessage) -> Result<(), P2pError> 
+    async fn send_message<T>(stream: &mut T, message: &P2pMessage) -> Result<(), P2pError>
     where
         T: AsyncWriteExt + Unpin,
     {
-        let serialized = bincode::serialize(message)
-            .map_err(P2pError::Serialization)?;
-        
+        let serialized = bincode::serialize(message).map_err(P2pError::Serialization)?;
+
         if serialized.len() > MAX_MESSAGE_SIZE {
             return Err(P2pError::MessageTooLarge);
         }
-        
+
         // Send length prefix (4 bytes, big-endian)
         let length = serialized.len() as u32;
-        stream.write_all(&length.to_be_bytes()).await
+        stream
+            .write_all(&length.to_be_bytes())
+            .await
             .map_err(P2pError::Io)?;
-        
+
         // Send message payload
-        stream.write_all(&serialized).await
-            .map_err(P2pError::Io)?;
-        
-        stream.flush().await
-            .map_err(P2pError::Io)?;
-        
+        stream.write_all(&serialized).await.map_err(P2pError::Io)?;
+
+        stream.flush().await.map_err(P2pError::Io)?;
+
         Ok(())
     }
-    
+
     /// Receive framed message (generic over AsyncRead)
-    async fn receive_message<T>(stream: &mut T) -> Result<P2pMessage, P2pError> 
+    async fn receive_message<T>(stream: &mut T) -> Result<P2pMessage, P2pError>
     where
         T: AsyncReadExt + Unpin,
     {
         // Read length prefix
         let mut length_bytes = [0u8; 4];
-        stream.read_exact(&mut length_bytes).await
+        stream
+            .read_exact(&mut length_bytes)
+            .await
             .map_err(P2pError::Io)?;
-        
+
         let length = u32::from_be_bytes(length_bytes) as usize;
         if length > MAX_MESSAGE_SIZE {
             return Err(P2pError::MessageTooLarge);
         }
-        
+
         // Read message payload
         let mut payload = vec![0u8; length];
-        stream.read_exact(&mut payload).await
+        stream
+            .read_exact(&mut payload)
+            .await
             .map_err(P2pError::Io)?;
-        
+
         // Deserialize message
-        let message = bincode::deserialize(&payload)
-            .map_err(P2pError::Serialization)?;
-        
+        let message = bincode::deserialize(&payload).map_err(P2pError::Serialization)?;
+
         Ok(message)
     }
-    
+
     /// Handle messages from a peer
     async fn handle_peer_messages(
         peer_id: NodeId,
@@ -730,7 +757,7 @@ impl PureRustP2p {
             }
         }
     }
-    
+
     /// Discover peers using DHT
     async fn discover_peers(
         known_peers: Arc<RwLock<HashMap<NodeId, PeerInfo>>>,
@@ -743,7 +770,7 @@ impl PureRustP2p {
             if let Ok(nodes) = dht.find_node(random_id).await {
                 let mut known = known_peers.write().await;
                 let connections = connections.read().await;
-                
+
                 for node in nodes {
                     if !connections.contains_key(&node.id) {
                         let peer_info = PeerInfo::new(node.id, node.addr);
@@ -753,11 +780,11 @@ impl PureRustP2p {
             }
         }
     }
-    
+
     /// Maintain connections (keep-alive, cleanup)
     async fn maintain_connections(connections: Arc<RwLock<HashMap<NodeId, PeerConnection>>>) {
         let mut to_remove = Vec::new();
-        
+
         {
             let mut connections = connections.write().await;
             for (peer_id, connection) in connections.iter_mut() {
@@ -774,7 +801,7 @@ impl PureRustP2p {
                     let _ = connection.send_message(ping).await;
                 }
             }
-            
+
             for peer_id in to_remove {
                 connections.remove(&peer_id);
             }
@@ -799,28 +826,28 @@ pub struct P2pStats {
 pub enum P2pError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Serialization error: {0}")]
     Serialization(#[from] bincode::Error),
-    
+
     #[error("Connection timeout")]
     Timeout,
-    
+
     #[error("Too many connections")]
     TooManyConnections,
-    
+
     #[error("Peer not found")]
     PeerNotFound,
-    
+
     #[error("Not connected")]
     NotConnected,
-    
+
     #[error("Message too large")]
     MessageTooLarge,
-    
+
     #[error("Unexpected message")]
     UnexpectedMessage,
-    
+
     #[error("Handshake failed")]
     HandshakeFailed,
 }
@@ -840,7 +867,7 @@ mod tests {
             enable_discovery: false,
             ..Default::default()
         };
-        
+
         PureRustP2p::new(config).await.unwrap()
     }
 
@@ -855,14 +882,14 @@ mod tests {
     async fn test_peer_connection() {
         let mut p2p1 = create_test_p2p(0).await;
         let mut p2p2 = create_test_p2p(0).await;
-        
+
         // Just test basic creation and stats
         let stats1 = p2p1.get_stats().await;
         let stats2 = p2p2.get_stats().await;
-        
+
         assert_eq!(stats1.connected_peers, 0);
         assert_eq!(stats2.connected_peers, 0);
-        
+
         // Test successful P2P creation
         assert_eq!(stats1.total_connections, 0);
         assert_eq!(stats2.total_connections, 0);
@@ -871,11 +898,11 @@ mod tests {
     #[tokio::test]
     async fn test_message_sending() {
         let mut p2p1 = create_test_p2p(0).await;
-        
+
         // Test message handler registration
         let (tx, _rx) = mpsc::unbounded_channel();
         p2p1.register_handler("test".to_string(), tx).await;
-        
+
         // Test broadcast to no peers
         let test_data = b"Hello, P2P!".to_vec();
         let sent_count = p2p1.broadcast_message("test", test_data).await;
@@ -884,16 +911,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_peer_info_quality_update() {
-        let mut peer_info = PeerInfo::new(
-            NodeId::random(),
-            "127.0.0.1:8080".parse().unwrap()
-        );
-        
+        let mut peer_info = PeerInfo::new(NodeId::random(), "127.0.0.1:8080".parse().unwrap());
+
         assert_eq!(peer_info.quality_score, 0.5);
-        
+
         peer_info.update_quality(Duration::from_millis(50), 0.9);
         assert!(peer_info.quality_score > 0.5);
-        
+
         peer_info.update_quality(Duration::from_millis(500), 0.1);
         assert!(peer_info.quality_score < 0.5);
     }
@@ -901,12 +925,9 @@ mod tests {
     #[tokio::test]
     async fn test_connection_stats() {
         let (tx, _rx) = mpsc::unbounded_channel();
-        let mut connection = PeerConnection::new(
-            NodeId::random(),
-            "127.0.0.1:8080".parse().unwrap(),
-            tx
-        );
-        
+        let mut connection =
+            PeerConnection::new(NodeId::random(), "127.0.0.1:8080".parse().unwrap(), tx);
+
         connection.update_stats(1024, 512);
         assert_eq!(connection.stats.bytes_sent, 1024);
         assert_eq!(connection.stats.bytes_received, 512);
@@ -917,30 +938,34 @@ mod tests {
     async fn test_broadcast_message() {
         let mut p2p = create_test_p2p(0).await;
         p2p.start().await.unwrap();
-        
+
         let test_data = b"Broadcast test".to_vec();
         let sent_count = p2p.broadcast_message("broadcast", test_data).await;
-        
+
         // Should be 0 since no peers are connected
         assert_eq!(sent_count, 0);
-        
+
         p2p.stop().await;
     }
 
     #[tokio::test]
     async fn test_message_framing() {
         use tokio::io::DuplexStream;
-        
+
         let (mut client, mut server) = tokio::io::duplex(1024);
-        
-        let test_message = P2pMessage::Ping { timestamp: 123456789 };
-        
+
+        let test_message = P2pMessage::Ping {
+            timestamp: 123456789,
+        };
+
         // Send message
-        PureRustP2p::send_message(&mut client, &test_message).await.unwrap();
-        
+        PureRustP2p::send_message(&mut client, &test_message)
+            .await
+            .unwrap();
+
         // Receive message
         let received = PureRustP2p::receive_message(&mut server).await.unwrap();
-        
+
         match received {
             P2pMessage::Ping { timestamp } => assert_eq!(timestamp, 123456789),
             _ => panic!("Expected ping message"),

@@ -31,6 +31,7 @@ enum Request<'a> {
     CreateConfigSnapshot {
         description: Option<String>,
     },
+    GetComplianceReport,
 }
 
 #[derive(Debug, Serialize)]
@@ -193,6 +194,21 @@ impl DaemonClient {
             id: None,
             auth: self.auth_token.as_deref(),
             req: Request::CreateConfigSnapshot { description },
+        })
+        .await
+    }
+
+    /// Get compliance report from daemon
+    ///
+    /// # Errors
+    /// Returns an error if:
+    /// - Communication with daemon fails
+    /// - Compliance detection fails on daemon side
+    pub async fn get_compliance_report(&self) -> Result<serde_json::Value> {
+        self.rpc_json(&RpcRequest {
+            id: None,
+            auth: self.auth_token.as_deref(),
+            req: Request::GetComplianceReport,
         })
         .await
     }
@@ -535,5 +551,16 @@ mod tests {
         std::env::remove_var("NYX_TOKEN");
         std::env::remove_var("NYX_DAEMON_COOKIE");
         Ok(())
+    }
+
+    #[test]
+    fn compliance_request_serialization() {
+        let req = RpcRequest {
+            id: None,
+            auth: None,
+            req: Request::GetComplianceReport,
+        };
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains("\"op\":\"get_compliance_report\""));
     }
 }

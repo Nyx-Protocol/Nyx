@@ -20,9 +20,9 @@ pub struct DegradationThresholds {
 impl Default for DegradationThresholds {
     fn default() -> Self {
         Self {
-            max_loss_rate: 0.05, // 5% packet loss
+            max_loss_rate: 0.05,                 // 5% packet loss
             max_rtt: Duration::from_millis(500), // 500ms RTT
-            min_quality_score: 0.6, // 60% quality score
+            min_quality_score: 0.6,              // 60% quality score
         }
     }
 }
@@ -343,10 +343,10 @@ impl PathBuilder {
     }
 
     /// Update path quality from live probe metrics
-    /// 
+    ///
     /// This method integrates with NetworkPathProber to update path quality based on
     /// real network measurements. It should be called periodically by the metrics update task.
-    /// 
+    ///
     /// # Arguments
     /// * `path_id` - ID of the path to update
     /// * `rtt` - Round-trip time
@@ -369,10 +369,10 @@ impl PathBuilder {
         // Calculate quality scores (0.0-1.0)
         // Lower RTT is better: score = 1.0 - min(rtt/1000ms, 1.0)
         let latency_score = 1.0 - (rtt.as_millis() as f64 / 1000.0).min(1.0);
-        
+
         // Higher bandwidth is better: normalize to 0.0-1.0 range (1 Mbps = 1.0)
         let bandwidth_score = (bandwidth as f64 / 1_000_000.0).min(1.0);
-        
+
         // Lower loss rate is better: score = 1.0 - loss_rate
         let reliability_score = (1.0 - loss_rate).max(0.0);
 
@@ -386,28 +386,33 @@ impl PathBuilder {
     }
 
     /// Check if path is degraded and needs rebuilding
-    /// 
+    ///
     /// Returns true if any of the quality thresholds are violated:
     /// - Packet loss rate exceeds threshold
     /// - RTT exceeds threshold  
     /// - Overall quality score falls below threshold
-    pub async fn is_path_degraded(&self, path_id: &str, rtt: Duration, loss_rate: f64) -> Result<bool> {
+    pub async fn is_path_degraded(
+        &self,
+        path_id: &str,
+        rtt: Duration,
+        loss_rate: f64,
+    ) -> Result<bool> {
         let read = self.active_paths.read().await;
         let info = read
             .get(path_id)
             .ok_or_else(|| DaemonError::internal("Path not found"))?;
 
         let thresholds = &self.config.degradation_thresholds;
-        
+
         // Check individual thresholds
         if loss_rate > thresholds.max_loss_rate {
             return Ok(true); // Loss rate too high
         }
-        
+
         if rtt > thresholds.max_rtt {
             return Ok(true); // RTT too high
         }
-        
+
         // Check overall quality score
         let quality_score = info.quality.overall_score();
         if quality_score < thresholds.min_quality_score {
@@ -418,15 +423,15 @@ impl PathBuilder {
     }
 
     /// Automatically rebuild degraded path with alternative route
-    /// 
+    ///
     /// This method is called when a path is detected as degraded. It attempts to:
     /// 1. Mark the current path as failed
     /// 2. Build a new path to the same endpoint
     /// 3. Return the new path ID
-    /// 
+    ///
     /// # Arguments
     /// * `degraded_path_id` - ID of the degraded path
-    /// 
+    ///
     /// # Returns
     /// * `Ok(String)` - ID of the newly built replacement path
     pub async fn rebuild_degraded_path(&self, degraded_path_id: &str) -> Result<String> {
@@ -436,7 +441,7 @@ impl PathBuilder {
             let info = write
                 .get_mut(degraded_path_id)
                 .ok_or_else(|| DaemonError::internal("Path not found"))?;
-            
+
             // Mark as failed to prevent further use
             info.failed = true;
             info.endpoint
@@ -444,27 +449,26 @@ impl PathBuilder {
 
         // Build new path to same endpoint
         let new_path_id = self.build_path(endpoint).await?;
-        
+
         Ok(new_path_id)
     }
 
     /// Get all paths that need rebuilding due to degradation
-    /// 
+    ///
     /// Returns a list of (path_id, endpoint) tuples for paths that should be rebuilt
     pub async fn get_degraded_paths(&self) -> Result<Vec<(String, SocketAddr)>> {
         let read = self.active_paths.read().await;
         let thresholds = &self.config.degradation_thresholds;
-        
+
         let degraded: Vec<_> = read
             .iter()
             .filter(|(_, info)| {
                 // Check if quality is below threshold
-                info.quality.overall_score() < thresholds.min_quality_score ||
-                info.failed
+                info.quality.overall_score() < thresholds.min_quality_score || info.failed
             })
             .map(|(id, info)| (id.clone(), info.endpoint))
             .collect();
-        
+
         Ok(degraded)
     }
 }

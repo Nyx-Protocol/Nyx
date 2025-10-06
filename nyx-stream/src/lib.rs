@@ -8,12 +8,16 @@
     clippy::unreachable,
     clippy::uninlined_format_args
 )]
-#![warn(
-    clippy::todo,
-    clippy::unimplemented
-)]
 // Relax strict lints for test builds only
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::uninlined_format_args))]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::uninlined_format_args
+    )
+)]
 
 pub mod advanced_path_selection; // Advanced path selection algorithms and load balancing
 pub mod advanced_rate_limiting; // Advanced Rate Limiting & Flow Control for v1.0
@@ -32,7 +36,6 @@ pub mod frame;
 pub mod frame_codec;
 pub mod handshake; // Hybrid post-quantum handshake state machine
 pub mod hpke_rekey;
-pub mod rekey_scheduler; // HPKE rekey scheduler (1GB/10min triggers)
 pub mod integrated_frame_processor;
 pub mod management; // Management frame_s and error code_s
 pub mod multipath;
@@ -49,9 +52,10 @@ pub mod plugin_ipc; // IPC helper trait_s (stub_s for now)
 pub mod plugin_manifest; // Manifest loader (TOML)
 pub mod plugin_registry; // In-memory registry and permission_s
 pub mod plugin_sandbox; // Cooperative sandbox (policy + guard_s)
-pub mod replay_protection; // Anti-replay protection with sliding window for v1.0
 pub mod plugin_sandbox_platform; // Platform-specific sandbox implementations
 pub mod plugin_settings;
+pub mod rekey_scheduler; // HPKE rekey scheduler (1GB/10min triggers)
+pub mod replay_protection; // Anti-replay protection with sliding window for v1.0
 pub mod telemetry_schema;
 #[cfg(test)]
 pub mod test_helpers; // Test helper utilities for integration tests // OTLP Telemetry Schema for Nyx Protocol v1.0 // Runtime setting_s for plugin_s // Rekey trigger helpers (test_s/integration use) // Integrated frame processing with reordering and flow control

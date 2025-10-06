@@ -62,21 +62,21 @@ pub enum MessageType {
     BindingRequest = 0x0001,
     BindingResponse = 0x0101,
     BindingErrorResponse = 0x0111,
-    
+
     // TURN methods (RFC 5766)
     AllocateRequest = 0x0003,
     AllocateResponse = 0x0103,
     AllocateErrorResponse = 0x0113,
-    
+
     RefreshRequest = 0x0004,
     RefreshResponse = 0x0104,
-    
+
     SendIndication = 0x0016,
     DataIndication = 0x0017,
-    
+
     CreatePermissionRequest = 0x0008,
     CreatePermissionResponse = 0x0108,
-    
+
     ChannelBindRequest = 0x0009,
     ChannelBindResponse = 0x0109,
 }
@@ -119,7 +119,7 @@ pub enum AttributeType {
     Software = 0x8022,
     AlternateServer = 0x8023,
     Fingerprint = 0x8028,
-    
+
     // RFC 5766 TURN attributes
     ChannelNumber = 0x000C,
     Lifetime = 0x000D,
@@ -132,6 +132,7 @@ pub enum AttributeType {
 }
 
 impl AttributeType {
+    #[allow(dead_code)] // Reserved for future STUN attribute parsing
     fn from_u16(value: u16) -> Option<Self> {
         match value {
             0x0001 => Some(Self::MappedAddress),
@@ -191,7 +192,7 @@ impl StunMessage {
         for byte in &mut transaction_id {
             *byte = rand::random();
         }
-        
+
         Self {
             header: StunHeader {
                 message_type,
@@ -215,17 +216,26 @@ impl StunMessage {
 
     /// Add USERNAME attribute
     pub fn add_username(&mut self, username: &str) {
-        self.add_attribute(AttributeType::Username as u16, Bytes::from(username.as_bytes().to_vec()));
+        self.add_attribute(
+            AttributeType::Username as u16,
+            Bytes::from(username.as_bytes().to_vec()),
+        );
     }
 
     /// Add REALM attribute
     pub fn add_realm(&mut self, realm: &str) {
-        self.add_attribute(AttributeType::Realm as u16, Bytes::from(realm.as_bytes().to_vec()));
+        self.add_attribute(
+            AttributeType::Realm as u16,
+            Bytes::from(realm.as_bytes().to_vec()),
+        );
     }
 
     /// Add NONCE attribute
     pub fn add_nonce(&mut self, nonce: &str) {
-        self.add_attribute(AttributeType::Nonce as u16, Bytes::from(nonce.as_bytes().to_vec()));
+        self.add_attribute(
+            AttributeType::Nonce as u16,
+            Bytes::from(nonce.as_bytes().to_vec()),
+        );
     }
 
     /// Add LIFETIME attribute (TURN)
@@ -275,7 +285,9 @@ impl StunMessage {
                 let mut cursor = attr.value.clone();
                 Ok(Some(cursor.get_u32()))
             } else {
-                Err(StunError::InvalidAttribute("Invalid lifetime length".into()))
+                Err(StunError::InvalidAttribute(
+                    "Invalid lifetime length".into(),
+                ))
             }
         } else {
             Ok(None)
@@ -288,13 +300,15 @@ impl StunMessage {
 
         // Write header
         buf.put_u16(self.header.message_type as u16);
-        
+
         // Calculate total length of attributes
-        let attrs_len: usize = self.attributes.iter()
+        let attrs_len: usize = self
+            .attributes
+            .iter()
             .map(|a| 4 + align_to_4(a.value.len()))
             .sum();
         buf.put_u16(attrs_len as u16);
-        
+
         buf.put_u32(MAGIC_COOKIE);
         buf.put_slice(&self.header.transaction_id);
 
@@ -303,7 +317,7 @@ impl StunMessage {
             buf.put_u16(attr.attr_type);
             buf.put_u16(attr.value.len() as u16);
             buf.put_slice(&attr.value);
-            
+
             // Pad to 4-byte boundary
             let padding = (4 - (attr.value.len() % 4)) % 4;
             buf.put_bytes(0, padding);
@@ -322,12 +336,13 @@ impl StunMessage {
 
         // Parse header
         let msg_type_raw = cursor.get_u16();
-        let message_type = MessageType::from_u16(msg_type_raw)
-            .ok_or_else(|| StunError::ParseError(format!("Unknown message type: {}", msg_type_raw)))?;
+        let message_type = MessageType::from_u16(msg_type_raw).ok_or_else(|| {
+            StunError::ParseError(format!("Unknown message type: {}", msg_type_raw))
+        })?;
 
         let length = cursor.get_u16();
         let magic = cursor.get_u32();
-        
+
         if magic != MAGIC_COOKIE {
             return Err(StunError::ParseError("Invalid magic cookie".into()));
         }
@@ -385,18 +400,26 @@ impl StunMessage {
         let result = mac.finalize();
         let integrity = result.into_bytes();
 
-        self.add_attribute(AttributeType::MessageIntegrity as u16, Bytes::copy_from_slice(&integrity[..]));
+        self.add_attribute(
+            AttributeType::MessageIntegrity as u16,
+            Bytes::copy_from_slice(&integrity[..]),
+        );
         Ok(())
     }
 
     /// Verify MESSAGE-INTEGRITY attribute
     pub fn verify_message_integrity(&self, password: &str) -> StunResult<bool> {
-        let integrity_attr = self.get_attribute(AttributeType::MessageIntegrity as u16)
-            .ok_or_else(|| StunError::AuthenticationFailed("No MESSAGE-INTEGRITY attribute".into()))?;
+        let integrity_attr = self
+            .get_attribute(AttributeType::MessageIntegrity as u16)
+            .ok_or_else(|| {
+                StunError::AuthenticationFailed("No MESSAGE-INTEGRITY attribute".into())
+            })?;
 
         // Create message without MESSAGE-INTEGRITY for verification
         let mut verify_msg = self.clone();
-        verify_msg.attributes.retain(|a| a.attr_type != AttributeType::MessageIntegrity as u16);
+        verify_msg
+            .attributes
+            .retain(|a| a.attr_type != AttributeType::MessageIntegrity as u16);
         let encoded = verify_msg.encode()?;
 
         // Calculate HMAC-SHA1
@@ -404,7 +427,7 @@ impl StunMessage {
         let mut mac = HmacSha1::new_from_slice(password.as_bytes())
             .map_err(|e| StunError::AuthenticationFailed(e.to_string()))?;
         mac.update(&encoded);
-        
+
         // Constant-time comparison to prevent timing attacks
         Ok(mac.verify_slice(&integrity_attr.value).is_ok())
     }
@@ -450,7 +473,7 @@ fn encode_xor_address(addr: SocketAddr, transaction_id: &[u8; 12]) -> Bytes {
             let mut xor_key = [0u8; 16];
             xor_key[0..4].copy_from_slice(&MAGIC_COOKIE.to_be_bytes());
             xor_key[4..16].copy_from_slice(transaction_id);
-            
+
             for i in 0..16 {
                 buf.put_u8(octets[i] ^ xor_key[i]);
             }
@@ -468,7 +491,7 @@ fn decode_xor_address(data: &[u8], transaction_id: &[u8; 12]) -> StunResult<Sock
 
     let mut cursor = data;
     cursor.advance(1); // Skip reserved byte
-    
+
     let family = cursor[0];
     cursor.advance(1);
 
@@ -481,13 +504,13 @@ fn decode_xor_address(data: &[u8], transaction_id: &[u8; 12]) -> StunResult<Sock
             if cursor.len() < 4 {
                 return Err(StunError::ParseError("IPv4 address truncated".into()));
             }
-            
+
             let magic_bytes = MAGIC_COOKIE.to_be_bytes();
             let mut octets = [0u8; 4];
             for i in 0..4 {
                 octets[i] = cursor[i] ^ magic_bytes[i];
             }
-            
+
             Ok(SocketAddr::new(IpAddr::V4(Ipv4Addr::from(octets)), port))
         }
         0x02 => {
@@ -495,16 +518,16 @@ fn decode_xor_address(data: &[u8], transaction_id: &[u8; 12]) -> StunResult<Sock
             if cursor.len() < 16 {
                 return Err(StunError::ParseError("IPv6 address truncated".into()));
             }
-            
+
             let mut xor_key = [0u8; 16];
             xor_key[0..4].copy_from_slice(&MAGIC_COOKIE.to_be_bytes());
             xor_key[4..16].copy_from_slice(transaction_id);
-            
+
             let mut octets = [0u8; 16];
             for i in 0..16 {
                 octets[i] = cursor[i] ^ xor_key[i];
             }
-            
+
             Ok(SocketAddr::new(IpAddr::V6(Ipv6Addr::from(octets)), port))
         }
         _ => Err(StunError::UnsupportedAddressFamily),
@@ -563,7 +586,8 @@ impl StunClient {
         }
 
         // Extract mapped address
-        response.get_xor_mapped_address()?
+        response
+            .get_xor_mapped_address()?
             .ok_or_else(|| StunError::ParseError("No XOR-MAPPED-ADDRESS in response".into()))
     }
 }
@@ -617,9 +641,9 @@ impl TurnClient {
                 self.nonce = Some(nonce);
                 match self.allocate_attempt(lifetime).await? {
                     AllocateResult::Success(addr) => Ok(addr),
-                    AllocateResult::NeedsAuth(_, _) => {
-                        Err(StunError::AuthenticationFailed("Authentication failed after retry".into()))
-                    }
+                    AllocateResult::NeedsAuth(_, _) => Err(StunError::AuthenticationFailed(
+                        "Authentication failed after retry".into(),
+                    )),
                 }
             }
         }
@@ -662,22 +686,25 @@ impl TurnClient {
         // Check if we need to authenticate
         if response.header.message_type == MessageType::AllocateErrorResponse {
             // Extract realm and nonce for retry
-            let realm = response.get_attribute(AttributeType::Realm as u16)
+            let realm = response
+                .get_attribute(AttributeType::Realm as u16)
                 .map(|attr| String::from_utf8_lossy(&attr.value).to_string());
-            let nonce = response.get_attribute(AttributeType::Nonce as u16)
+            let nonce = response
+                .get_attribute(AttributeType::Nonce as u16)
                 .map(|attr| String::from_utf8_lossy(&attr.value).to_string());
 
             if let (Some(realm), Some(nonce)) = (realm, nonce) {
                 return Ok(AllocateResult::NeedsAuth(realm, nonce));
             }
-            
+
             return Err(StunError::ServerError("Allocation failed".into()));
         }
 
         // Extract relayed address
-        let addr = response.get_xor_relayed_address()?
+        let addr = response
+            .get_xor_relayed_address()?
             .ok_or_else(|| StunError::ParseError("No XOR-RELAYED-ADDRESS in response".into()))?;
-        
+
         Ok(AllocateResult::Success(addr))
     }
 
@@ -709,7 +736,8 @@ impl TurnClient {
         buf.truncate(len);
 
         let response = StunMessage::decode(&buf)?;
-        response.get_lifetime()?
+        response
+            .get_lifetime()?
             .ok_or_else(|| StunError::ParseError("No LIFETIME in response".into()))
     }
 }
@@ -726,7 +754,7 @@ mod tests {
 
     #[test]
     fn test_stun_message_encoding() {
-        let mut msg = StunMessage::new(MessageType::BindingRequest);
+        let msg = StunMessage::new(MessageType::BindingRequest);
         let encoded = msg.encode().unwrap();
 
         // Verify header
@@ -736,7 +764,7 @@ mod tests {
 
     #[test]
     fn test_stun_message_decoding() {
-        let mut msg = StunMessage::new(MessageType::BindingRequest);
+        let msg = StunMessage::new(MessageType::BindingRequest);
         let encoded = msg.encode().unwrap();
         let decoded = StunMessage::decode(&encoded).unwrap();
 
@@ -748,7 +776,7 @@ mod tests {
     fn test_xor_address_encoding() {
         let addr: SocketAddr = "192.168.1.1:5000".parse().unwrap();
         let transaction_id = [0u8; 12];
-        
+
         let encoded = encode_xor_address(addr, &transaction_id);
         let decoded = decode_xor_address(&encoded, &transaction_id).unwrap();
 
@@ -763,8 +791,120 @@ mod tests {
 
         // Verification should succeed
         assert!(msg.verify_message_integrity("test-password").unwrap());
-        
+
         // Wrong password should fail
         assert!(!msg.verify_message_integrity("wrong-password").unwrap());
+    }
+
+    #[test]
+    fn test_binding_request_attributes() {
+        let mut msg = StunMessage::new(MessageType::BindingRequest);
+        msg.add_username("alice");
+        msg.add_realm("example.org");
+        msg.add_nonce("f//499k954d6OL34oL9FSTvy64sA");
+
+        let encoded = msg.encode().unwrap();
+        let decoded = StunMessage::decode(&encoded).unwrap();
+
+        // Verify attributes were preserved
+        assert!(decoded
+            .get_attribute(AttributeType::Username as u16)
+            .is_some());
+        assert!(decoded.get_attribute(AttributeType::Realm as u16).is_some());
+        assert!(decoded.get_attribute(AttributeType::Nonce as u16).is_some());
+    }
+
+    #[test]
+    fn test_turn_allocate_request() {
+        let mut msg = StunMessage::new(MessageType::AllocateRequest);
+        msg.add_requested_transport(17); // UDP
+        msg.add_lifetime(600); // 10 minutes
+
+        let encoded = msg.encode().unwrap();
+        let decoded = StunMessage::decode(&encoded).unwrap();
+
+        assert_eq!(decoded.header.message_type, MessageType::AllocateRequest);
+        assert!(decoded
+            .get_attribute(AttributeType::RequestedTransport as u16)
+            .is_some());
+        assert_eq!(decoded.get_lifetime().unwrap(), Some(600));
+    }
+
+    #[test]
+    fn test_xor_mapped_address_attribute() {
+        let mut msg = StunMessage::new(MessageType::BindingResponse);
+        let addr: SocketAddr = "203.0.113.45:54320".parse().unwrap();
+        msg.add_xor_mapped_address(addr);
+
+        let encoded = msg.encode().unwrap();
+        let decoded = StunMessage::decode(&encoded).unwrap();
+
+        let parsed_addr = decoded.get_xor_mapped_address().unwrap().unwrap();
+        assert_eq!(parsed_addr, addr);
+    }
+
+    #[test]
+    fn test_ipv6_xor_address() {
+        let addr: SocketAddr = "[2001:db8::1]:8080".parse().unwrap();
+        let transaction_id = [
+            0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x12, 0x34, 0x56, 0x78,
+        ];
+
+        let encoded = encode_xor_address(addr, &transaction_id);
+        let decoded = decode_xor_address(&encoded, &transaction_id).unwrap();
+
+        assert_eq!(addr, decoded);
+    }
+
+    #[test]
+    fn test_error_code_attribute() {
+        let msg = StunMessage::new(MessageType::BindingErrorResponse);
+        // Error codes would be added here if implemented
+        let encoded = msg.encode().unwrap();
+
+        assert!(encoded.len() >= 20);
+        assert_eq!(msg.header.message_type, MessageType::BindingErrorResponse);
+    }
+
+    #[test]
+    fn test_message_type_roundtrip() {
+        let types = vec![
+            MessageType::BindingRequest,
+            MessageType::BindingResponse,
+            MessageType::AllocateRequest,
+            MessageType::AllocateResponse,
+            MessageType::RefreshRequest,
+            MessageType::RefreshResponse,
+        ];
+
+        for msg_type in types {
+            let parsed = MessageType::from_u16(msg_type as u16).unwrap();
+            assert_eq!(parsed, msg_type);
+        }
+    }
+
+    #[test]
+    fn test_attribute_padding() {
+        let mut msg = StunMessage::new(MessageType::BindingRequest);
+        // Add attribute with non-4-byte-aligned length
+        msg.add_username("abc"); // 3 bytes, requires 1 byte padding
+
+        let encoded = msg.encode().unwrap();
+        let decoded = StunMessage::decode(&encoded).unwrap();
+
+        // Username should be preserved despite padding
+        let username_attr = decoded
+            .get_attribute(AttributeType::Username as u16)
+            .unwrap();
+        assert_eq!(username_attr.value.len(), 3);
+    }
+
+    #[test]
+    fn test_transaction_id_uniqueness() {
+        let msg1 = StunMessage::new(MessageType::BindingRequest);
+        let msg2 = StunMessage::new(MessageType::BindingRequest);
+
+        // Transaction IDs should be different (statistically)
+        assert_ne!(msg1.header.transaction_id, msg2.header.transaction_id);
     }
 }

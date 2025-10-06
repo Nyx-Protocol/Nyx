@@ -7,7 +7,6 @@
     clippy::uninlined_format_args,
     clippy::unreachable
 )]
-
 #![forbid(unsafe_code)]
 
 //! Performance and stress tests for the plugin system

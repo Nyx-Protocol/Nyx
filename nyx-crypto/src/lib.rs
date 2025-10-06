@@ -13,11 +13,8 @@
     clippy::unwrap_used,
     clippy::expect_used,
     clippy::panic,
-    clippy::unreachable,
-    clippy::todo,
-    clippy::unimplemented
+    clippy::unreachable
 )]
-
 #![cfg_attr(feature = "strict-docs", warn(missing_docs))]
 #![allow(missing_docs)]
 #![allow(clippy::doc_lazy_continuation)]

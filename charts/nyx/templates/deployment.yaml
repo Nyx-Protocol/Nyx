@@ -62,7 +62,16 @@ spec:
 {{ toYaml (.Values.securityContext | default (dict)) | indent 12 }}
           ports:
             - containerPort: 43300
+              name: transport
+              protocol: TCP
             - containerPort: {{ .Values.service.metricsPort }}
+              name: metrics
+              protocol: TCP
+{{- if .Values.grpc.enabled }}
+            - containerPort: {{ .Values.grpc.port }}
+              name: grpc
+              protocol: TCP
+{{- end }}
           resources:
 {{ toYaml (.Values.resources | default (dict)) | indent 12 }}
           volumeMounts:
@@ -78,6 +87,18 @@ spec:
           env:
             - name: NYX_CONFIG
               value: "{{ $mount }}/{{ $file }}"
+{{- if .Values.telemetry.otlp.enabled }}
+            - name: NYX_OTLP_ENDPOINT
+              value: "{{ .Values.telemetry.otlp.endpoint }}"
+{{- end }}
+{{- if .Values.grpc.enabled }}
+            - name: NYX_GRPC_ADDR
+              value: "0.0.0.0:{{ .Values.grpc.port }}"
+{{- end }}
+            - name: NYX_PROMETHEUS_ADDR
+              value: "0.0.0.0:{{ .Values.service.metricsPort }}"
+            - name: RUST_LOG
+              value: "{{ .Values.config.logLevel | default \"info\" }}"
           envFrom:
 {{- $sec := (default (dict) .Values.secrets) -}}
 {{- if $sec.create }}

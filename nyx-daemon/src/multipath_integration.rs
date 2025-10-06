@@ -15,8 +15,7 @@
 #![forbid(unsafe_code)]
 
 use nyx_stream::multipath_dataplane::{
-    MultipathConfig, PathId, PathInfo, PathMetrics, PathScheduler, PathState,
-    ReorderingBuffer,
+    MultipathConfig, PathId, PathInfo, PathMetrics, PathScheduler, PathState, ReorderingBuffer,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -53,7 +52,7 @@ impl MultipathManager {
     /// Unregister connection
     pub async fn unregister_connection(&self, conn_id: ConnectionId) -> Result<(), MultipathError> {
         let mut conns = self.connections.write().await;
-        
+
         if conns.remove(&conn_id).is_some() {
             info!("Unregistered connection {} from multipath", conn_id);
             Ok(())
@@ -70,7 +69,7 @@ impl MultipathManager {
         path_info: PathInfo,
     ) -> Result<(), MultipathError> {
         let mut conns = self.connections.write().await;
-        
+
         let multipath = conns
             .get_mut(&conn_id)
             .ok_or(MultipathError::ConnectionNotFound)?;
@@ -87,7 +86,7 @@ impl MultipathManager {
         path_id: PathId,
     ) -> Result<(), MultipathError> {
         let mut conns = self.connections.write().await;
-        
+
         let multipath = conns
             .get_mut(&conn_id)
             .ok_or(MultipathError::ConnectionNotFound)?;
@@ -100,7 +99,7 @@ impl MultipathManager {
     /// Select path for sending (core scheduler integration)
     pub async fn select_path(&self, conn_id: ConnectionId) -> Result<PathId, MultipathError> {
         let mut conns = self.connections.write().await;
-        
+
         let multipath = conns
             .get_mut(&conn_id)
             .ok_or(MultipathError::ConnectionNotFound)?;
@@ -116,7 +115,7 @@ impl MultipathManager {
         metrics: PathMetrics,
     ) -> Result<(), MultipathError> {
         let mut conns = self.connections.write().await;
-        
+
         let multipath = conns
             .get_mut(&conn_id)
             .ok_or(MultipathError::ConnectionNotFound)?;
@@ -132,26 +131,36 @@ impl MultipathManager {
         path_id: PathId,
     ) -> Option<PathMetrics> {
         let conns = self.connections.read().await;
-        
+
         conns.get(&conn_id).and_then(|multipath| {
-            multipath.scheduler.get_path_info(path_id).map(|info| info.metrics.clone())
+            multipath
+                .scheduler
+                .get_path_info(path_id)
+                .map(|info| info.metrics.clone())
         })
     }
 
     /// List all paths for connection
     pub async fn list_paths(&self, conn_id: ConnectionId) -> Vec<PathId> {
         let conns = self.connections.read().await;
-        
+
         conns
             .get(&conn_id)
-            .map(|multipath| multipath.scheduler.get_all_paths().keys().copied().collect())
+            .map(|multipath| {
+                multipath
+                    .scheduler
+                    .get_all_paths()
+                    .keys()
+                    .copied()
+                    .collect()
+            })
             .unwrap_or_default()
     }
 
     /// Get reordering buffer status
     pub async fn get_reorder_status(&self, conn_id: ConnectionId) -> Option<ReorderStatus> {
         let conns = self.connections.read().await;
-        
+
         conns.get(&conn_id).map(|multipath| {
             let (buffered, next_seq, timeout) = multipath.reorder_buffer.get_stats();
             ReorderStatus {
@@ -168,6 +177,7 @@ struct ConnectionMultipath {
     scheduler: PathScheduler,
     reorder_buffer: ReorderingBuffer,
     config: MultipathConfig,
+    #[allow(dead_code)]
     next_sequence: u64,
     last_probe: Instant,
 }
@@ -207,7 +217,11 @@ impl ConnectionMultipath {
         self.scheduler.select_path()
     }
 
-    fn update_metrics(&mut self, path_id: PathId, metrics: PathMetrics) -> Result<(), MultipathError> {
+    fn update_metrics(
+        &mut self,
+        path_id: PathId,
+        metrics: PathMetrics,
+    ) -> Result<(), MultipathError> {
         self.scheduler
             .update_path_metrics(path_id, metrics)
             .map_err(|e| MultipathError::SchedulerError(e.to_string()))
@@ -224,7 +238,7 @@ impl ConnectionMultipath {
             if let Some(path_info) = self.scheduler.get_all_paths().get(&path_id) {
                 let needs_degradation = path_info.last_activity.elapsed() > timeout
                     && matches!(path_info.state, PathState::Active);
-                
+
                 let needs_failure = path_info.metrics.quality < self.config.min_path_quality
                     && matches!(path_info.state, PathState::Active | PathState::Degraded);
 

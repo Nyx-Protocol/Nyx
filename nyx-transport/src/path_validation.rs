@@ -683,7 +683,7 @@ pub enum ProbeType {
 }
 
 /// Active probe scheduler for periodic path quality measurement
-/// 
+///
 /// Implements RFC-compliant probing with:
 /// - Configurable probe intervals
 /// - Exponential backoff on failures
@@ -698,7 +698,7 @@ pub struct ProbeScheduler {
 
 impl ProbeScheduler {
     /// Create new probe scheduler
-    /// 
+    ///
     /// # Arguments
     /// * `local_addr` - Local bind address for probes
     /// * `probe_interval` - Interval between probes (default: 5 seconds)
@@ -709,7 +709,7 @@ impl ProbeScheduler {
         max_history: usize,
     ) -> Result<Self> {
         let validator = PathValidator::new(local_addr).await?;
-        
+
         Ok(Self {
             validator: Arc::new(validator),
             probe_interval,
@@ -719,7 +719,7 @@ impl ProbeScheduler {
     }
 
     /// Start periodic probing for a path
-    /// 
+    ///
     /// Returns a join handle that can be aborted to stop probing
     pub fn start_probing(&self, target: SocketAddr) -> tokio::task::JoinHandle<()> {
         let validator = Arc::clone(&self.validator);
@@ -730,10 +730,10 @@ impl ProbeScheduler {
         tokio::spawn(async move {
             let mut interval_timer = tokio::time::interval(interval);
             let mut consecutive_failures = 0u32;
-            
+
             loop {
                 interval_timer.tick().await;
-                
+
                 // Perform probe
                 let probe_start = Instant::now();
                 let result = match validator.validate_path(target).await {
@@ -767,7 +767,7 @@ impl ProbeScheduler {
                 if let Ok(mut hist) = history.lock() {
                     let path_history = hist.entry(target).or_insert_with(Vec::new);
                     path_history.push(result);
-                    
+
                     // Limit history size
                     if path_history.len() > max_history {
                         path_history.remove(0);
@@ -776,8 +776,8 @@ impl ProbeScheduler {
 
                 // Exponential backoff on failures (up to 60 seconds)
                 if consecutive_failures > 0 {
-                    let backoff_ms = (interval.as_millis() as u64)
-                        * (2u64.pow(consecutive_failures.min(5)));
+                    let backoff_ms =
+                        (interval.as_millis() as u64) * (2u64.pow(consecutive_failures.min(5)));
                     let backoff = Duration::from_millis(backoff_ms.min(60_000));
                     tokio::time::sleep(backoff).await;
                 }
@@ -786,7 +786,7 @@ impl ProbeScheduler {
     }
 
     /// Get probe statistics for a path
-    /// 
+    ///
     /// Returns aggregated statistics from recent probes:
     /// - Average RTT
     /// - Packet loss rate
@@ -795,7 +795,7 @@ impl ProbeScheduler {
     pub fn get_path_stats(&self, target: &SocketAddr) -> Option<PathStats> {
         let history = self.probe_history.lock().ok()?;
         let results = history.get(target)?;
-        
+
         if results.is_empty() {
             return None;
         }
@@ -828,7 +828,8 @@ impl ProbeScheduler {
                     let diff = rtt.as_secs_f64() - mean_rtt;
                     diff * diff
                 })
-                .sum::<f64>() / (rtts.len() - 1) as f64;
+                .sum::<f64>()
+                / (rtts.len() - 1) as f64;
             Duration::from_secs_f64(variance.sqrt())
         } else {
             Duration::ZERO
@@ -848,7 +849,7 @@ impl ProbeScheduler {
     /// Get all path statistics
     pub fn get_all_stats(&self) -> HashMap<SocketAddr, PathStats> {
         let mut result = HashMap::new();
-        
+
         if let Ok(history) = self.probe_history.lock() {
             for target in history.keys() {
                 if let Some(stats) = self.get_path_stats(target) {
@@ -856,7 +857,7 @@ impl ProbeScheduler {
                 }
             }
         }
-        
+
         result
     }
 
@@ -888,7 +889,7 @@ pub struct PathStats {
 }
 
 /// Endpoint validator for connection establishment verification
-/// 
+///
 /// Validates that an endpoint is reachable and responsive by:
 /// 1. Attempting TCP connection (if applicable)
 /// 2. Sending PATH_CHALLENGE and expecting PATH_RESPONSE
@@ -904,19 +905,19 @@ impl EndpointValidator {
     }
 
     /// Validate endpoint reachability
-    /// 
+    ///
     /// # Arguments
     /// * `local_addr` - Local bind address
     /// * `target` - Target endpoint to validate
-    /// 
+    ///
     /// # Returns
     /// `Ok(Duration)` with connection establishment time, or error
     pub async fn validate(&self, local_addr: SocketAddr, target: SocketAddr) -> Result<Duration> {
         let start = Instant::now();
-        
+
         // Try PATH_CHALLENGE validation first (preferred for QUIC)
         let validator = PathValidator::new_with_timeout(local_addr, self.timeout).await?;
-        
+
         match validator.validate_path(target).await {
             Ok(_metrics) => Ok(start.elapsed()),
             Err(e) => {
@@ -932,7 +933,7 @@ impl EndpointValidator {
     /// TCP connection probe (fallback)
     async fn tcp_probe(target: SocketAddr, timeout: Duration) -> Result<Duration> {
         let start = Instant::now();
-        
+
         match tokio::time::timeout(timeout, tokio::net::TcpStream::connect(target)).await {
             Ok(Ok(_stream)) => Ok(start.elapsed()),
             Ok(Err(e)) => Err(Error::Msg(format!("TCP probe failed: {e}"))),
@@ -951,9 +952,8 @@ impl EndpointValidator {
 
         for &target in targets {
             let validator = Self::new(self.timeout);
-            let handle = tokio::spawn(async move {
-                (target, validator.validate(local_addr, target).await)
-            });
+            let handle =
+                tokio::spawn(async move { (target, validator.validate(local_addr, target).await) });
             handles.push(handle);
         }
 
@@ -1064,7 +1064,7 @@ mod tests {
 
         assert_ne!(PathChallenge, UdpEcho);
         assert_ne!(TcpConnect, PathChallenge);
-        
+
         // Test Debug formatting
         assert_eq!(format!("{PathChallenge:?}"), "PathChallenge");
         assert_eq!(format!("{UdpEcho:?}"), "UdpEcho");
@@ -1074,16 +1074,12 @@ mod tests {
     #[tokio::test]
     async fn probe_scheduler_creation() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let local_addr = "127.0.0.1:0".parse()?;
-        let scheduler = ProbeScheduler::new(
-            local_addr,
-            Duration::from_secs(1),
-            50,
-        ).await?;
-        
+        let scheduler = ProbeScheduler::new(local_addr, Duration::from_secs(1), 50).await?;
+
         // Verify scheduler is created successfully
         assert!(scheduler.probe_interval == Duration::from_secs(1));
         assert_eq!(scheduler.max_history, 50);
-        
+
         Ok(())
     }
 
@@ -1099,13 +1095,13 @@ mod tests {
             probe_type: ProbeType::PathChallenge,
             error: None,
         };
-        
+
         assert!(result.success);
         assert_eq!(result.rtt, Duration::from_millis(50));
         assert_eq!(result.packet_loss, 0.0);
         assert_eq!(result.probe_type, ProbeType::PathChallenge);
         assert!(result.error.is_none());
-        
+
         Ok(())
     }
 
@@ -1118,7 +1114,7 @@ mod tests {
     #[tokio::test]
     async fn path_stats_calculation() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let target = "127.0.0.1:8080".parse()?;
-        
+
         // Create sample probe results
         let results = vec![
             ProbeResult {
@@ -1153,47 +1149,41 @@ mod tests {
         // Calculate stats manually
         let success_count = results.iter().filter(|r| r.success).count();
         let success_rate = success_count as f64 / results.len() as f64;
-        
+
         assert_eq!(success_count, 2);
         assert!((success_rate - 0.666).abs() < 0.01);
-        
+
         Ok(())
     }
 
     #[tokio::test]
     async fn probe_scheduler_stats_empty() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let local_addr = "127.0.0.1:0".parse()?;
-        let scheduler = ProbeScheduler::new(
-            local_addr,
-            Duration::from_secs(1),
-            50,
-        ).await?;
-        
+        let scheduler = ProbeScheduler::new(local_addr, Duration::from_secs(1), 50).await?;
+
         let target: SocketAddr = "127.0.0.1:9999".parse()?;
         let stats = scheduler.get_path_stats(&target);
-        
+
         // Should be None when no probes have been performed
         assert!(stats.is_none());
-        
+
         Ok(())
     }
 
     #[tokio::test]
-    async fn probe_scheduler_clear_history() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    async fn probe_scheduler_clear_history() -> std::result::Result<(), Box<dyn std::error::Error>>
+    {
         let local_addr = "127.0.0.1:0".parse()?;
-        let scheduler = ProbeScheduler::new(
-            local_addr,
-            Duration::from_secs(1),
-            50,
-        ).await?;
-        
+        let scheduler = ProbeScheduler::new(local_addr, Duration::from_secs(1), 50).await?;
+
         let target: SocketAddr = "127.0.0.1:9999".parse()?;
-        
+
         // Manually add some history
         {
             let mut history = scheduler.probe_history.lock().unwrap();
-            history.insert(target, vec![
-                ProbeResult {
+            history.insert(
+                target,
+                vec![ProbeResult {
                     target,
                     success: true,
                     rtt: Duration::from_millis(50),
@@ -1201,40 +1191,43 @@ mod tests {
                     timestamp: Instant::now(),
                     probe_type: ProbeType::PathChallenge,
                     error: None,
-                }
-            ]);
+                }],
+            );
         }
-        
+
         // Verify history exists
         assert!(scheduler.get_path_stats(&target).is_some());
-        
+
         // Clear history
         scheduler.clear_history(&target);
-        
+
         // Verify history is cleared
         assert!(scheduler.get_path_stats(&target).is_none());
-        
+
         Ok(())
     }
 
     #[tokio::test]
-    async fn endpoint_validator_tcp_probe_localhost() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    async fn endpoint_validator_tcp_probe_localhost(
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         // Start a simple TCP listener
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await?;
         let server_addr = listener.local_addr()?;
-        
+
         // Spawn listener task
         let _listener_task = tokio::spawn(async move {
             let _ = listener.accept().await;
         });
-        
+
         // Test TCP probe
         let validator = EndpointValidator::new(Duration::from_secs(2));
-        let result = validator.validate("127.0.0.1:0".parse()?, server_addr).await;
-        
+        let result = validator
+            .validate("127.0.0.1:0".parse()?, server_addr)
+            .await;
+
         // Should succeed connecting to localhost
         assert!(result.is_ok());
-        
+
         Ok(())
     }
 }

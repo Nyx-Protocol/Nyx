@@ -255,7 +255,10 @@ impl PathScheduler {
     /// Select next path with telemetry instrumentation (Section 6.2 - Multipath decision tracking)
     ///
     /// Async version of `select_path()` that creates telemetry spans for path selection observability.
-    pub async fn select_path_with_telemetry(&mut self, connection_id: TelemetryConnectionId) -> Option<PathId> {
+    pub async fn select_path_with_telemetry(
+        &mut self,
+        connection_id: TelemetryConnectionId,
+    ) -> Option<PathId> {
         // Telemetry: Create span for multipath path selection (Section 6.2)
         let span_id = if let Some(ref telemetry) = self.telemetry {
             telemetry
@@ -306,15 +309,27 @@ impl PathScheduler {
                     if let Some(path_info) = self.paths.get(&path_id) {
                         telemetry
                             .get_context()
-                            .add_span_attribute(sid, "selected.rtt_ms", &path_info.metrics.rtt_ms.to_string())
+                            .add_span_attribute(
+                                sid,
+                                "selected.rtt_ms",
+                                &path_info.metrics.rtt_ms.to_string(),
+                            )
                             .await;
                         telemetry
                             .get_context()
-                            .add_span_attribute(sid, "selected.quality", &path_info.metrics.quality.to_string())
+                            .add_span_attribute(
+                                sid,
+                                "selected.quality",
+                                &path_info.metrics.quality.to_string(),
+                            )
                             .await;
                         telemetry
                             .get_context()
-                            .add_span_attribute(sid, "selected.hop_count", &path_info.metrics.hop_count.to_string())
+                            .add_span_attribute(
+                                sid,
+                                "selected.hop_count",
+                                &path_info.metrics.hop_count.to_string(),
+                            )
                             .await;
                     }
                 }

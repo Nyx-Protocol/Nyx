@@ -1,5 +1,4 @@
 #![allow(missing_docs)]
-
 #![forbid(unsafe_code)]
 
 use nyx_core::sandbox::{apply_policy, SandboxPolicy as CorePolicy, SandboxStatus};

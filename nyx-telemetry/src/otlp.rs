@@ -1,16 +1,16 @@
 //! OTLP (OpenTelemetry Protocol) Exporter Implementation
-//! 
+//!
 //! This module provides OTLP exporter functionality for sending telemetry data
 //! to OpenTelemetry collectors via gRPC or HTTP protocols.
 
 use crate::{Error, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::{mpsc, RwLock};
 use tokio::time::{interval, sleep, timeout};
 use tracing::{debug, error, info, warn};
-use serde::{Deserialize, Serialize};
 
 /// Maximum number of spans to batch before sending
 const DEFAULT_MAX_BATCH_SIZE: usize = 512;
@@ -131,8 +131,10 @@ pub struct ExportBatch {
 /// OTLP Exporter
 pub struct OtlpExporter {
     /// Configuration
+    #[allow(dead_code)]
     config: OtlpConfig,
     /// HTTP client
+    #[allow(dead_code)]
     client: reqwest::Client,
     /// Span sender channel
     span_sender: mpsc::UnboundedSender<Span>,
@@ -171,9 +173,9 @@ impl OtlpExporter {
 
         let (span_sender, span_receiver) = mpsc::unbounded_channel();
         let (shutdown_tx, shutdown_rx) = mpsc::channel(1);
-        
+
         let stats = Arc::new(RwLock::new(ExportStats::default()));
-        
+
         // Start background export task
         let export_task = ExportTask::new(
             config.clone(),
@@ -182,9 +184,9 @@ impl OtlpExporter {
             shutdown_rx,
             stats.clone(),
         );
-        
+
         tokio::spawn(export_task.run());
-        
+
         Ok(Self {
             config,
             client,
@@ -200,11 +202,11 @@ impl OtlpExporter {
             let mut stats = self.stats.write().await;
             stats.spans_received += 1;
         }
-        
+
         self.span_sender
             .send(span)
             .map_err(|_| Error::Init("Export channel closed".to_string()))?;
-            
+
         Ok(())
     }
 
@@ -216,7 +218,7 @@ impl OtlpExporter {
     /// Shutdown the exporter gracefully
     pub async fn shutdown(&mut self) -> Result<()> {
         if let Some(shutdown_tx) = self.shutdown_tx.take() {
-            if let Err(_) = shutdown_tx.send(()).await {
+            if shutdown_tx.send(()).await.is_err() {
                 warn!("Shutdown signal already sent or receiver dropped");
             }
         }
@@ -237,12 +239,12 @@ impl OtlpExporter {
             status: SpanStatus::Ok,
             events: vec![],
         };
-        
+
         self.export_span(flush_span).await?;
-        
+
         // Wait a bit for the flush to complete
         sleep(Duration::from_millis(100)).await;
-        
+
         Ok(())
     }
 }
@@ -304,14 +306,14 @@ impl ExportTask {
                         }
                     }
                 }
-                
+
                 // Batch timeout
                 _ = batch_timer.tick() => {
                     if !self.batch.is_empty() {
                         self.export_current_batch().await;
                     }
                 }
-                
+
                 // Shutdown signal
                 _ = self.shutdown_receiver.recv() => {
                     info!("OTLP exporter shutdown requested");
@@ -320,18 +322,18 @@ impl ExportTask {
                 }
             }
         }
-        
+
         info!("OTLP export task completed");
     }
 
     async fn add_span_to_batch(&mut self, span: Span) {
         self.batch.push(span);
-        
+
         // Export if batch is full
         if self.batch.len() >= self.config.max_batch_size {
             self.export_current_batch().await;
         }
-        
+
         // Export if timeout exceeded
         if self.last_export.elapsed() >= self.config.batch_timeout {
             self.export_current_batch().await;
@@ -346,7 +348,10 @@ impl ExportTask {
         let batch = ExportBatch {
             resource: HashMap::from([
                 ("service.name".to_string(), "nyx".to_string()),
-                ("service.version".to_string(), env!("CARGO_PKG_VERSION").to_string()),
+                (
+                    "service.version".to_string(),
+                    env!("CARGO_PKG_VERSION").to_string(),
+                ),
             ]),
             spans: std::mem::take(&mut self.batch),
             created_at: SystemTime::now(),
@@ -391,7 +396,10 @@ impl ExportTask {
                         stats.retries_performed += 1;
                     }
 
-                    warn!("Export attempt {} failed, retrying in {:?}: {}", retry_count, backoff, e);
+                    warn!(
+                        "Export attempt {} failed, retrying in {:?}: {}",
+                        retry_count, backoff, e
+                    );
                     sleep(backoff).await;
                     backoff = std::cmp::min(backoff * 2, Duration::from_secs(30));
                 }
@@ -408,7 +416,8 @@ impl ExportTask {
         let body = serde_json::to_vec(batch)
             .map_err(|e| Error::Init(format!("Failed to serialize batch: {}", e)))?;
 
-        let mut request = self.client
+        let mut request = self
+            .client
             .post(&url)
             .header("Content-Type", "application/json");
 
@@ -436,7 +445,10 @@ impl ExportTask {
                 .text()
                 .await
                 .unwrap_or_else(|_| "Failed to read response body".to_string());
-            Err(Error::Init(format!("Export failed with status {}: {}", status, body)))
+            Err(Error::Init(format!(
+                "Export failed with status {}: {}",
+                status, body
+            )))
         }
     }
 }
@@ -493,13 +505,13 @@ pub mod utils {
     pub fn generate_trace_id() -> String {
         use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(0);
-        
+
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos() as u64;
         let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
-        
+
         format!("{:016x}{:016x}", timestamp, counter)
     }
 
@@ -507,7 +519,7 @@ pub mod utils {
     pub fn generate_span_id() -> String {
         use std::sync::atomic::{AtomicU64, Ordering};
         static COUNTER: AtomicU64 = AtomicU64::new(0);
-        
+
         let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
         format!("{:016x}", counter)
     }
@@ -544,23 +556,23 @@ mod tests {
     async fn test_span_export() {
         let config = create_test_config();
         let mut exporter = OtlpExporter::new(config).await.unwrap();
-        
+
         let span = utils::create_span(
             "trace123".to_string(),
             "span456".to_string(),
             "test_span".to_string(),
             None,
         );
-        
+
         let result = exporter.export_span(span).await;
         assert!(result.is_ok());
-        
+
         // Wait a bit for background processing
         sleep(Duration::from_millis(50)).await;
-        
+
         let stats = exporter.stats().await;
         assert_eq!(stats.spans_received, 1);
-        
+
         exporter.shutdown().await.unwrap();
     }
 
@@ -568,7 +580,7 @@ mod tests {
     async fn test_batch_export() {
         let config = create_test_config();
         let mut exporter = OtlpExporter::new(config).await.unwrap();
-        
+
         // Export multiple spans to trigger batching
         for i in 0..3 {
             let span = utils::create_span(
@@ -579,13 +591,13 @@ mod tests {
             );
             exporter.export_span(span).await.unwrap();
         }
-        
+
         // Wait for batch processing
         sleep(Duration::from_millis(200)).await;
-        
+
         let stats = exporter.stats().await;
         assert_eq!(stats.spans_received, 3);
-        
+
         exporter.shutdown().await.unwrap();
     }
 
@@ -593,17 +605,17 @@ mod tests {
     async fn test_force_flush() {
         let config = create_test_config();
         let exporter = OtlpExporter::new(config).await.unwrap();
-        
+
         let span = utils::create_span(
             "trace123".to_string(),
             "span456".to_string(),
             "test_span".to_string(),
             None,
         );
-        
+
         exporter.export_span(span).await.unwrap();
         exporter.force_flush().await.unwrap();
-        
+
         let stats = exporter.stats().await;
         assert!(stats.spans_received >= 1);
     }
@@ -616,7 +628,7 @@ mod tests {
             "test_span".to_string(),
             None,
         );
-        
+
         assert_eq!(span.trace_id, "trace123");
         assert_eq!(span.span_id, "span456");
         assert_eq!(span.name, "test_span");
@@ -632,7 +644,7 @@ mod tests {
             "test_span".to_string(),
             None,
         );
-        
+
         let finished_span = utils::finish_span(span, SpanStatus::Ok);
         assert!(finished_span.end_time.is_some());
         assert_eq!(finished_span.status, SpanStatus::Ok);
@@ -646,14 +658,13 @@ mod tests {
             "test_span".to_string(),
             None,
         );
-        
-        let span_with_attr = utils::add_attribute(
-            span,
-            "key1".to_string(),
-            "value1".to_string(),
+
+        let span_with_attr = utils::add_attribute(span, "key1".to_string(), "value1".to_string());
+
+        assert_eq!(
+            span_with_attr.attributes.get("key1"),
+            Some(&"value1".to_string())
         );
-        
-        assert_eq!(span_with_attr.attributes.get("key1"), Some(&"value1".to_string()));
     }
 
     #[test]
@@ -664,13 +675,9 @@ mod tests {
             "test_span".to_string(),
             None,
         );
-        
-        let span_with_event = utils::add_event(
-            span,
-            "test_event".to_string(),
-            HashMap::new(),
-        );
-        
+
+        let span_with_event = utils::add_event(span, "test_event".to_string(), HashMap::new());
+
         assert_eq!(span_with_event.events.len(), 1);
         assert_eq!(span_with_event.events[0].name, "test_event");
     }
@@ -681,7 +688,7 @@ mod tests {
         let trace_id2 = utils::generate_trace_id();
         assert_ne!(trace_id1, trace_id2);
         assert_eq!(trace_id1.len(), 32); // 16 bytes = 32 hex chars
-        
+
         let span_id1 = utils::generate_span_id();
         let span_id2 = utils::generate_span_id();
         assert_ne!(span_id1, span_id2);

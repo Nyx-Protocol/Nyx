@@ -8,7 +8,6 @@
     clippy::uninlined_format_args,
     clippy::unreachable
 )]
-
 #![forbid(unsafe_code)]
 
 use nyx_stream::plugin_cbor::{parse_plugin_header, PluginCborError};

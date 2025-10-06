@@ -17,21 +17,26 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tracing::{info, warn};
+use tracing::info;
 
 /// Minimum observation duration for cover traffic measurement (10 seconds)
+#[allow(dead_code)]
 const OBSERVATION_DURATION: Duration = Duration::from_secs(10);
 
 /// Tolerance for cover traffic ratio deviation (±5%)
+#[allow(dead_code)]
 const RATIO_TOLERANCE: f64 = 0.05;
 
 /// Expected cover traffic ratio in active mode
+#[allow(dead_code)]
 const ACTIVE_COVER_RATIO: f64 = 0.3; // 30%
 
 /// Expected cover traffic ratio in low-power mode
+#[allow(dead_code)]
 const LOW_POWER_COVER_RATIO: f64 = 0.1; // 10%
 
 /// Traffic statistics collected during testing
+#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 struct TrafficStats {
     total_packets: u64,
@@ -42,6 +47,7 @@ struct TrafficStats {
 }
 
 impl TrafficStats {
+    #[allow(dead_code)]
     fn cover_ratio(&self) -> f64 {
         if self.total_packets == 0 {
             return 0.0;
@@ -49,6 +55,7 @@ impl TrafficStats {
         self.cover_packets as f64 / self.total_packets as f64
     }
 
+    #[allow(dead_code)]
     fn observation_duration(&self) -> Duration {
         match (self.observation_start, self.observation_end) {
             (Some(start), Some(end)) => end.duration_since(start),
@@ -56,6 +63,7 @@ impl TrafficStats {
         }
     }
 
+    #[allow(dead_code)]
     fn packets_per_second(&self) -> f64 {
         let duration_secs = self.observation_duration().as_secs_f64();
         if duration_secs == 0.0 {
@@ -66,6 +74,7 @@ impl TrafficStats {
 }
 
 /// Cover traffic test context
+#[allow(dead_code)]
 struct CoverTrafficTestContext {
     harness: TestHarness,
     stats: Arc<RwLock<TrafficStats>>,
@@ -74,6 +83,7 @@ struct CoverTrafficTestContext {
 }
 
 impl CoverTrafficTestContext {
+    #[allow(dead_code)]
     async fn new() -> TestResult<Self> {
         let harness = TestHarness::new();
 
@@ -85,6 +95,7 @@ impl CoverTrafficTestContext {
         })
     }
 
+    #[allow(dead_code)]
     async fn spawn_daemon(&mut self, daemon_id: &str) -> TestResult<()> {
         let daemon_config = DaemonConfig {
             bind_addr: "127.0.0.1:8100".parse().unwrap(),
@@ -96,8 +107,12 @@ impl CoverTrafficTestContext {
     }
 
     /// Simulate traffic generation and collection
+    #[allow(dead_code)]
     async fn simulate_traffic(&self, duration: Duration, cover_ratio: f64) -> TestResult<()> {
-        info!("Simulating traffic for {:?} with cover ratio {:.2}", duration, cover_ratio);
+        info!(
+            "Simulating traffic for {:?} with cover ratio {:.2}",
+            duration, cover_ratio
+        );
 
         let mut stats = self.stats.write().await;
         stats.observation_start = Some(Instant::now());
@@ -135,10 +150,12 @@ impl CoverTrafficTestContext {
         Ok(())
     }
 
+    #[allow(dead_code)]
     async fn get_stats(&self) -> TrafficStats {
         self.stats.read().await.clone()
     }
 
+    #[allow(dead_code)]
     async fn reset_counters(&self) {
         self.packet_counter.store(0, Ordering::SeqCst);
         self.cover_counter.store(0, Ordering::SeqCst);
@@ -147,6 +164,7 @@ impl CoverTrafficTestContext {
         *stats = TrafficStats::default();
     }
 
+    #[allow(dead_code)]
     async fn shutdown(mut self) -> TestResult<()> {
         self.harness.shutdown_all().await
     }
@@ -156,9 +174,7 @@ impl CoverTrafficTestContext {
 #[tokio::test]
 #[ignore] // Requires running daemon and extended observation time
 async fn test_active_mode_cover_ratio() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
     info!("Starting active mode cover traffic ratio test");
 
@@ -167,7 +183,8 @@ async fn test_active_mode_cover_ratio() -> TestResult<()> {
 
     // Observe traffic over extended duration
     info!("Observing traffic for {:?}", OBSERVATION_DURATION);
-    ctx.simulate_traffic(OBSERVATION_DURATION, ACTIVE_COVER_RATIO).await?;
+    ctx.simulate_traffic(OBSERVATION_DURATION, ACTIVE_COVER_RATIO)
+        .await?;
 
     let stats = ctx.get_stats().await;
 
@@ -184,10 +201,7 @@ async fn test_active_mode_cover_ratio() -> TestResult<()> {
     let actual_ratio = stats.cover_ratio();
     let deviation = (actual_ratio - ACTIVE_COVER_RATIO).abs();
 
-    assert!(
-        stats.total_packets > 0,
-        "Should have observed some traffic"
-    );
+    assert!(stats.total_packets > 0, "Should have observed some traffic");
 
     assert!(
         deviation <= RATIO_TOLERANCE,
@@ -207,9 +221,7 @@ async fn test_active_mode_cover_ratio() -> TestResult<()> {
 #[tokio::test]
 #[ignore] // Requires running daemon and extended observation time
 async fn test_low_power_mode_cover_reduction() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
     info!("Starting low-power mode cover traffic reduction test");
 
@@ -218,7 +230,8 @@ async fn test_low_power_mode_cover_reduction() -> TestResult<()> {
 
     // Phase 1: Active mode observation
     info!("Phase 1: Active mode observation");
-    ctx.simulate_traffic(Duration::from_secs(5), ACTIVE_COVER_RATIO).await?;
+    ctx.simulate_traffic(Duration::from_secs(5), ACTIVE_COVER_RATIO)
+        .await?;
 
     let active_stats = ctx.get_stats().await;
     let active_ratio = active_stats.cover_ratio();
@@ -238,7 +251,8 @@ async fn test_low_power_mode_cover_reduction() -> TestResult<()> {
     // For this test, we manually adjust the ratio
     warn!("Low-power mode activated - reducing cover traffic");
 
-    ctx.simulate_traffic(Duration::from_secs(5), LOW_POWER_COVER_RATIO).await?;
+    ctx.simulate_traffic(Duration::from_secs(5), LOW_POWER_COVER_RATIO)
+        .await?;
 
     let lowpower_stats = ctx.get_stats().await;
     let lowpower_ratio = lowpower_stats.cover_ratio();
@@ -272,9 +286,7 @@ async fn test_low_power_mode_cover_reduction() -> TestResult<()> {
 #[tokio::test]
 #[ignore] // Requires running daemon and extended observation time
 async fn test_cover_ratio_adaptation() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
     info!("Starting cover ratio adaptation test");
 
@@ -283,7 +295,8 @@ async fn test_cover_ratio_adaptation() -> TestResult<()> {
 
     // Scenario 1: Good network conditions → maintain target ratio
     info!("Scenario 1: Good network conditions");
-    ctx.simulate_traffic(Duration::from_secs(5), ACTIVE_COVER_RATIO).await?;
+    ctx.simulate_traffic(Duration::from_secs(5), ACTIVE_COVER_RATIO)
+        .await?;
 
     let good_stats = ctx.get_stats().await;
     let good_ratio = good_stats.cover_ratio();
@@ -302,7 +315,8 @@ async fn test_cover_ratio_adaptation() -> TestResult<()> {
     let poor_network_ratio = 0.15; // Reduced from 30% to 15%
     warn!("Poor network detected - reducing cover traffic");
 
-    ctx.simulate_traffic(Duration::from_secs(5), poor_network_ratio).await?;
+    ctx.simulate_traffic(Duration::from_secs(5), poor_network_ratio)
+        .await?;
 
     let poor_stats = ctx.get_stats().await;
     let poor_ratio = poor_stats.cover_ratio();
@@ -328,9 +342,7 @@ async fn test_cover_ratio_adaptation() -> TestResult<()> {
 #[tokio::test]
 #[ignore] // Requires extended observation and statistical analysis
 async fn test_cover_traffic_distribution() -> TestResult<()> {
-    let _ = tracing_subscriber::fmt()
-        .with_test_writer()
-        .try_init();
+    let _ = tracing_subscriber::fmt().with_test_writer().try_init();
 
     info!("Starting cover traffic distribution test");
 
@@ -342,14 +354,18 @@ async fn test_cover_traffic_distribution() -> TestResult<()> {
     let interval_duration = Duration::from_secs(2);
     let mut ratios = Vec::new();
 
-    info!("Collecting {} samples of {:?} each", num_intervals, interval_duration);
+    info!(
+        "Collecting {} samples of {:?} each",
+        num_intervals, interval_duration
+    );
 
     for i in 0..num_intervals {
         if i > 0 {
             ctx.reset_counters().await;
         }
 
-        ctx.simulate_traffic(interval_duration, ACTIVE_COVER_RATIO).await?;
+        ctx.simulate_traffic(interval_duration, ACTIVE_COVER_RATIO)
+            .await?;
 
         let stats = ctx.get_stats().await;
         let ratio = stats.cover_ratio();
@@ -360,9 +376,7 @@ async fn test_cover_traffic_distribution() -> TestResult<()> {
 
     // Calculate statistics
     let mean = ratios.iter().sum::<f64>() / ratios.len() as f64;
-    let variance = ratios.iter()
-        .map(|r| (r - mean).powi(2))
-        .sum::<f64>() / ratios.len() as f64;
+    let variance = ratios.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / ratios.len() as f64;
     let std_dev = variance.sqrt();
 
     info!(

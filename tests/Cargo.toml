@@ -22,3 +22,8 @@ nyx-core = { path = "../nyx-core" }
 name = "e2e_handshake"
 path = "tests/e2e_handshake.rs"
 harness = true
+
+[[test]]
+name = "advanced_integration"
+path = "tests/advanced_integration.rs"
+harness = true

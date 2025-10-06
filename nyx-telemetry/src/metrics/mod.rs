@@ -58,7 +58,9 @@ static HANDSHAKE_DURATION_HISTOGRAM: Lazy<HistogramVec> = Lazy::new(|| {
         "nyx_handshake_duration_ms",
         "Handshake duration in milliseconds",
     )
-    .buckets(vec![10.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0, 10000.0]);
+    .buckets(vec![
+        10.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0, 10000.0,
+    ]);
     let histogram = HistogramVec::new(opts, &["handshake_type"])
         .expect("Failed to create handshake_duration_ms histogram");
     REGISTRY
@@ -88,9 +90,13 @@ static CMIX_BATCH_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
 /// Labels: batch_size_range
 /// Buckets: 1ms, 5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s
 static CMIX_BATCH_DURATION_HISTOGRAM: Lazy<HistogramVec> = Lazy::new(|| {
-    let opts =
-        HistogramOpts::new("nyx_cmix_batch_duration_ms", "cMix batch processing duration")
-            .buckets(vec![1.0, 5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0]);
+    let opts = HistogramOpts::new(
+        "nyx_cmix_batch_duration_ms",
+        "cMix batch processing duration",
+    )
+    .buckets(vec![
+        1.0, 5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0,
+    ]);
     let histogram = HistogramVec::new(opts, &["batch_size_range"])
         .expect("Failed to create cmix_batch_duration_ms histogram");
     REGISTRY
@@ -106,11 +112,105 @@ static CMIX_MESSAGES_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
         "nyx_cmix_messages_total",
         "Total number of cMix messages processed",
     );
-    let counter =
-        IntCounterVec::new(opts, &["direction"]).expect("Failed to create cmix_messages_total counter");
+    let counter = IntCounterVec::new(opts, &["direction"])
+        .expect("Failed to create cmix_messages_total counter");
     REGISTRY
         .register(Box::new(counter.clone()))
         .expect("Failed to register cmix_messages_total");
+    counter
+});
+
+// ===== Path Quality Metrics =====
+
+use prometheus::GaugeVec;
+
+/// Gauge for path RTT (Round-Trip Time) in milliseconds
+/// Labels: path_id, session_id
+static PATH_RTT_GAUGE: Lazy<GaugeVec> = Lazy::new(|| {
+    let opts = Opts::new("nyx_path_rtt_ms", "Path round-trip time in milliseconds");
+    let gauge = GaugeVec::new(opts, &["path_id", "session_id"])
+        .expect("Failed to create path_rtt_ms gauge");
+    REGISTRY
+        .register(Box::new(gauge.clone()))
+        .expect("Failed to register path_rtt_ms");
+    gauge
+});
+
+/// Gauge for path packet loss rate (0.0-1.0)
+/// Labels: path_id, session_id
+static PATH_LOSS_RATE_GAUGE: Lazy<GaugeVec> = Lazy::new(|| {
+    let opts = Opts::new(
+        "nyx_path_loss_rate",
+        "Path packet loss rate (0.0 = no loss, 1.0 = 100% loss)",
+    );
+    let gauge = GaugeVec::new(opts, &["path_id", "session_id"])
+        .expect("Failed to create path_loss_rate gauge");
+    REGISTRY
+        .register(Box::new(gauge.clone()))
+        .expect("Failed to register path_loss_rate");
+    gauge
+});
+
+/// Gauge for path bandwidth in bytes per second
+/// Labels: path_id, session_id
+static PATH_BANDWIDTH_GAUGE: Lazy<GaugeVec> = Lazy::new(|| {
+    let opts = Opts::new(
+        "nyx_path_bandwidth_bytes_per_sec",
+        "Path bandwidth in bytes per second",
+    );
+    let gauge = GaugeVec::new(opts, &["path_id", "session_id"])
+        .expect("Failed to create path_bandwidth_bytes_per_sec gauge");
+    REGISTRY
+        .register(Box::new(gauge.clone()))
+        .expect("Failed to register path_bandwidth_bytes_per_sec");
+    gauge
+});
+
+// ===== Cover Traffic Metrics =====
+
+/// Counter for cover traffic packets sent
+/// Labels: session_id, traffic_type (dummy|padding)
+static COVER_TRAFFIC_SENT_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    let opts = Opts::new(
+        "nyx_cover_traffic_sent_total",
+        "Total number of cover traffic packets sent",
+    );
+    let counter = IntCounterVec::new(opts, &["session_id", "traffic_type"])
+        .expect("Failed to create cover_traffic_sent_total counter");
+    REGISTRY
+        .register(Box::new(counter.clone()))
+        .expect("Failed to register cover_traffic_sent_total");
+    counter
+});
+
+/// Gauge for cover traffic utilization rate (0.0-1.0)
+/// Labels: session_id
+/// Represents the ratio of cover traffic to total traffic
+static COVER_TRAFFIC_UTILIZATION_GAUGE: Lazy<GaugeVec> = Lazy::new(|| {
+    let opts = Opts::new(
+        "nyx_cover_traffic_utilization",
+        "Cover traffic utilization rate (0.0 = no cover traffic, 1.0 = all cover traffic)",
+    );
+    let gauge = GaugeVec::new(opts, &["session_id"])
+        .expect("Failed to create cover_traffic_utilization gauge");
+    REGISTRY
+        .register(Box::new(gauge.clone()))
+        .expect("Failed to register cover_traffic_utilization");
+    gauge
+});
+
+/// Counter for cover traffic bytes sent
+/// Labels: session_id
+static COVER_TRAFFIC_BYTES_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
+    let opts = Opts::new(
+        "nyx_cover_traffic_bytes_total",
+        "Total bytes of cover traffic sent",
+    );
+    let counter = IntCounterVec::new(opts, &["session_id"])
+        .expect("Failed to create cover_traffic_bytes_total counter");
+    REGISTRY
+        .register(Box::new(counter.clone()))
+        .expect("Failed to register cover_traffic_bytes_total");
     counter
 });
 
@@ -132,8 +232,13 @@ static REKEY_EVENTS_COUNTER: Lazy<IntCounterVec> = Lazy::new(|| {
 /// Labels: rekey_reason
 /// Buckets: 10ms, 50ms, 100ms, 250ms, 500ms, 1s, 2s, 5s
 static REKEY_DURATION_HISTOGRAM: Lazy<HistogramVec> = Lazy::new(|| {
-    let opts = HistogramOpts::new("nyx_rekey_duration_ms", "Rekey operation duration in milliseconds")
-        .buckets(vec![10.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2000.0, 5000.0]);
+    let opts = HistogramOpts::new(
+        "nyx_rekey_duration_ms",
+        "Rekey operation duration in milliseconds",
+    )
+    .buckets(vec![
+        10.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2000.0, 5000.0,
+    ]);
     let histogram = HistogramVec::new(opts, &["rekey_reason"])
         .expect("Failed to create rekey_duration_ms histogram");
     REGISTRY
@@ -333,6 +438,59 @@ pub fn record_rekey_failure(session_id: &str, error_type: &str) {
     REKEY_FAILURE_COUNTER
         .with_label_values(&[session_id, error_type])
         .inc();
+}
+
+/// Record path quality metrics
+///
+/// # Arguments
+/// * `path_id` - Truncated path identifier
+/// * `session_id` - Truncated session identifier
+/// * `rtt_ms` - Round-trip time in milliseconds
+/// * `loss_rate` - Packet loss rate (0.0-1.0)
+/// * `bandwidth_bps` - Bandwidth in bytes per second
+pub fn record_path_quality(
+    path_id: &str,
+    session_id: &str,
+    rtt_ms: f64,
+    loss_rate: f64,
+    bandwidth_bps: f64,
+) {
+    PATH_RTT_GAUGE
+        .with_label_values(&[path_id, session_id])
+        .set(rtt_ms);
+    PATH_LOSS_RATE_GAUGE
+        .with_label_values(&[path_id, session_id])
+        .set(loss_rate.clamp(0.0, 1.0)); // Clamp to valid range
+    PATH_BANDWIDTH_GAUGE
+        .with_label_values(&[path_id, session_id])
+        .set(bandwidth_bps.max(0.0)); // Ensure non-negative
+}
+
+/// Record cover traffic sent
+///
+/// # Arguments
+/// * `session_id` - Truncated session identifier
+/// * `traffic_type` - Type of cover traffic: "dummy" or "padding"
+/// * `packet_count` - Number of cover traffic packets sent
+/// * `bytes` - Number of bytes sent
+pub fn record_cover_traffic(session_id: &str, traffic_type: &str, packet_count: u64, bytes: u64) {
+    COVER_TRAFFIC_SENT_COUNTER
+        .with_label_values(&[session_id, traffic_type])
+        .inc_by(packet_count);
+    COVER_TRAFFIC_BYTES_COUNTER
+        .with_label_values(&[session_id])
+        .inc_by(bytes);
+}
+
+/// Record cover traffic utilization rate
+///
+/// # Arguments
+/// * `session_id` - Truncated session identifier
+/// * `utilization_rate` - Cover traffic utilization (0.0-1.0)
+pub fn record_cover_traffic_utilization(session_id: &str, utilization_rate: f64) {
+    COVER_TRAFFIC_UTILIZATION_GAUGE
+        .with_label_values(&[session_id])
+        .set(utilization_rate.clamp(0.0, 1.0));
 }
 
 /// Truncate identifier to first N characters for low cardinality labels
@@ -585,7 +743,10 @@ mod tests {
 
         let output = dump_prometheus_internal();
         assert!(output.contains("nyx_cmix_messages_total"));
-        assert!(output.contains("direction=\"inbound\"") || output.contains("direction=\\\"inbound\\\""));
+        assert!(
+            output.contains("direction=\"inbound\"")
+                || output.contains("direction=\\\"inbound\\\"")
+        );
     }
 
     #[test]
@@ -705,5 +866,84 @@ mod tests {
         let output = dump_prometheus_internal();
         assert!(output.contains("test_counter_1"));
         assert!(output.contains("test_counter_2"));
+    }
+
+    #[test]
+    fn test_record_path_quality() {
+        let path_id = truncate_id("path-1234", 8);
+        let session_id = truncate_id("session-path-test", 8);
+
+        // Record path quality metrics
+        record_path_quality(&path_id, &session_id, 45.5, 0.02, 1_000_000.0);
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_path_rtt_ms"));
+        assert!(output.contains("nyx_path_loss_rate"));
+        assert!(output.contains("nyx_path_bandwidth_bytes_per_sec"));
+    }
+
+    #[test]
+    fn test_record_path_quality_boundary_values() {
+        let path_id = truncate_id("path-boundary", 8);
+        let session_id = truncate_id("session-boundary", 8);
+
+        // Test boundary values (clamping)
+        record_path_quality(&path_id, &session_id, 0.0, -0.5, -1000.0); // Negative values should be clamped
+        record_path_quality(&path_id, &session_id, 1000.0, 1.5, 10_000_000.0); // > 1.0 loss rate should be clamped
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_path_rtt_ms"));
+    }
+
+    #[test]
+    fn test_record_cover_traffic() {
+        let session_id = truncate_id("session-cover", 8);
+
+        // Record cover traffic packets
+        record_cover_traffic(&session_id, "dummy", 100, 50_000);
+        record_cover_traffic(&session_id, "padding", 50, 10_000);
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_cover_traffic_sent_total"));
+        assert!(output.contains("nyx_cover_traffic_bytes_total"));
+        assert!(output.contains("dummy") || output.contains("padding"));
+    }
+
+    #[test]
+    fn test_record_cover_traffic_utilization() {
+        let session_id = truncate_id("session-utilization", 8);
+
+        // Record utilization rates
+        record_cover_traffic_utilization(&session_id, 0.35);
+        record_cover_traffic_utilization(&session_id, 0.75);
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_cover_traffic_utilization"));
+    }
+
+    #[test]
+    fn test_cover_traffic_utilization_clamping() {
+        let session_id = truncate_id("session-clamp", 8);
+
+        // Test boundary clamping
+        record_cover_traffic_utilization(&session_id, -0.5); // Should clamp to 0.0
+        record_cover_traffic_utilization(&session_id, 1.5); // Should clamp to 1.0
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("nyx_cover_traffic_utilization"));
+    }
+
+    #[test]
+    fn test_multiple_paths_metrics() {
+        let session_id = truncate_id("session-multipath", 8);
+
+        // Record metrics for multiple paths
+        record_path_quality("path-1", &session_id, 20.0, 0.01, 5_000_000.0);
+        record_path_quality("path-2", &session_id, 50.0, 0.05, 2_000_000.0);
+        record_path_quality("path-3", &session_id, 100.0, 0.10, 1_000_000.0);
+
+        let output = dump_prometheus_internal();
+        assert!(output.contains("path_id="));
+        assert!(output.contains("session_id="));
     }
 }

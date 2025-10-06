@@ -48,8 +48,7 @@ fn hybrid_demo_rejects_static_mismatch() -> Result<(), Box<dyn std::error::Error
 
     // Use wrong expected initiator static pk
     let wrong_pk = X25519StaticKeypair::from_seed([9u8; 32]).pk;
-    let err_local =
-        handshake::responder_handshake(&r_x, &r_pq, &wrong_pk, &init.msg1, prologue);
+    let err_local = handshake::responder_handshake(&r_x, &r_pq, &wrong_pk, &init.msg1, prologue);
     assert!(err_local.is_err());
     Ok(())
 }

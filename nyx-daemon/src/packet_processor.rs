@@ -10,8 +10,8 @@
 //! - Integration with Connection Manager and Stream Manager
 
 use nyx_stream::extended_packet::{
-    ConnectionId, ExtendedPacket, ExtendedPacketHeader, PacketFlags, PacketType, PathId,
-    EXTENDED_HEADER_SIZE, MAX_PAYLOAD_SIZE,
+    ConnectionId, ExtendedPacket, ExtendedPacketHeader, EXTENDED_HEADER_SIZE,
+    MAX_PAYLOAD_SIZE, PacketFlags, PacketType, PathId,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -359,7 +359,13 @@ mod tests {
         // Encode small payload
         let payload = b"Small".to_vec();
         let encoded = processor
-            .encode_packet(1, PacketType::Application, PacketFlags::default(), None, payload)
+            .encode_packet(
+                1,
+                PacketType::Application,
+                PacketFlags::default(),
+                None,
+                payload,
+            )
             .await
             .unwrap();
 

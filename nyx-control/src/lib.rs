@@ -11,6 +11,8 @@ use serde::{Deserialize, Serialize};
 
 #[path = "dht/mod.rs"]
 pub mod dht;
+pub mod gossip; // Config gossip protocol with vector clocks
+pub mod kademlia; // Kademlia DHT networking protocol
 pub mod probe;
 pub mod push;
 pub mod rendezvous;

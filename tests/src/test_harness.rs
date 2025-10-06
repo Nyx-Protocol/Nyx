@@ -227,11 +227,27 @@ impl DaemonHandle {
                 e
             )),
             Err(_) => {
-                warn!("Daemon '{}' did not exit within timeout, forcing kill", self.id);
+                warn!(
+                    "Daemon '{}' did not exit within timeout, forcing kill",
+                    self.id
+                );
                 child.kill().await?;
                 Ok(())
             }
         }
+    }
+
+    /// Force kill the daemon immediately (simulates crash/network failure)
+    pub async fn force_kill(&self) -> TestResult<()> {
+        warn!("Force killing daemon '{}' (simulating failure)", self.id);
+
+        let mut child = self.child.lock().await;
+        child
+            .kill()
+            .await
+            .context(format!("Failed to force kill daemon '{}'", self.id))?;
+
+        Ok(())
     }
 }
 
@@ -273,10 +289,7 @@ impl ClientHandle {
     ///
     /// # Returns
     /// Handle to the client connection, or error if connection fails
-    pub async fn connect(
-        id: impl Into<String>,
-        daemon_addr: SocketAddr,
-    ) -> TestResult<Self> {
+    pub async fn connect(id: impl Into<String>, daemon_addr: SocketAddr) -> TestResult<Self> {
         let id = id.into();
         info!("Connecting client '{}' to daemon at {}", id, daemon_addr);
 
@@ -360,7 +373,7 @@ impl NetworkConfig {
         Self {
             latency_ms: 20,
             jitter_ms: 5,
-            loss_rate: 0.001, // 0.1%
+            loss_rate: 0.001,                // 0.1%
             bandwidth_bps: Some(10_000_000), // 10 Mbps
         }
     }
@@ -370,7 +383,7 @@ impl NetworkConfig {
         Self {
             latency_ms: 200,
             jitter_ms: 50,
-            loss_rate: 0.05, // 5%
+            loss_rate: 0.05,                // 5%
             bandwidth_bps: Some(1_000_000), // 1 Mbps
         }
     }
@@ -379,8 +392,8 @@ impl NetworkConfig {
     pub fn unstable() -> Self {
         Self {
             latency_ms: 100,
-            jitter_ms: 100, // High jitter
-            loss_rate: 0.1, // 10%
+            jitter_ms: 100,                 // High jitter
+            loss_rate: 0.1,                 // 10%
             bandwidth_bps: Some(5_000_000), // 5 Mbps
         }
     }
@@ -444,6 +457,12 @@ pub struct TestHarness {
     /// Test network configuration
     #[allow(dead_code)] // Will be used in future network simulation tests
     network: TestNetwork,
+}
+
+impl Default for TestHarness {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TestHarness {
@@ -528,6 +547,41 @@ impl TestHarness {
             }
         }
 
+        Ok(())
+    }
+
+    /// Configure network simulation parameters
+    pub fn configure_network(&mut self, config: NetworkConfig) {
+        info!("Updating network config: {:?}", config);
+        self.network = TestNetwork::new(config);
+    }
+
+    /// Simulate path failure for a daemon (shutdown without cleanup)
+    pub async fn simulate_path_failure(&mut self, daemon_id: &str) -> TestResult<()> {
+        info!("Simulating path failure for daemon '{}'", daemon_id);
+
+        if let Some(daemon) = self.daemons.remove(daemon_id) {
+            // Force kill daemon to simulate network failure
+            daemon.force_kill().await?;
+            Ok(())
+        } else {
+            Err(anyhow::anyhow!("Daemon '{}' not found", daemon_id))
+        }
+    }
+
+    /// Simulate screen-off event (low power mode)
+    pub async fn simulate_screen_off(&self, _daemon_id: &str) -> TestResult<()> {
+        // In a real implementation, this would send a signal to the daemon
+        // to trigger low power mode. For now, this is a placeholder.
+        info!("Simulating screen-off event (low power mode)");
+        Ok(())
+    }
+
+    /// Simulate screen-on event (active mode)
+    pub async fn simulate_screen_on(&self, _daemon_id: &str) -> TestResult<()> {
+        // In a real implementation, this would send a signal to the daemon
+        // to restore active power mode. For now, this is a placeholder.
+        info!("Simulating screen-on event (active mode)");
         Ok(())
     }
 }

@@ -37,9 +37,9 @@ impl Default for Config {
 // --- Module_s ------------------------------------------------------------------
 
 pub mod metrics;
-pub mod otlp;
 #[cfg(feature = "otlp")]
 mod opentelemetry_integration;
+pub mod otlp;
 #[cfg(not(feature = "otlp"))]
 mod opentelemetry_integration {
     use anyhow::Result;
@@ -58,8 +58,6 @@ mod opentelemetry_integration {
         // No-op when otlp feature is disabled
     }
 }
-#[cfg(feature = "otlp")]
-mod otlp;
 mod sampling;
 
 // --- Public API surface kept stable -------------------------------------------
