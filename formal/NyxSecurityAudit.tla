@@ -1,4 +1,5 @@
 ---- MODULE NyxSecurityAudit ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Security Audit and Compliance                            *)
 (*                                                                          *)
