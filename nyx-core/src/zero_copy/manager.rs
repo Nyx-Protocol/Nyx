@@ -163,7 +163,7 @@ impl BufferPool {
     /// Ultra-optimized with fast-path optimization, SIMD operations, and minimal lock contention.
     #[inline(always)]
     pub fn acquire(&self, n: usize) -> Vec<u8> {
-        // Early return for zero-sized requests
+        // Early return for zero-sized requests - use const empty vec to avoid allocation
         if n == 0 {
             return Vec::new();
         }

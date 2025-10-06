@@ -10,6 +10,10 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 /// The EWMA formula: EWMA(t) = α × Y(t) + (1-α) × EWMA(t-1)
 /// where α is the smoothing factor (0 < α ≤ 1) and Y(t) is the current observation.
 ///
+/// # Performance Optimization
+/// This implementation uses NaN to represent uninitialized state instead of Option<f64>,
+/// eliminating the discriminant overhead and improving memory layout and cache efficiency.
+///
 /// # Thread Safety
 /// This struct is not thread-safe. Use synchronization primitives if sharing across threads.
 ///
@@ -27,8 +31,10 @@ pub struct Ewma {
     /// Smoothing factor between 0.0 and 1.0
     /// Higher values give more weight to recent observations
     alpha: f64,
-    /// Current EWMA value, None if no values have been processed yet
-    value: Option<f64>,
+    /// Current EWMA value, NaN if no values have been processed yet
+    /// Using NaN instead of Option<f64> eliminates discriminant overhead
+    /// and provides better cache locality (8 bytes instead of 16 bytes)
+    value: f64,
 }
 
 impl Ewma {
@@ -41,7 +47,9 @@ impl Ewma {
     ///
     /// # Panics
     /// Panics if alpha is not in the range (0.0, 1.0]
-    /// Create a new EWMA with the given smoothing factor
+    ///
+    /// # Performance
+    /// Initializes with NaN for uninitialized state, eliminating Option overhead
     #[must_use]
     pub fn new(alpha: f64) -> Self {
         assert!(
@@ -49,7 +57,10 @@ impl Ewma {
             "Alpha must be in range (0.0, 1.0], got: {alpha}",
         );
 
-        Self { alpha, value: None }
+        Self {
+            alpha,
+            value: f64::NAN,
+        }
     }
 
     /// Updates the EWMA with a new value.
@@ -61,13 +72,18 @@ impl Ewma {
     /// * `value` - The new observation to incorporate into the EWMA
     ///
     /// # Performance
-    /// Inlined for optimal performance in high-frequency update scenarios
+    /// Inlined for optimal performance in high-frequency update scenarios.
+    /// Uses NaN check which is faster than Option discriminant check.
     #[inline]
     pub fn update(&mut self, value: f64) {
-        self.value = Some(match self.value {
-            Some(current) => self.alpha.mul_add(value, (1.0 - self.alpha) * current),
-            None => value,
-        });
+        // Check if value is initialized (not NaN)
+        // is_nan() compiles to efficient x86 UCOMISD instruction
+        if self.value.is_nan() {
+            self.value = value;
+        } else {
+            // Use fused multiply-add for better performance and precision
+            self.value = self.alpha.mul_add(value, (1.0 - self.alpha) * self.value);
+        }
     }
 
     /// Returns the current EWMA value.
@@ -75,19 +91,32 @@ impl Ewma {
     /// # Returns
     /// * `Some(value)` if at least one update has been performed
     /// * `None` if no values have been processed yet
+    ///
+    /// # Performance
+    /// NaN check is compiled to efficient branch-free comparison on modern CPUs
     #[must_use]
+    #[inline]
     pub fn get(&self) -> Option<f64> {
-        self.value
+        if self.value.is_nan() {
+            None
+        } else {
+            Some(self.value)
+        }
     }
 
     /// Resets the EWMA to its initial state (no values).
     ///
     /// After calling this method, `get()` will return `None` until `update()` is called.
+    ///
+    /// # Performance
+    /// Simple assignment of NaN constant, no allocation or deallocation
+    #[inline]
     pub fn reset(&mut self) {
-        self.value = None;
+        self.value = f64::NAN;
     }
 
     /// Returns the smoothing factor (alpha) used by this EWMA.
+    #[inline]
     pub fn alpha(&self) -> f64 {
         self.alpha
     }
@@ -208,10 +237,11 @@ impl RateLimiter {
     /// - Gracefully handles very large time differences
     ///
     /// # Performance Optimizations
-    /// - Early return when bucket is at capacity to avoid unnecessary calculations
-    /// - Inlined for reduced call overhead in hot paths
-    /// - Uses const for nanosecond conversion factor (compiler optimization)
-    #[inline]
+    /// - Early return when bucket is at capacity to avoid time syscall overhead
+    /// - Aggressive inlining for reduced call overhead in hot paths
+    /// - Uses const for nanosecond conversion with reciprocal multiplication
+    /// - Minimizes branching for better CPU pipeline utilization
+    #[inline(always)]
     fn refill(&mut self) {
         // Early exit if bucket is already at capacity - avoid time syscall
         if self.tokens >= self.capacity {
@@ -228,50 +258,58 @@ impl RateLimiter {
         }
 
         let elapsed_nanos = now.saturating_sub(self.last_refill);
-        
+
         // Early exit if no time has elapsed - avoid unnecessary calculations
         if elapsed_nanos == 0 {
             return;
         }
-        
+
         self.last_refill = now;
 
         // Convert nanoseconds to seconds using const for better optimization
-        // Use reciprocal multiplication instead of division for performance
+        // Reciprocal multiplication is faster than division on most architectures
         const NANOS_TO_SECS_FACTOR: f64 = 1.0 / 1_000_000_000.0;
         let elapsed_secs = (elapsed_nanos as f64) * NANOS_TO_SECS_FACTOR;
 
-        // Calculate tokens to add, using fused multiply-add for precision
-        let tokens_to_add = elapsed_secs * self.refill_rate;
-
-        // Add tokens but cap at capacity
-        self.tokens = (self.tokens + tokens_to_add).min(self.capacity);
+        // Calculate tokens to add: elapsed_secs * refill_rate
+        // Then add to current tokens and cap at capacity in single expression
+        // This allows compiler to optimize the min operation better
+        let new_tokens = self.tokens + elapsed_secs * self.refill_rate;
+        self.tokens = if new_tokens < self.capacity {
+            new_tokens
+        } else {
+            self.capacity
+        };
     }
 
     /// Attempts to consume one token from the bucket.
     ///
-    /// This operation will first refill the bucket based on elapsed time,
-    /// then attempt to consume a token if available.
+    /// This operation will first check for available tokens (fast path),
+    /// then refill if needed (slow path with syscall).
     ///
     /// # Returns
     /// * `true` if a token was successfully consumed
     /// * `false` if no tokens were available
     ///
     /// # Performance
-    /// This method is optimized for high-frequency calls and has minimal overhead.
-    /// Inlined for maximum performance in hot paths.
-    #[inline]
+    /// This method is heavily optimized for high-frequency calls:
+    /// - Fast path avoids syscall when tokens available (common case)
+    /// - Aggressive inlining for minimal overhead
+    /// - Branch prediction friendly (fast path taken most of the time)
+    #[inline(always)]
     pub fn allow(&mut self) -> bool {
         // Fast path: check if token available without refilling
-        // This avoids syscall when bucket has tokens
+        // This avoids expensive syscall when bucket has tokens
+        // Most calls should take this path, making branch prediction effective
         if self.tokens >= 1.0 {
             self.tokens -= 1.0;
             return true;
         }
-        
+
         // Slow path: need to refill and check again
         self.refill();
 
+        // Check again after refill - use simple comparison and decrement
         if self.tokens >= 1.0 {
             self.tokens -= 1.0;
             true
@@ -335,17 +373,20 @@ impl RateLimiter {
     ///
     /// This method refills the bucket before returning the token count,
     /// ensuring the returned value is current.
+    #[inline]
     pub fn available_tokens(&mut self) -> f64 {
         self.refill();
         self.tokens
     }
 
     /// Returns the bucket capacity.
+    #[inline]
     pub fn capacity(&self) -> f64 {
         self.capacity
     }
 
     /// Returns the refill rate (tokens per second).
+    #[inline]
     pub fn refill_rate(&self) -> f64 {
         self.refill_rate
     }

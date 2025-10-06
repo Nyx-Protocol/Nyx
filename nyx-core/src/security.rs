@@ -280,10 +280,7 @@ impl PcrDetector {
             PcrTrigger::PeriodicRotation { .. } => metrics.triggers_by_periodic += 1,
         }
 
-        // Add to audit log
-        log.push(event.clone());
-
-        // Log to tracing
+        // Log to tracing before moving event
         if event.success {
             info!(
                 "PCR event recorded: {:?}, {} sessions affected, duration: {:?}",
@@ -295,14 +292,19 @@ impl PcrDetector {
                 event.trigger, event.error
             );
         }
+
+        // Add to audit log - move instead of clone to avoid unnecessary allocation
+        log.push(event);
     }
 
-    /// Get audit log
+    /// Get audit log snapshot
+    /// Returns a cloned vector of events for external consumption
     pub async fn get_audit_log(&self) -> Vec<PcrEvent> {
         self.audit_log.read().await.clone()
     }
 
-    /// Get metrics
+    /// Get metrics snapshot
+    /// Returns a cloned copy of current metrics for external consumption
     pub async fn get_metrics(&self) -> PcrMetrics {
         self.metrics.read().await.clone()
     }
