@@ -852,9 +852,7 @@ mod tests {
             .expect("HTTP request failed");
         assert_eq!(resp.status(), 200);
 
-        let body = resp
-            .into_string()
-            .expect("Failed to read response body");
+        let body = resp.into_string().expect("Failed to read response body");
         assert!(body.contains("nyx_handshake_success_total"));
         assert!(body.contains("nyx_cmix_batch_total"));
 
