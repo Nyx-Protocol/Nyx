@@ -16,7 +16,7 @@
 (*   - Quality of Experience (QoE) metrics                                 *)
 (****************************************************************************)
 
-EXTENDS Naturals, Sequences, FiniteSets, Integers, Reals, TLC,
+EXTENDS Naturals, Sequences, FiniteSets, Integers, Reals, TLC
 
 (****************************************************************************)
 (* Common Helper Operators                                                  *)
@@ -49,8 +49,8 @@ Sum(S) == LET RECURSIVE SumRec(_)
 Average(S) == IF S = {} THEN 0 ELSE Sum(S) / Cardinality(S)
 
 
-INSTANCE NyxNetworkLayer
-INSTANCE NyxStreamManagement
+\* INSTANCE NyxNetworkLayer
+\* INSTANCE NyxStreamManagement
 
 (****************************************************************************)
 (* Traffic Classification                                                   *)
