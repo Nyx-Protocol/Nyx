@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --release --workspace --exclude nyx-sdk-wasm --target $TARGET
 
 # -------- runtime stage --------
-FROM gcr.io/distroless/cc-debian12@sha256:ce5c00e38acfc34b4e2cbbded4086985a45fc5517fcdba833ca6123e3aa8b6e1
+FROM gcr.io/distroless/cc-debian12:latest
 ARG TARGET=x86_64-unknown-linux-musl
 
 # Copy daemon binary; crate name produces binary `nyx-daemon`
