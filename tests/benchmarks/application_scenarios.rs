@@ -62,7 +62,7 @@ impl TestNetwork {
             let encrypted = {
                 let cipher = self.cipher.lock().await;
                 let nonce = [0u8; 12]; // Simplified for benchmark
-                cipher.encrypt(&nonce.into(), chunk).unwrap()
+                cipher.encrypt(&nonce.into(), chunk).expect("encryption failed")
             };
 
             // Send via UDP
@@ -136,7 +136,7 @@ fn bench_messaging(c: &mut Criterion) {
                     let encrypted = {
                         let cipher = network.cipher.lock().await;
                         let nonce = [0u8; 12];
-                        cipher.encrypt(&nonce.into(), &message).unwrap()
+                        cipher.encrypt(&nonce.into(), message.as_slice()).expect("encryption failed")
                     };
 
                     network
@@ -152,7 +152,7 @@ fn bench_messaging(c: &mut Criterion) {
                     let decrypted = {
                         let cipher = network.cipher.lock().await;
                         let nonce = [0u8; 12];
-                        cipher.decrypt(&nonce.into(), &buf[..len]).unwrap()
+                        cipher.decrypt(&nonce.into(), &buf[..len]).expect("decryption failed")
                     };
 
                     let latency = start.elapsed();
@@ -176,7 +176,7 @@ fn bench_messaging(c: &mut Criterion) {
                 let encrypted = {
                     let cipher = network.cipher.lock().await;
                     let nonce = [0u8; 12];
-                    cipher.encrypt(&nonce.into(), &message).unwrap()
+                    cipher.encrypt(&nonce.into(), message.as_slice()).expect("encryption failed")
                 };
 
                 network
@@ -225,7 +225,7 @@ fn bench_video_streaming(c: &mut Criterion) {
                     let encrypted = {
                         let cipher = network.cipher.lock().await;
                         let nonce = [0u8; 12];
-                        cipher.encrypt(&nonce.into(), &chunk).unwrap()
+                        cipher.encrypt(&nonce.into(), chunk.as_slice()).expect("encryption failed")
                     };
 
                     match network
@@ -286,7 +286,7 @@ fn bench_voip(c: &mut Criterion) {
                 let encrypted = {
                     let cipher = network.cipher.lock().await;
                     let nonce = [0u8; 12];
-                    cipher.encrypt(&nonce.into(), &frame).unwrap()
+                    cipher.encrypt(&nonce.into(), frame.as_slice()).expect("encryption failed")
                 };
 
                 network
@@ -302,7 +302,7 @@ fn bench_voip(c: &mut Criterion) {
                 let _decrypted = {
                     let cipher = network.cipher.lock().await;
                     let nonce = [0u8; 12];
-                    cipher.decrypt(&nonce.into(), &buf[..len]).unwrap()
+                    cipher.decrypt(&nonce.into(), &buf[..len]).expect("decryption failed")
                 };
 
                 let latency = frame_start.elapsed();
@@ -395,7 +395,7 @@ fn bench_scalability(c: &mut Criterion) {
                                 let encrypted = {
                                     let cipher = net.cipher.lock().await;
                                     let nonce = [0u8; 12];
-                                    cipher.encrypt(&nonce.into(), &msg).unwrap()
+                                    cipher.encrypt(&nonce.into(), msg.as_slice()).expect("encryption failed")
                                 };
 
                                 net.sender_socket
@@ -411,7 +411,7 @@ fn bench_scalability(c: &mut Criterion) {
                                 let _decrypted = {
                                     let cipher = net.cipher.lock().await;
                                     let nonce = [0u8; 12];
-                                    cipher.decrypt(&nonce.into(), &buf[..len]).unwrap()
+                                    cipher.decrypt(&nonce.into(), &buf[..len]).expect("decryption failed")
                                 };
                             })
                         })
