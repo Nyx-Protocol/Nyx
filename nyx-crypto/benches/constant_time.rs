@@ -1,15 +1,29 @@
 #![allow(missing_docs)]
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
-#[inline]
+/// Constant-time equality comparison optimized for performance
+///
+/// # Security
+/// - Executes in constant time regardless of where differences occur
+/// - Prevents timing side-channel attacks
+///
+/// # Performance Optimizations
+/// - Early length check (lengths are not secret)
+/// - Iterator-based loop for potential compiler optimizations
+/// - Aggressive inlining for reduced call overhead
+#[inline(always)]
 fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    // Early exit for length mismatch - lengths are not secret
     if a.len() != b.len() {
         return false;
     }
-    let mut diff = 0u8;
-    for i in 0..a.len() {
-        diff |= a[i] ^ b[i];
-    }
+    
+    // Use iterator with fold for potentially better optimization
+    // XOR all byte differences and check if result is zero
+    let diff = a.iter()
+        .zip(b.iter())
+        .fold(0u8, |acc, (&x, &y)| acc | (x ^ y));
+    
     diff == 0
 }
 
