@@ -16,7 +16,7 @@
 //!
 //! **Pure Rust:** Uses tokio UDP (ZERO C/C++ dependencies)
 
-use crate::dht::{NodeId, StorageKey, StorageValue};
+use crate::dht::{DhtStorage, NodeId, StorageKey, StorageValue};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -246,7 +246,8 @@ impl KademliaRoutingTable {
 
     /// Find K closest nodes to target
     pub fn find_closest(&self, target: &NodeId, k: usize) -> Vec<NodeContact> {
-        let mut all_contacts: Vec<(NodeContact, [u8; 32])> = Vec::new();
+        // Pre-allocate for typical routing table size (256 buckets * 20 max = 5120, but typically ~500)
+        let mut all_contacts: Vec<(NodeContact, [u8; 32])> = Vec::with_capacity(512);
 
         for bucket in &self.buckets {
             for contact in bucket.contacts() {
@@ -279,8 +280,8 @@ pub struct DhtNode {
     local_id: NodeId,
     #[allow(dead_code)]
     local_addr: SocketAddr,
-    #[allow(dead_code)]
-    routing_table: KademliaRoutingTable,
+    routing_table: Arc<tokio::sync::RwLock<KademliaRoutingTable>>,
+    storage: Arc<tokio::sync::RwLock<DhtStorage>>,
     socket: Arc<UdpSocket>,
     request_id_counter: u64,
     shutdown_tx: Option<mpsc::Sender<()>>,
@@ -295,7 +296,10 @@ impl DhtNode {
         Ok(Self {
             local_id: local_id.clone(),
             local_addr: bind_addr,
-            routing_table: KademliaRoutingTable::new(local_id),
+            routing_table: Arc::new(tokio::sync::RwLock::new(KademliaRoutingTable::new(
+                local_id,
+            ))),
+            storage: Arc::new(tokio::sync::RwLock::new(DhtStorage::new())),
             socket,
             request_id_counter: 0,
             shutdown_tx: None,
@@ -309,6 +313,8 @@ impl DhtNode {
 
         let socket = Arc::clone(&self.socket);
         let local_id = self.local_id.clone();
+        let routing_table = Arc::clone(&self.routing_table);
+        let storage = Arc::clone(&self.storage);
 
         // Spawn message receiver task
         tokio::spawn(async move {
@@ -323,7 +329,14 @@ impl DhtNode {
                     result = socket.recv_from(&mut buf) => {
                         match result {
                             Ok((len, peer_addr)) => {
-                                Self::handle_incoming(&buf[..len], peer_addr, &local_id).await;
+                                Self::handle_incoming(
+                                    &buf[..len],
+                                    peer_addr,
+                                    &local_id,
+                                    &socket,
+                                    &routing_table,
+                                    &storage,
+                                ).await;
                             }
                             Err(e) => {
                                 error!("DHT recv error: {}", e);
@@ -339,16 +352,180 @@ impl DhtNode {
     }
 
     /// Handle incoming message
-    async fn handle_incoming(data: &[u8], peer_addr: SocketAddr, _local_id: &NodeId) {
+    async fn handle_incoming(
+        data: &[u8],
+        peer_addr: SocketAddr,
+        local_id: &NodeId,
+        socket: &Arc<UdpSocket>,
+        routing_table: &Arc<tokio::sync::RwLock<KademliaRoutingTable>>,
+        storage: &Arc<tokio::sync::RwLock<DhtStorage>>,
+    ) {
         match bincode::deserialize::<KademliaRpc>(data) {
             Ok(rpc) => {
                 debug!("Received {:?} from {}", rpc, peer_addr);
-                // TODO: Process RPC and send response
+
+                // Process RPC and generate response
+                let response =
+                    Self::process_rpc(rpc, local_id, peer_addr, routing_table, storage).await;
+
+                // Send response if generated
+                if let Some(resp) = response {
+                    if let Err(e) = Self::send_rpc_static(socket, &resp, peer_addr).await {
+                        warn!("Failed to send response to {}: {}", peer_addr, e);
+                    }
+                }
             }
             Err(e) => {
                 warn!("Failed to deserialize RPC from {}: {}", peer_addr, e);
             }
         }
+    }
+
+    /// Process RPC message and generate response
+    async fn process_rpc(
+        rpc: KademliaRpc,
+        local_id: &NodeId,
+        peer_addr: SocketAddr,
+        routing_table: &Arc<tokio::sync::RwLock<KademliaRoutingTable>>,
+        storage: &Arc<tokio::sync::RwLock<DhtStorage>>,
+    ) -> Option<KademliaRpc> {
+        match rpc {
+            KademliaRpc::Ping {
+                request_id,
+                node_id,
+            } => {
+                debug!("Processing PING from {:?}", node_id);
+                // Update routing table with peer info
+                let contact = NodeContact::new(node_id, peer_addr);
+                if let Ok(mut table) = routing_table.try_write() {
+                    let _ = table.add_node(contact);
+                }
+                // Respond with our PING
+                Some(KademliaRpc::Ping {
+                    request_id,
+                    node_id: local_id.clone(),
+                })
+            }
+
+            KademliaRpc::FindNode {
+                request_id,
+                requester,
+                target,
+            } => {
+                debug!(
+                    "Processing FIND_NODE for target {:?} from {:?}",
+                    target, requester
+                );
+                // Update routing table with requester
+                let contact = NodeContact::new(requester, peer_addr);
+                if let Ok(mut table) = routing_table.try_write() {
+                    let _ = table.add_node(contact);
+                }
+
+                // Find K closest nodes to target
+                let nodes = if let Ok(table) = routing_table.try_read() {
+                    table.find_closest(&target, 20)
+                } else {
+                    Vec::new()
+                };
+
+                Some(KademliaRpc::FindNodeResponse { request_id, nodes })
+            }
+
+            KademliaRpc::Store {
+                request_id,
+                requester,
+                key,
+                value,
+                ttl_secs: _,
+            } => {
+                debug!("Processing STORE from {:?}", requester);
+                // Update routing table with requester
+                let contact = NodeContact::new(requester, peer_addr);
+                if let Ok(mut table) = routing_table.try_write() {
+                    let _ = table.add_node(contact);
+                }
+
+                // Store key-value pair
+                let success = if let Ok(mut store) = storage.try_write() {
+                    store.put(key, value).is_ok()
+                } else {
+                    false
+                };
+
+                Some(KademliaRpc::StoreResponse {
+                    request_id,
+                    success,
+                })
+            }
+
+            KademliaRpc::FindValue {
+                request_id,
+                requester,
+                key,
+            } => {
+                debug!("Processing FIND_VALUE for key from {:?}", requester);
+                // Update routing table with requester
+                let contact = NodeContact::new(requester.clone(), peer_addr);
+                if let Ok(mut table) = routing_table.try_write() {
+                    let _ = table.add_node(contact);
+                }
+
+                // Try to retrieve value
+                let value = if let Ok(mut store) = storage.try_write() {
+                    store.get(&key)
+                } else {
+                    None
+                };
+
+                // If value not found, return closest nodes
+                let nodes = if value.is_none() {
+                    if let Ok(table) = routing_table.try_read() {
+                        // Use requester as target for closest nodes
+                        table.find_closest(&requester, 20)
+                    } else {
+                        Vec::new()
+                    }
+                } else {
+                    Vec::new()
+                };
+
+                Some(KademliaRpc::FindValueResponse {
+                    request_id,
+                    value,
+                    nodes,
+                })
+            }
+
+            // Response messages (no reply needed)
+            KademliaRpc::FindNodeResponse { .. }
+            | KademliaRpc::StoreResponse { .. }
+            | KademliaRpc::FindValueResponse { .. } => {
+                debug!("Received response message (no action needed)");
+                None
+            }
+        }
+    }
+
+    /// Static helper to send RPC without &mut self
+    async fn send_rpc_static(
+        socket: &Arc<UdpSocket>,
+        rpc: &KademliaRpc,
+        dest: SocketAddr,
+    ) -> Result<(), std::io::Error> {
+        let data = bincode::serialize(rpc)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+
+        if data.len() > MAX_MESSAGE_SIZE {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "message too large",
+            ));
+        }
+
+        socket.send_to(&data, dest).await?;
+        debug!("Sent {:?} to {}", rpc, dest);
+        Ok(())
     }
 
     /// Send RPC message
