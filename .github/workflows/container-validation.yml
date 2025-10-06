@@ -1,0 +1,395 @@
+name: Container and Infrastructure Validation
+
+# Validate Docker, Kubernetes, and infrastructure configurations
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - 'k8s-*.yaml'
+      - 'charts/**'
+      - 'kind-config.yaml'
+      - '.github/workflows/container-validation.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - 'k8s-*.yaml'
+      - 'charts/**'
+      - 'kind-config.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  # ==================== Docker Validation ====================
+  
+  # Validate Dockerfiles with hadolint (pure Python alternative)
+  dockerfile-lint:
+    name: Dockerfile Linting
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          format: sarif
+          output-file: hadolint-results.sarif
+          no-fail: true
+      
+      - name: Upload Hadolint SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: hadolint-results.sarif
+        continue-on-error: true
+      
+      - name: Check additional Dockerfiles
+        run: |
+          for dockerfile in Dockerfile.*; do
+            if [ -f "$dockerfile" ]; then
+              echo "Linting $dockerfile..."
+              docker run --rm -i hadolint/hadolint < "$dockerfile" || true
+            fi
+          done
+
+  # Build Docker images to ensure they compile correctly
+  docker-build-test:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile:
+          - Dockerfile
+          - Dockerfile.benchmark
+          - nyx-cli/Dockerfile
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Extract image name
+        id: image
+        run: |
+          name=$(echo "${{ matrix.dockerfile }}" | sed 's/Dockerfile/nyx/' | sed 's/\//\-/g')
+          echo "name=$name" >> $GITHUB_OUTPUT
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: false
+          tags: ${{ steps.image.outputs.name }}:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true
+      
+      - name: Test Docker image
+        run: |
+          docker images
+          docker inspect ${{ steps.image.outputs.name }}:test
+
+  # Container image security scanning with Trivy
+  container-security-scan:
+    name: Container Security Scan (Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [docker-build-test]
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build image for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          tags: nyx:scan
+          cache-from: type=gha
+          load: true
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: nyx:scan
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+      
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+        continue-on-error: true
+      
+      - name: Run Trivy JSON output
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: nyx:scan
+          format: 'json'
+          output: 'trivy-results.json'
+      
+      - name: Upload Trivy results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-scan-results
+          path: |
+            trivy-results.sarif
+            trivy-results.json
+          retention-days: 90
+
+  # ==================== Docker Compose Validation ====================
+  
+  # Validate docker-compose configurations
+  docker-compose-validation:
+    name: Docker Compose Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        compose-file:
+          - docker-compose.benchmark.yml
+          - docker-compose.grafana.yml
+          - docker-compose.real-benchmark.yml
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Validate compose file syntax
+        run: |
+          docker compose -f ${{ matrix.compose-file }} config > /dev/null
+          echo "✅ ${{ matrix.compose-file }} is valid"
+      
+      - name: Check for common issues
+        run: |
+          echo "Checking ${{ matrix.compose-file }} for best practices..."
+          # Check for version specification
+          if ! grep -q "^version:" ${{ matrix.compose-file }}; then
+            echo "⚠️ No version specified in ${{ matrix.compose-file }}"
+          fi
+          # Check for health checks
+          if ! grep -q "healthcheck:" ${{ matrix.compose-file }}; then
+            echo "ℹ️ No health checks defined in ${{ matrix.compose-file }}"
+          fi
+          echo "✅ Validation complete"
+
+  # ==================== Kubernetes Validation ====================
+  
+  # Validate Kubernetes manifests with kubeconform
+  kubernetes-manifest-validation:
+    name: Kubernetes Manifest Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install kubeconform (Go-based, no C/C++ dependency)
+        run: |
+          curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+      
+      - name: Validate standalone K8s manifests
+        run: |
+          if [ -f k8s-nyx-multinode.yaml ]; then
+            echo "Validating k8s-nyx-multinode.yaml..."
+            kubeconform -summary -output json k8s-nyx-multinode.yaml | tee k8s-validation.json
+          fi
+      
+      - name: Upload K8s validation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k8s-validation-results
+          path: k8s-validation.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # Validate Helm charts
+  helm-chart-validation:
+    name: Helm Chart Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+      
+      - name: Lint Helm chart
+        run: |
+          if [ -d charts/nyx ]; then
+            helm lint charts/nyx
+          fi
+      
+      - name: Validate with different values files
+        run: |
+          if [ -d charts/nyx ]; then
+            for values in charts/nyx/values*.yaml; do
+              echo "Testing with $values..."
+              helm template nyx charts/nyx -f "$values" > /dev/null
+              echo "✅ $values validated successfully"
+            done
+          fi
+      
+      - name: Test Helm chart installation (dry-run)
+        run: |
+          if [ -d charts/nyx ]; then
+            helm install nyx-test charts/nyx --dry-run --debug
+          fi
+      
+      - name: Validate rendered manifests with kubeconform
+        run: |
+          curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+          
+          if [ -d charts/nyx ]; then
+            helm template nyx charts/nyx | kubeconform -summary -
+          fi
+
+  # ==================== Kind Configuration Validation ====================
+  
+  # Validate Kind configuration
+  kind-config-validation:
+    name: Kind Configuration Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Kind
+        uses: helm/kind-action@v1
+        with:
+          install_only: true
+      
+      - name: Validate Kind config
+        run: |
+          if [ -f kind-config.yaml ]; then
+            echo "Validating kind-config.yaml..."
+            # Kind doesn't have a native validation command, so we'll check syntax
+            cat kind-config.yaml | grep -E "(kind:|apiVersion:)" && echo "✅ Basic structure valid"
+          fi
+
+  # ==================== Infrastructure as Code Validation ====================
+  
+  # Validate infrastructure configurations
+  iac-validation:
+    name: Infrastructure as Code Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Check for Terraform files
+        id: terraform
+        run: |
+          if find . -name "*.tf" -type f | grep -q .; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Setup Terraform
+        if: steps.terraform.outputs.found == 'true'
+        uses: hashicorp/setup-terraform@v3
+      
+      - name: Terraform Format Check
+        if: steps.terraform.outputs.found == 'true'
+        run: terraform fmt -check -recursive
+      
+      - name: Terraform Validate
+        if: steps.terraform.outputs.found == 'true'
+        run: |
+          find . -name "*.tf" -type f -execdir terraform init -backend=false \; -execdir terraform validate \;
+
+  # ==================== Summary ====================
+  
+  container-validation-success:
+    name: Container Validation Success
+    runs-on: ubuntu-latest
+    needs:
+      - dockerfile-lint
+      - docker-build-test
+      - container-security-scan
+      - docker-compose-validation
+      - kubernetes-manifest-validation
+      - helm-chart-validation
+      - kind-config-validation
+    if: always()
+    steps:
+      - name: Generate validation summary
+        run: |
+          echo "## Container & Infrastructure Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dockerfile Lint | ${{ needs.dockerfile-lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Build Test | ${{ needs.docker-build-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Container Security Scan | ${{ needs.container-security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Compose Validation | ${{ needs.docker-compose-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Kubernetes Manifest Validation | ${{ needs.kubernetes-manifest-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Helm Chart Validation | ${{ needs.helm-chart-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Kind Config Validation | ${{ needs.kind-config-validation.result }} |" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for failures
+          if [[ "${{ needs.dockerfile-lint.result }}" == "failure" ]] || \
+             [[ "${{ needs.docker-build-test.result }}" == "failure" ]] || \
+             [[ "${{ needs.container-security-scan.result }}" == "failure" ]] || \
+             [[ "${{ needs.docker-compose-validation.result }}" == "failure" ]] || \
+             [[ "${{ needs.kubernetes-manifest-validation.result }}" == "failure" ]] || \
+             [[ "${{ needs.helm-chart-validation.result }}" == "failure" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Container validation failed**" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **All container validations passed**" >> $GITHUB_STEP_SUMMARY
+          fi
+

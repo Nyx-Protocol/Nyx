@@ -1,0 +1,401 @@
+name: Advanced Testing (Matrix, Integration, Fuzzing)
+
+# Advanced testing suite for comprehensive validation
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Run full matrix testing weekly on Sundays at 02:00 UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of advanced test to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - matrix
+          - integration
+          - fuzzing
+          - miri
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+permissions:
+  contents: read
+
+jobs:
+  # ==================== Rust Version Matrix Testing ====================
+  
+  # Test across multiple Rust versions for compatibility
+  rust-version-matrix:
+    name: Rust ${{ matrix.rust }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'matrix' || github.event.inputs.test_type == '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [stable, beta, nightly]
+        include:
+          # Test MSRV (Minimum Supported Rust Version)
+          - os: ubuntu-latest
+            rust: 1.70.0
+            msrv: true
+        exclude:
+          # Skip some combinations to save CI time
+          - os: windows-latest
+            rust: beta
+          - os: macos-latest
+            rust: beta
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust ${{ matrix.rust }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+      
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.os }}-${{ matrix.rust }}
+          cache-on-failure: true
+      
+      # OS-specific dependency installation
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcap-dev pkg-config protobuf-compiler
+      
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install protobuf
+      
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: choco install protoc -y
+      
+      - name: Build workspace
+        run: cargo build --workspace --all-features --locked
+        continue-on-error: ${{ matrix.rust == 'nightly' }}
+      
+      - name: Run tests
+        run: cargo test --workspace --all-features --no-fail-fast
+        continue-on-error: ${{ matrix.rust == 'nightly' }}
+      
+      - name: Check MSRV compatibility
+        if: matrix.msrv
+        run: |
+          echo "✅ MSRV ${{ matrix.rust }} compatibility verified"
+
+  # ==================== Feature Matrix Testing ====================
+  
+  # Test various feature flag combinations
+  feature-matrix:
+    name: Feature Matrix Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'matrix' || github.event.inputs.test_type == '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        features:
+          - ""  # No features
+          - "hybrid"
+          - "hybrid,multipath"
+          - "hybrid,telemetry"
+          - "hybrid,multipath,telemetry"
+          - "hybrid,multipath,telemetry,plugin"
+          - "experimental-metrics"
+          - "otlp_exporter"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: features-${{ hashFiles('Cargo.lock') }}-${{ matrix.features }}
+          cache-on-failure: true
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcap-dev pkg-config protobuf-compiler
+      
+      - name: Build with features
+        run: |
+          if [ -z "${{ matrix.features }}" ]; then
+            cargo build --workspace --no-default-features --locked
+          else
+            cargo build --workspace --features "${{ matrix.features }}" --locked
+          fi
+      
+      - name: Test with features
+        run: |
+          if [ -z "${{ matrix.features }}" ]; then
+            cargo test --workspace --no-default-features --no-fail-fast
+          else
+            cargo test --workspace --features "${{ matrix.features }}" --no-fail-fast
+          fi
+
+  # ==================== Integration Testing ====================
+  
+  # Full integration test suite
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'integration' || github.event.inputs.test_type == '' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "integration"
+          cache-on-failure: true
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcap-dev pkg-config protobuf-compiler
+      
+      - name: Run integration test suite
+        run: |
+          cargo test --package tests --all-features --no-fail-fast -- --nocapture
+      
+      - name: Run benchmarks (compilation check)
+        run: |
+          cargo test --package tests --manifest-path tests/benchmarks/Cargo.toml \
+            --benches --no-fail-fast
+      
+      - name: Run control integration tests
+        run: |
+          cargo test -p nyx-control --test integration_tests \
+            --all-features --no-fail-fast -- --nocapture
+      
+      - name: Run SDK integration tests
+        run: |
+          cargo test -p nyx-sdk --test integration_test \
+            --all-features --no-fail-fast -- --nocapture
+      
+      - name: Run stream timeout tests
+        run: |
+          cargo test -p nyx-sdk --test stream_timeout_tests \
+            --all-features --no-fail-fast -- --nocapture
+
+  # ==================== Fuzzing ====================
+  
+  # Continuous fuzzing with cargo-fuzz
+  fuzzing:
+    name: Fuzzing Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'fuzzing' || github.event.inputs.test_type == '' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust nightly (required for fuzzing)
+        uses: dtolnay/rust-toolchain@nightly
+      
+      - name: Install cargo-fuzz
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+      
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "fuzz"
+          cache-on-failure: true
+      
+      - name: List fuzz targets
+        run: |
+          cd fuzz
+          cargo fuzz list
+      
+      - name: Run fuzz targets (short duration)
+        run: |
+          cd fuzz
+          for target in $(cargo fuzz list); do
+            echo "Fuzzing target: $target"
+            # Run each target for 60 seconds
+            timeout 60s cargo fuzz run "$target" -- -max_total_time=60 || true
+          done
+      
+      - name: Check for crashes
+        if: always()
+        run: |
+          if [ -d "fuzz/artifacts" ] && [ "$(ls -A fuzz/artifacts)" ]; then
+            echo "⚠️ Fuzzing crashes detected!"
+            ls -la fuzz/artifacts/
+            exit 1
+          else
+            echo "✅ No fuzzing crashes detected"
+          fi
+      
+      - name: Upload fuzzing artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-artifacts
+          path: fuzz/artifacts/
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # ==================== Miri (Undefined Behavior Detection) ====================
+  
+  # Miri for detecting undefined behavior in unsafe code
+  miri-tests:
+    name: Miri UB Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'miri' || github.event.inputs.test_type == '' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust nightly with Miri
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "miri"
+          cache-on-failure: true
+      
+      - name: Setup Miri
+        run: cargo miri setup
+      
+      # Run Miri on core cryptographic and safety-critical crates
+      - name: Run Miri on nyx-crypto
+        run: |
+          cargo miri test -p nyx-crypto --lib --no-fail-fast
+        continue-on-error: true
+      
+      - name: Run Miri on nyx-core
+        run: |
+          cargo miri test -p nyx-core --lib --no-fail-fast
+        continue-on-error: true
+      
+      - name: Run Miri on nyx-fec
+        run: |
+          cargo miri test -p nyx-fec --lib --no-fail-fast
+        continue-on-error: true
+
+  # ==================== Benchmarking ====================
+  
+  # Performance benchmarking
+  benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "benchmarks"
+          cache-on-failure: true
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcap-dev pkg-config protobuf-compiler
+      
+      - name: Run benchmarks (nyx-core)
+        run: cargo bench -p nyx-core --no-fail-fast
+      
+      - name: Run benchmarks (nyx-crypto)
+        run: cargo bench -p nyx-crypto --no-fail-fast
+      
+      - name: Run benchmarks (nyx-fec)
+        run: cargo bench -p nyx-fec --no-fail-fast
+      
+      - name: Run benchmarks (nyx-stream)
+        run: cargo bench -p nyx-stream --no-fail-fast
+      
+      - name: Run benchmarks (nyx-transport)
+        run: cargo bench -p nyx-transport --no-fail-fast
+      
+      - name: Run benchmarks (nyx-control)
+        run: cargo bench -p nyx-control --no-fail-fast
+      
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: target/criterion/
+          retention-days: 90
+
+  # ==================== Summary ====================
+  
+  advanced-testing-success:
+    name: Advanced Testing Success
+    runs-on: ubuntu-latest
+    needs:
+      - rust-version-matrix
+      - feature-matrix
+      - integration-tests
+      - fuzzing
+      - miri-tests
+    if: always()
+    steps:
+      - name: Check status
+        run: |
+          echo "## Advanced Testing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Rust Version Matrix | ${{ needs.rust-version-matrix.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Feature Matrix | ${{ needs.feature-matrix.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Fuzzing | ${{ needs.fuzzing.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Miri UB Detection | ${{ needs.miri-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          
+          # Fail if critical tests failed
+          if [[ "${{ needs.integration-tests.result }}" == "failure" ]]; then
+            echo "❌ Critical integration tests failed"
+            exit 1
+          fi
+

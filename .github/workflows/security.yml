@@ -1,0 +1,376 @@
+name: Security Audit and SBOM
+
+# Run security checks on all pushes and PRs, plus scheduled weekly scans
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main, master, develop]
+  schedule:
+    # Run every Monday at 00:00 UTC for fresh vulnerability scanning
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+# Cancel redundant runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+# Read-only permissions by default
+permissions:
+  contents: read
+  security-events: write  # For uploading SARIF results
+
+jobs:
+  # ==================== Rust Security Audit ====================
+  
+  # Cargo audit for Rust dependencies
+  rust-cargo-audit:
+    name: Rust Dependency Audit (cargo-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+      
+      - name: Run cargo audit
+        run: |
+          cargo audit --json > cargo-audit-report.json || true
+          cargo audit
+      
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-audit-report
+          path: cargo-audit-report.json
+          retention-days: 90
+
+  # OSV Scanner for comprehensive vulnerability detection
+  osv-scanner:
+    name: OSV Vulnerability Scanner
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run OSV Scanner
+        uses: google/osv-scanner-action@v1
+        with:
+          scan-args: |
+            --recursive
+            --format json
+            --output osv-scan-results.json
+            ./
+        continue-on-error: true
+      
+      - name: Upload OSV scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: osv-scan-results
+          path: osv-scan-results.json
+          retention-days: 90
+
+  # ==================== SAST (Static Application Security Testing) ====================
+  
+  # Semgrep for pattern-based security analysis
+  semgrep-sast:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    container:
+      image: returntocorp/semgrep
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Run Semgrep
+        run: |
+          semgrep scan --config auto --json --output semgrep-results.json || true
+          semgrep scan --config auto --sarif --output semgrep.sarif || true
+      
+      - name: Upload Semgrep results (JSON)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-results
+          path: semgrep-results.json
+          retention-days: 90
+      
+      - name: Upload Semgrep SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+        continue-on-error: true
+
+  # ==================== Rust-specific Security Tools ====================
+  
+  # Cargo-deny for dependency policy enforcement
+  cargo-deny:
+    name: Cargo Deny (License and Security)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      
+      - name: Run cargo deny check
+        run: |
+          cargo deny check --config .cargo-deny.toml || \
+          cargo deny check advisories bans licenses sources
+      
+      - name: Generate detailed report
+        if: always()
+        run: |
+          cargo deny list --format json > cargo-deny-report.json || true
+      
+      - name: Upload cargo-deny report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-deny-report
+          path: cargo-deny-report.json
+          retention-days: 90
+
+  # ==================== Go Security ====================
+  
+  # Go security scanning with gosec
+  go-security-scan:
+    name: Go Security Scan (gosec)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    defaults:
+      run:
+        working-directory: nyx-http-proxy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+      
+      - name: Run gosec security scanner
+        uses: securego/gosec@master
+        with:
+          args: '-fmt sarif -out gosec-results.sarif ./nyx-http-proxy/...'
+        continue-on-error: true
+      
+      - name: Upload gosec SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: gosec-results.sarif
+        continue-on-error: true
+      
+      - name: Run gosec JSON output
+        run: |
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec -fmt json -out gosec-results.json ./... || true
+      
+      - name: Upload gosec JSON results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gosec-results
+          path: nyx-http-proxy/gosec-results.json
+          retention-days: 90
+
+  # Go dependency vulnerability check
+  go-vuln-check:
+    name: Go Vulnerability Check (govulncheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: nyx-http-proxy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+      
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      
+      - name: Run govulncheck
+        run: |
+          govulncheck -json ./... > govulncheck-results.json || true
+          govulncheck ./...
+      
+      - name: Upload govulncheck results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: govulncheck-results
+          path: nyx-http-proxy/govulncheck-results.json
+          retention-days: 90
+
+  # ==================== SBOM Generation ====================
+  
+  # Generate Software Bill of Materials for Rust
+  sbom-rust:
+    name: Generate SBOM (Rust)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install cargo-sbom
+        run: cargo install cargo-sbom
+      
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          cargo sbom --output-format json > sbom-rust-cyclonedx.json
+      
+      - name: Generate SBOM (SPDX)
+        run: |
+          cargo sbom --output-format spdx > sbom-rust-spdx.json
+      
+      - name: Upload Rust SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-rust
+          path: |
+            sbom-rust-cyclonedx.json
+            sbom-rust-spdx.json
+          retention-days: 90
+
+  # Generate Software Bill of Materials for Go
+  sbom-go:
+    name: Generate SBOM (Go)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: nyx-http-proxy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+      
+      - name: Install cyclonedx-gomod
+        run: go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@latest
+      
+      - name: Generate SBOM (CycloneDX)
+        run: |
+          cyclonedx-gomod app -json -output sbom-go-cyclonedx.json || true
+      
+      - name: Upload Go SBOM
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-go
+          path: nyx-http-proxy/sbom-go-cyclonedx.json
+          retention-days: 90
+
+  # ==================== Secret Scanning ====================
+  
+  # Gitleaks for secret detection
+  secret-scanning:
+    name: Secret Scanning (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for comprehensive scanning
+      
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+  # ==================== Security Summary ====================
+  
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs:
+      - rust-cargo-audit
+      - osv-scanner
+      - semgrep-sast
+      - cargo-deny
+      - go-security-scan
+      - go-vuln-check
+      - sbom-rust
+      - sbom-go
+      - secret-scanning
+    if: always()
+    steps:
+      - name: Generate security summary
+        run: |
+          echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Rust Cargo Audit | ${{ needs.rust-cargo-audit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| OSV Scanner | ${{ needs.osv-scanner.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Semgrep SAST | ${{ needs.semgrep-sast.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cargo Deny | ${{ needs.cargo-deny.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Go Security Scan | ${{ needs.go-security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Go Vuln Check | ${{ needs.go-vuln-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SBOM Rust | ${{ needs.sbom-rust.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SBOM Go | ${{ needs.sbom-go.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scanning | ${{ needs.secret-scanning.result }} |" >> $GITHUB_STEP_SUMMARY
+

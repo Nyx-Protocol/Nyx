@@ -1,0 +1,373 @@
+name: Code Coverage
+
+# Comprehensive code coverage analysis and reporting
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Weekly coverage report on Wednesdays at 03:00 UTC
+    - cron: '0 3 * * 3'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0
+  RUSTFLAGS: -Cinstrument-coverage
+
+permissions:
+  contents: read
+
+jobs:
+  # ==================== Rust Coverage ====================
+  
+  # Comprehensive Rust code coverage
+  rust-coverage:
+    name: Rust Code Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "coverage"
+          cache-on-failure: true
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcap-dev pkg-config protobuf-compiler
+      
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      
+      - name: Generate coverage (workspace)
+        run: |
+          cargo llvm-cov clean --workspace
+          cargo llvm-cov --workspace --all-features --no-fail-fast \
+            --lcov --output-path lcov-workspace.info \
+            --html --output-dir coverage-html-workspace
+      
+      - name: Generate coverage per package
+        run: |
+          mkdir -p coverage-per-package
+          for pkg in nyx-core nyx-crypto nyx-transport nyx-mix nyx-fec \
+                     nyx-stream nyx-telemetry nyx-control nyx-cli \
+                     nyx-daemon nyx-sdk nyx-conformance; do
+            echo "Generating coverage for $pkg..."
+            cargo llvm-cov clean -p $pkg
+            cargo llvm-cov -p $pkg --all-features --no-fail-fast \
+              --lcov --output-path coverage-per-package/$pkg.lcov \
+              --html --output-dir coverage-per-package/$pkg-html || true
+          done
+      
+      - name: Generate coverage summary
+        run: |
+          echo "# Code Coverage Report" > COVERAGE_REPORT.md
+          echo "" >> COVERAGE_REPORT.md
+          echo "## Workspace Coverage" >> COVERAGE_REPORT.md
+          echo "" >> COVERAGE_REPORT.md
+          
+          # Parse workspace coverage
+          cargo llvm-cov report --lcov --output-path - | \
+            awk -F',' '
+              NR>1 {
+                lines+=$6; 
+                hit+=$7;
+                funcs+=$8;
+                func_hit+=$9
+              }
+              END {
+                if (lines > 0) {
+                  line_cov = (hit / lines) * 100;
+                  func_cov = (func_hit / funcs) * 100;
+                  printf "- **Line Coverage**: %.2f%% (%d/%d lines)\n", line_cov, hit, lines;
+                  printf "- **Function Coverage**: %.2f%% (%d/%d functions)\n", func_cov, func_hit, funcs;
+                }
+              }
+            ' >> COVERAGE_REPORT.md || echo "- Coverage data unavailable" >> COVERAGE_REPORT.md
+          
+          echo "" >> COVERAGE_REPORT.md
+          echo "## Per-Package Coverage" >> COVERAGE_REPORT.md
+          echo "" >> COVERAGE_REPORT.md
+          echo "| Package | Line Coverage | Functions |" >> COVERAGE_REPORT.md
+          echo "|---------|---------------|-----------|" >> COVERAGE_REPORT.md
+          
+          for lcov_file in coverage-per-package/*.lcov; do
+            if [ -f "$lcov_file" ]; then
+              pkg=$(basename "$lcov_file" .lcov)
+              cov=$(cat "$lcov_file" | awk -F',' 'NR>1 {lines+=$6; hit+=$7} END {
+                if (lines > 0) printf "%.2f%%", (hit / lines) * 100; else print "N/A"
+              }')
+              echo "| $pkg | $cov | - |" >> COVERAGE_REPORT.md
+            fi
+          done
+      
+      - name: Display coverage summary
+        run: cat COVERAGE_REPORT.md
+      
+      - name: Upload Rust coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-coverage
+          path: |
+            lcov-workspace.info
+            coverage-html-workspace/
+            coverage-per-package/
+            COVERAGE_REPORT.md
+          retention-days: 90
+      
+      - name: Check coverage thresholds
+        run: |
+          # Parse workspace line coverage
+          coverage=$(cargo llvm-cov report --lcov --output-path - | \
+            awk -F',' 'NR>1 {lines+=$6; hit+=$7} END {
+              if (lines > 0) printf "%.2f", (hit / lines) * 100
+            }')
+          
+          echo "Current coverage: ${coverage}%"
+          
+          # Set minimum coverage threshold
+          THRESHOLD=70.0
+          
+          if (( $(echo "$coverage < $THRESHOLD" | bc -l) )); then
+            echo "⚠️ Coverage ${coverage}% is below threshold ${THRESHOLD}%"
+            # Don't fail on coverage for now, just warn
+          else
+            echo "✅ Coverage ${coverage}% meets threshold ${THRESHOLD}%"
+          fi
+
+  # ==================== Go Coverage ====================
+  
+  # Go HTTP Proxy coverage
+  go-coverage:
+    name: Go Code Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: nyx-http-proxy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+      
+      - name: Run tests with coverage
+        run: |
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      
+      - name: Generate coverage report
+        run: |
+          go tool cover -html=coverage.out -o coverage.html
+          go tool cover -func=coverage.out | tee coverage-summary.txt
+      
+      - name: Generate coverage JSON
+        run: |
+          total_coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          echo "{\"total_coverage\": \"$total_coverage\"}" > coverage.json
+          echo "Total Go coverage: $total_coverage"
+      
+      - name: Upload Go coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-coverage
+          path: |
+            nyx-http-proxy/coverage.out
+            nyx-http-proxy/coverage.html
+            nyx-http-proxy/coverage-summary.txt
+            nyx-http-proxy/coverage.json
+          retention-days: 90
+      
+      - name: Check Go coverage threshold
+        run: |
+          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Go coverage: ${coverage}%"
+          
+          THRESHOLD=60.0
+          
+          if (( $(echo "$coverage < $THRESHOLD" | bc -l) )); then
+            echo "⚠️ Go coverage ${coverage}% is below threshold ${THRESHOLD}%"
+          else
+            echo "✅ Go coverage ${coverage}% meets threshold ${THRESHOLD}%"
+          fi
+
+  # ==================== Coverage Aggregation ====================
+  
+  # Aggregate and generate unified coverage report
+  aggregate-coverage:
+    name: Aggregate Coverage Report
+    runs-on: ubuntu-latest
+    needs: [rust-coverage, go-coverage]
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download Rust coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-coverage
+          path: rust-coverage/
+      
+      - name: Download Go coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: go-coverage
+          path: go-coverage/
+      
+      - name: Generate unified coverage report
+        run: |
+          echo "# Unified Coverage Report" > UNIFIED_COVERAGE.md
+          echo "" >> UNIFIED_COVERAGE.md
+          echo "Generated on: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> UNIFIED_COVERAGE.md
+          echo "" >> UNIFIED_COVERAGE.md
+          
+          echo "## Rust Coverage" >> UNIFIED_COVERAGE.md
+          if [ -f rust-coverage/COVERAGE_REPORT.md ]; then
+            cat rust-coverage/COVERAGE_REPORT.md >> UNIFIED_COVERAGE.md
+          fi
+          
+          echo "" >> UNIFIED_COVERAGE.md
+          echo "## Go Coverage" >> UNIFIED_COVERAGE.md
+          if [ -f go-coverage/coverage-summary.txt ]; then
+            echo "\`\`\`" >> UNIFIED_COVERAGE.md
+            cat go-coverage/coverage-summary.txt >> UNIFIED_COVERAGE.md
+            echo "\`\`\`" >> UNIFIED_COVERAGE.md
+          fi
+          
+          echo "" >> UNIFIED_COVERAGE.md
+          echo "## Coverage Files" >> UNIFIED_COVERAGE.md
+          echo "" >> UNIFIED_COVERAGE.md
+          echo "- Rust LCOV: \`rust-coverage/lcov-workspace.info\`" >> UNIFIED_COVERAGE.md
+          echo "- Rust HTML: \`rust-coverage/coverage-html-workspace/\`" >> UNIFIED_COVERAGE.md
+          echo "- Go Coverage: \`go-coverage/coverage.out\`" >> UNIFIED_COVERAGE.md
+          echo "- Go HTML: \`go-coverage/coverage.html\`" >> UNIFIED_COVERAGE.md
+      
+      - name: Display unified coverage report
+        run: cat UNIFIED_COVERAGE.md
+      
+      - name: Upload unified coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: unified-coverage-report
+          path: UNIFIED_COVERAGE.md
+          retention-days: 90
+      
+      - name: Generate job summary
+        if: always()
+        run: |
+          if [ -f UNIFIED_COVERAGE.md ]; then
+            cat UNIFIED_COVERAGE.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ==================== Coverage Badges ====================
+  
+  # Generate coverage badges (optional)
+  generate-badges:
+    name: Generate Coverage Badges
+    runs-on: ubuntu-latest
+    needs: [aggregate-coverage]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-coverage
+          path: rust-coverage/
+      
+      - name: Extract coverage percentage
+        id: coverage
+        run: |
+          if [ -f rust-coverage/lcov-workspace.info ]; then
+            coverage=$(cat rust-coverage/lcov-workspace.info | \
+              awk -F',' 'NR>1 {lines+=$6; hit+=$7} END {
+                if (lines > 0) printf "%.1f", (hit / lines) * 100
+              }')
+          else
+            coverage="0.0"
+          fi
+          echo "coverage=$coverage" >> $GITHUB_OUTPUT
+          echo "Coverage: ${coverage}%"
+      
+      - name: Create coverage badge
+        run: |
+          coverage="${{ steps.coverage.outputs.coverage }}"
+          
+          # Determine badge color based on coverage
+          if (( $(echo "$coverage >= 80" | bc -l) )); then
+            color="brightgreen"
+          elif (( $(echo "$coverage >= 60" | bc -l) )); then
+            color="yellow"
+          else
+            color="red"
+          fi
+          
+          echo "Badge: coverage-${coverage}%-${color}"
+          
+          # Create badge markdown
+          echo "![Coverage](https://img.shields.io/badge/coverage-${coverage}%25-${color})" > COVERAGE_BADGE.md
+
+  # ==================== Summary ====================
+  
+  coverage-success:
+    name: Coverage Success
+    runs-on: ubuntu-latest
+    needs:
+      - rust-coverage
+      - go-coverage
+      - aggregate-coverage
+    if: always()
+    steps:
+      - name: Check coverage status
+        run: |
+          echo "## Coverage Analysis Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Rust Coverage | ${{ needs.rust-coverage.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Go Coverage | ${{ needs.go-coverage.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Aggregate Report | ${{ needs.aggregate-coverage.result }} |" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.rust-coverage.result }}" != "success" ]] || \
+             [[ "${{ needs.go-coverage.result }}" != "success" ]]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Some coverage checks failed**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **All coverage checks completed successfully**" >> $GITHUB_STEP_SUMMARY
+          fi
+

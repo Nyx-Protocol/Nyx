@@ -1,0 +1,73 @@
+# Cargo deny configuration for security and license compliance
+# https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+targets = []
+all-features = true
+
+[advisories]
+version = 2
+# Database to use for advisory checking
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+# Vulnerability severity threshold
+vulnerability = "deny"
+# Unmaintained crate threshold
+unmaintained = "warn"
+# Yanked crate detection
+yanked = "deny"
+# Crates with notices
+notice = "warn"
+ignore = [
+    # Add specific advisories to ignore here if needed
+]
+
+[licenses]
+version = 2
+# Allow licenses that are compatible with the project
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-DFS-2016",
+    "Unlicense",
+    "Zlib",
+]
+# Deny licenses that are incompatible
+deny = [
+    "GPL-3.0",
+    "AGPL-3.0",
+]
+# Copyleft licenses require careful review
+copyleft = "warn"
+# Allow OSI/FSF approved licenses
+allow-osi-fsf-free = "both"
+# Default license policy
+default = "deny"
+confidence-threshold = 0.8
+
+[licenses.private]
+# Allow proprietary licenses for workspace members
+ignore = false
+registries = []
+
+[bans]
+# Deny multiple versions of the same crate
+multiple-versions = "warn"
+# Wildcards in dependencies
+wildcards = "allow"
+# Allow/deny specific crates
+deny = []
+skip = []
+skip-tree = []
+
+[sources]
+# Check crate sources
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
+

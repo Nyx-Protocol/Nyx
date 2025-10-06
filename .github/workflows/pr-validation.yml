@@ -1,0 +1,165 @@
+name: Pull Request Validation
+
+# Fast validation for pull requests
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ==================== Quick Validation ====================
+  
+  # Fast checks for immediate feedback
+  quick-checks:
+    name: Quick PR Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      
+      - name: Check PR title
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          # Check if PR title follows conventional commits
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?:.+ ]]; then
+            echo "⚠️ PR title should follow Conventional Commits format"
+            echo "Examples: 'feat: add new feature', 'fix(core): resolve bug'"
+          else
+            echo "✅ PR title follows Conventional Commits format"
+          fi
+      
+      - name: Check for TODO/FIXME comments
+        run: |
+          echo "Checking for TODO/FIXME comments in changed files..."
+          if git diff origin/main...HEAD | grep -E '^\+.*\b(TODO|FIXME|XXX|HACK)\b'; then
+            echo "⚠️ Found TODO/FIXME comments in changes"
+          else
+            echo "✅ No TODO/FIXME comments found"
+          fi
+      
+      - name: Check file sizes
+        run: |
+          echo "Checking for large files..."
+          large_files=$(git diff --stat origin/main...HEAD | awk '{if ($3 > 1000) print $1}')
+          if [ -n "$large_files" ]; then
+            echo "⚠️ Large file changes detected:"
+            echo "$large_files"
+          else
+            echo "✅ No unusually large file changes"
+          fi
+      
+      - name: Generate PR summary
+        run: |
+          echo "## Pull Request Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Title**: ${{ github.event.pull_request.title }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Author**: @${{ github.event.pull_request.user.login }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Base**: ${{ github.event.pull_request.base.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Head**: ${{ github.event.pull_request.head.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Changed Files" >> $GITHUB_STEP_SUMMARY
+          git diff --name-only origin/main...HEAD | head -20 | while read file; do
+            echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
+          done
+
+  # ==================== PR Labels ====================
+  
+  # Auto-label PRs based on changed files
+  auto-label:
+    name: Auto Label PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      
+      - name: Detect changed areas
+        id: detect
+        run: |
+          # Detect which areas were changed
+          if git diff --name-only origin/main...HEAD | grep -E '^(nyx-core|nyx-crypto|nyx-mix)/'; then
+            echo "core=true" >> $GITHUB_OUTPUT
+          fi
+          if git diff --name-only origin/main...HEAD | grep -E '^docs/'; then
+            echo "docs=true" >> $GITHUB_OUTPUT
+          fi
+          if git diff --name-only origin/main...HEAD | grep -E '^\.github/workflows/'; then
+            echo "ci=true" >> $GITHUB_OUTPUT
+          fi
+          if git diff --name-only origin/main...HEAD | grep -E '^(Dockerfile|docker-compose)'; then
+            echo "docker=true" >> $GITHUB_OUTPUT
+          fi
+          if git diff --name-only origin/main...HEAD | grep -E '^nyx-http-proxy/'; then
+            echo "go=true" >> $GITHUB_OUTPUT
+          fi
+
+  # ==================== Changelog Check ====================
+  
+  # Ensure changelog is updated
+  changelog-check:
+    name: Changelog Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      
+      - name: Check if CHANGELOG.md was updated
+        run: |
+          if git diff --name-only origin/main...HEAD | grep -q 'CHANGELOG.md'; then
+            echo "✅ CHANGELOG.md was updated"
+          else
+            echo "ℹ️ Consider updating CHANGELOG.md for user-facing changes"
+          fi
+
+  # ==================== Summary ====================
+  
+  pr-validation-success:
+    name: PR Validation Success
+    runs-on: ubuntu-latest
+    needs:
+      - quick-checks
+      - auto-label
+      - changelog-check
+    if: always()
+    steps:
+      - name: Check validation status
+        run: |
+          if [[ "${{ needs.quick-checks.result }}" == "success" ]] && \
+             [[ "${{ needs.auto-label.result }}" == "success" ]] && \
+             [[ "${{ needs.changelog-check.result }}" == "success" ]]; then
+            echo "✅ All PR validation checks passed"
+          else
+            echo "⚠️ Some PR validation checks had issues"
+          fi
+

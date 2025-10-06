@@ -1,0 +1,257 @@
+name: Dependency Review
+
+# Review and monitor dependencies for security and licensing
+on:
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - '**/go.mod'
+      - '**/go.sum'
+  schedule:
+    # Weekly dependency review on Tuesdays at 01:00 UTC
+    - cron: '0 1 * * 2'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ==================== Dependency Review (GitHub Native) ====================
+  
+  # GitHub's native dependency review for PRs
+  dependency-review:
+    name: Dependency Review (GitHub)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: true
+
+  # ==================== Rust Dependency Updates ====================
+  
+  # Check for outdated Rust dependencies
+  rust-dependency-check:
+    name: Rust Dependency Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install cargo-outdated
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-outdated
+      
+      - name: Check for outdated dependencies
+        run: |
+          cargo outdated --workspace --root-deps-only --format json > outdated-deps.json || true
+          cargo outdated --workspace --root-deps-only
+      
+      - name: Generate outdated dependencies report
+        run: |
+          echo "# Outdated Rust Dependencies" > OUTDATED_DEPS.md
+          echo "" >> OUTDATED_DEPS.md
+          echo "Generated on: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> OUTDATED_DEPS.md
+          echo "" >> OUTDATED_DEPS.md
+          
+          if [ -f outdated-deps.json ]; then
+            echo "See detailed report in artifacts." >> OUTDATED_DEPS.md
+          else
+            echo "No outdated dependencies detected." >> OUTDATED_DEPS.md
+          fi
+      
+      - name: Upload outdated dependencies report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-outdated-deps
+          path: |
+            outdated-deps.json
+            OUTDATED_DEPS.md
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # Check for dependency tree conflicts
+  rust-dependency-tree:
+    name: Rust Dependency Tree Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install cargo-tree
+        run: cargo install cargo-tree || true
+      
+      - name: Generate dependency tree
+        run: |
+          cargo tree --workspace --all-features > dependency-tree.txt || true
+      
+      - name: Check for duplicate dependencies
+        run: |
+          cargo tree --workspace --all-features --duplicates > duplicate-deps.txt || true
+          
+          if [ -s duplicate-deps.txt ]; then
+            echo "⚠️ Duplicate dependencies detected:"
+            cat duplicate-deps.txt
+          else
+            echo "✅ No duplicate dependencies found"
+          fi
+      
+      - name: Upload dependency tree analysis
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-dependency-tree
+          path: |
+            dependency-tree.txt
+            duplicate-deps.txt
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # ==================== Go Dependency Updates ====================
+  
+  # Check for outdated Go dependencies
+  go-dependency-check:
+    name: Go Dependency Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: nyx-http-proxy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+      
+      - name: List available updates
+        run: |
+          go list -u -m all > ../go-updates.txt || true
+          cat ../go-updates.txt
+      
+      - name: Check for security updates
+        run: |
+          go list -json -m all > ../go-deps.json || true
+      
+      - name: Upload Go dependency report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-dependency-report
+          path: |
+            go-updates.txt
+            go-deps.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # ==================== License Compliance ====================
+  
+  # Check license compliance
+  license-compliance:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install cargo-license
+        run: cargo install cargo-license
+      
+      - name: Generate license report (Rust)
+        run: |
+          cargo license --workspace --json > rust-licenses.json || true
+          cargo license --workspace > rust-licenses.txt || true
+      
+      - name: Check for incompatible licenses
+        run: |
+          echo "# License Compliance Report" > LICENSE_REPORT.md
+          echo "" >> LICENSE_REPORT.md
+          echo "## Rust Dependencies" >> LICENSE_REPORT.md
+          echo "" >> LICENSE_REPORT.md
+          
+          if [ -f rust-licenses.txt ]; then
+            echo "\`\`\`" >> LICENSE_REPORT.md
+            cat rust-licenses.txt >> LICENSE_REPORT.md
+            echo "\`\`\`" >> LICENSE_REPORT.md
+          fi
+          
+          echo "" >> LICENSE_REPORT.md
+          echo "⚠️ Please review licenses for compliance with project requirements." >> LICENSE_REPORT.md
+      
+      - name: Upload license report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-compliance-report
+          path: |
+            rust-licenses.json
+            rust-licenses.txt
+            LICENSE_REPORT.md
+          retention-days: 90
+
+  # ==================== Summary ====================
+  
+  dependency-review-success:
+    name: Dependency Review Success
+    runs-on: ubuntu-latest
+    needs:
+      - rust-dependency-check
+      - rust-dependency-tree
+      - go-dependency-check
+      - license-compliance
+    if: always()
+    steps:
+      - name: Generate dependency review summary
+        run: |
+          echo "## Dependency Review Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Rust Dependency Check | ${{ needs.rust-dependency-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Rust Dependency Tree | ${{ needs.rust-dependency-tree.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Go Dependency Check | ${{ needs.go-dependency-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Compliance | ${{ needs.license-compliance.result }} |" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Dependency review completed**" >> $GITHUB_STEP_SUMMARY
+
