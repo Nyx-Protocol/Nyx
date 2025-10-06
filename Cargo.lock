@@ -3199,6 +3199,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nyx-benchmarks"
+version = "1.0.0"
+dependencies = [
+ "criterion",
+ "futures",
+ "nyx-core",
+ "nyx-crypto",
+ "nyx-stream",
+ "nyx-transport",
+ "tokio",
+]
+
+[[package]]
 name = "nyx-cli"
 version = "0.1.0"
 dependencies = [
@@ -3337,6 +3350,7 @@ dependencies = [
  "criterion",
  "filetime",
  "getrandom 0.2.16",
+ "hex",
  "hex-literal",
  "hkdf",
  "hmac",

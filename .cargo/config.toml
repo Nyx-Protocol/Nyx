@@ -1,7 +1,12 @@
 [target.x86_64-pc-windows-msvc]
 linker = "rust-lld.exe"
 ar = "llvm-ar.exe"
-rustflags = ["-C", "embed-bitcode=yes"]
+rustflags = [
+    "-C", "embed-bitcode=yes",
+    # Performance optimizations for Windows builds
+    "-C", "link-arg=/OPT:REF",      # Remove unreferenced functions
+    "-C", "link-arg=/OPT:ICF",      # Identical COMDAT folding (reduce binary size, improve locality)
+]
 
 [target.i686-pc-windows-msvc]
 linker = "rust-lld.exe"

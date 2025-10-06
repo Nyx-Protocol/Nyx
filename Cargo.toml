@@ -16,6 +16,7 @@ members = [
     "nyx-mobile-ffi", # Mobile platform FFI bindings
     "build-protoc",
     "tests", # Integration test suite
+    "tests/benchmarks", # Application-level benchmarks
 ]
 exclude = [
     "fuzz", # cargo-fuzz targets are excluded from workspace
@@ -81,7 +82,7 @@ proptest = "1.0"
 [profile.release]
 codegen-units = 1
 lto = "fat"
-opt-level = 3  # Changed from "z" to 3 for better balance of size and speed
+opt-level = 3  # Maximum optimization for performance
 panic = "abort"
 strip = true   # Strip debug symbols for smaller binaries
 overflow-checks = false  # Disable overflow checks for maximum performance
@@ -93,7 +94,11 @@ incremental = false
 # Additional performance optimizations
 [profile.release.package."*"]
 opt-level = 3
-codegen-units = 1 
+codegen-units = 1
+
+# Bench profile inherits from release but with specific optimizations for benchmarking
+[profile.bench]
+inherits = "release" 
 
 # Reduce link-time memory usage for tests on Windows/MSVC by disabling debug symbols
 # and minimizing object fragmentation.
