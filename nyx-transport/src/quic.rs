@@ -74,9 +74,9 @@ impl CubicState {
         self.latest_rtt = Some(rtt);
 
         // Track minimum RTT
-        // SAFETY: Use map_or to avoid unwrap() even though short-circuit evaluation makes it safe
+        // SAFETY: Use is_none_or to avoid unwrap() even though short-circuit evaluation makes it safe
         // This improves readability and prevents future bugs if code is refactored
-        if self.min_rtt.map_or(true, |min| rtt < min) {
+        if self.min_rtt.is_none_or(|min| rtt < min) {
             self.min_rtt = Some(rtt);
         }
 
@@ -908,7 +908,8 @@ impl HeaderProtection {
         //   opaque label<7..255> = "tls13 " + Label;
         //   opaque context<0..255> = Context;
         // }
-        let mut hkdf_label = Vec::new();
+        // Pre-allocate: 2 (length) + 1 (label_len) + 6 ("tls13 ") + label + 1 (context_len) + context
+        let mut hkdf_label = Vec::with_capacity(10 + label.len() + context.len());
         hkdf_label.extend_from_slice(&(length as u16).to_be_bytes());
 
         // QUIC uses "tls13 " prefix (6 bytes + label)

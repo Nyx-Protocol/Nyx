@@ -352,7 +352,7 @@ impl PathValidator {
 
     /// Send PATH_CHALLENGE frame to target address
     async fn send_path_challenge(&self, challenge: &PathChallenge) -> Result<()> {
-        let mut frame = Vec::new();
+        let mut frame = Vec::with_capacity(9); // 1 byte type + 8 bytes token
         frame.push(PATH_CHALLENGE_FRAME_TYPE);
         frame.extend_from_slice(&challenge.token);
 
@@ -499,7 +499,7 @@ impl PathValidator {
 
     /// Send PATH_RESPONSE frame
     async fn send_path_response(&self, token: &[u8], target_addr: SocketAddr) -> Result<()> {
-        let mut frame = Vec::new();
+        let mut frame = Vec::with_capacity(9); // 1 byte type + 8 bytes token
         frame.push(PATH_RESPONSE_FRAME_TYPE);
         frame.extend_from_slice(token);
 
