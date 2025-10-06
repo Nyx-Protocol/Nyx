@@ -1,4 +1,5 @@
 ---- MODULE NyxTimeSensitiveNetworking ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Time-Sensitive Networking and Real-Time Communication    *)
 (*                                                                          *)
