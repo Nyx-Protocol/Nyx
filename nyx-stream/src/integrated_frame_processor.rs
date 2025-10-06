@@ -122,7 +122,7 @@ impl ReorderingBuffer {
 
     fn insert(&mut self, frame: Frame) -> Vec<Frame> {
         let seq = frame.header.seq;
-        let mut ready_frames = Vec::new();
+        let mut ready_frames = Vec::with_capacity(8);
 
         // Check if frame is within acceptable window
         if seq < self.expected_seq || seq >= self.expected_seq + self.window_size {
@@ -219,7 +219,7 @@ impl IntegratedFrameProcessor {
         }
 
         let start_time = Instant::now();
-        let mut processed_frames = Vec::new();
+        let mut processed_frames = Vec::with_capacity(16);
 
         // Work on a single mutable buffer so we actually consume decoded bytes
         let mut buf = BytesMut::from(&data[..]);
@@ -533,7 +533,7 @@ impl IntegratedFrameProcessor {
 
         if let Some(buffer) = reordering_buffers.remove(&stream_id) {
             // Extract all buffered frames
-            let mut flushed_frames = Vec::new();
+            let mut flushed_frames = Vec::with_capacity(buffer.buffer.len());
             for (_, frame) in buffer.buffer.into_iter() {
                 flushed_frames.push(frame);
             }
