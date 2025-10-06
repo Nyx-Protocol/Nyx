@@ -9,8 +9,8 @@
 //! These benchmarks demonstrate the practical performance of NyxNet
 //! for common application use cases using actual NyxNet components.
 
+use chacha20poly1305::{aead::Aead, ChaCha20Poly1305, KeyInit};
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use chacha20poly1305::{ChaCha20Poly1305, KeyInit, aead::{Aead, AeadCore}};
 use nyx_transport::{TransportConfig, UdpTransport};
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -62,7 +62,9 @@ impl TestNetwork {
             let encrypted = {
                 let cipher = self.cipher.lock().await;
                 let nonce = [0u8; 12]; // Simplified for benchmark
-                cipher.encrypt(&nonce.into(), chunk).expect("encryption failed")
+                cipher
+                    .encrypt(&nonce.into(), chunk)
+                    .expect("encryption failed")
             };
 
             // Send via UDP
@@ -136,7 +138,9 @@ fn bench_messaging(c: &mut Criterion) {
                     let encrypted = {
                         let cipher = network.cipher.lock().await;
                         let nonce = [0u8; 12];
-                        cipher.encrypt(&nonce.into(), message.as_slice()).expect("encryption failed")
+                        cipher
+                            .encrypt(&nonce.into(), message.as_slice())
+                            .expect("encryption failed")
                     };
 
                     network
@@ -152,7 +156,9 @@ fn bench_messaging(c: &mut Criterion) {
                     let decrypted = {
                         let cipher = network.cipher.lock().await;
                         let nonce = [0u8; 12];
-                        cipher.decrypt(&nonce.into(), &buf[..len]).expect("decryption failed")
+                        cipher
+                            .decrypt(&nonce.into(), &buf[..len])
+                            .expect("decryption failed")
                     };
 
                     let latency = start.elapsed();
@@ -176,7 +182,9 @@ fn bench_messaging(c: &mut Criterion) {
                 let encrypted = {
                     let cipher = network.cipher.lock().await;
                     let nonce = [0u8; 12];
-                    cipher.encrypt(&nonce.into(), message.as_slice()).expect("encryption failed")
+                    cipher
+                        .encrypt(&nonce.into(), message.as_slice())
+                        .expect("encryption failed")
                 };
 
                 network
@@ -213,7 +221,7 @@ fn bench_video_streaming(c: &mut Criterion) {
             let chunk_size = 1400; // MTU-friendly
             let chunks_per_sec = (bitrate_mbps * 1_000_000.0 / 8.0 / chunk_size as f64) as usize;
 
-            let start = Instant::now();
+            let _start = Instant::now();
             let mut packets_sent = 0;
             let mut packets_lost = 0;
 
@@ -225,7 +233,9 @@ fn bench_video_streaming(c: &mut Criterion) {
                     let encrypted = {
                         let cipher = network.cipher.lock().await;
                         let nonce = [0u8; 12];
-                        cipher.encrypt(&nonce.into(), chunk.as_slice()).expect("encryption failed")
+                        cipher
+                            .encrypt(&nonce.into(), chunk.as_slice())
+                            .expect("encryption failed")
                     };
 
                     match network
@@ -242,7 +252,7 @@ fn bench_video_streaming(c: &mut Criterion) {
                 tokio::time::sleep(Duration::from_millis(1000)).await;
             }
 
-            let elapsed = start.elapsed();
+            let _elapsed = _start.elapsed();
             let packet_loss_rate = if packets_sent > 0 {
                 packets_lost as f64 / (packets_sent + packets_lost) as f64
             } else {
@@ -286,7 +296,9 @@ fn bench_voip(c: &mut Criterion) {
                 let encrypted = {
                     let cipher = network.cipher.lock().await;
                     let nonce = [0u8; 12];
-                    cipher.encrypt(&nonce.into(), frame.as_slice()).expect("encryption failed")
+                    cipher
+                        .encrypt(&nonce.into(), frame.as_slice())
+                        .expect("encryption failed")
                 };
 
                 network
@@ -302,7 +314,9 @@ fn bench_voip(c: &mut Criterion) {
                 let _decrypted = {
                     let cipher = network.cipher.lock().await;
                     let nonce = [0u8; 12];
-                    cipher.decrypt(&nonce.into(), &buf[..len]).expect("decryption failed")
+                    cipher
+                        .decrypt(&nonce.into(), &buf[..len])
+                        .expect("decryption failed")
                 };
 
                 let latency = frame_start.elapsed();
@@ -381,51 +395,54 @@ fn bench_scalability(c: &mut Criterion) {
                     let networks: Vec<_> =
                         futures::future::join_all((0..count).map(|_| TestNetwork::new())).await;
 
-                    let start = Instant::now();
+                    let _start = Instant::now();
                     let message = vec![0u8; 1024];
 
                     // Spawn concurrent message sends
-                    let handles: Vec<_> = networks
-                        .iter()
-                        .map(|network| {
-                            let msg = message.clone();
-                            let net = network;
-                            tokio::spawn(async move {
-                                // Encrypt and send
-                                let encrypted = {
-                                    let cipher = net.cipher.lock().await;
-                                    let nonce = [0u8; 12];
-                                    cipher.encrypt(&nonce.into(), msg.as_slice()).expect("encryption failed")
-                                };
+                    let mut handles = Vec::new();
+                    for network in &networks {
+                        let msg = message.clone();
+                        let sender = network.sender_socket.clone();
+                        let receiver = network.receiver_socket.clone();
+                        let receiver_addr = network.receiver_addr;
+                        let cipher = network.cipher.clone();
 
-                                net.sender_socket
-                                    .send_to(&encrypted, net.receiver_addr)
-                                    .await
-                                    .unwrap();
+                        let handle = tokio::spawn(async move {
+                            // Encrypt and send
+                            let encrypted = {
+                                let cipher = cipher.lock().await;
+                                let nonce = [0u8; 12];
+                                cipher
+                                    .encrypt(&nonce.into(), msg.as_slice())
+                                    .expect("encryption failed")
+                            };
 
-                                // Receive response
-                                let mut buf = vec![0u8; 1024 + 64];
-                                let (len, _) =
-                                    net.receiver_socket.recv_from(&mut buf).await.unwrap();
+                            sender.send_to(&encrypted, receiver_addr).await.unwrap();
 
-                                let _decrypted = {
-                                    let cipher = net.cipher.lock().await;
-                                    let nonce = [0u8; 12];
-                                    cipher.decrypt(&nonce.into(), &buf[..len]).expect("decryption failed")
-                                };
-                            })
-                        })
-                        .collect();
+                            // Receive response
+                            let mut buf = vec![0u8; 1024 + 64];
+                            let (len, _) = receiver.recv_from(&mut buf).await.unwrap();
+
+                            let _decrypted = {
+                                let cipher = cipher.lock().await;
+                                let nonce = [0u8; 12];
+                                cipher
+                                    .decrypt(&nonce.into(), &buf[..len])
+                                    .expect("decryption failed")
+                            };
+                        });
+                        handles.push(handle);
+                    }
 
                     // Wait for all connections
                     for handle in handles {
                         handle.await.unwrap();
                     }
 
-                    let elapsed = start.elapsed();
-                    let avg_latency = elapsed / count as u32;
+                    let _elapsed = _start.elapsed();
+                    let avg_latency = _elapsed / count as u32;
 
-                    black_box((elapsed, avg_latency))
+                    black_box((_elapsed, avg_latency))
                 });
             },
         );
