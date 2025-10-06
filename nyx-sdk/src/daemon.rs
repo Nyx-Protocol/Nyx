@@ -234,18 +234,19 @@ impl DaemonClient {
             req: Request::SubscribeEvents { types },
         };
         let line = serde_json::to_string(&req).map_err(|e| Error::Protocol(e.to_string()))? + "\n";
+        let timeout_ms3 = self.cfg.request_timeout_ms;
         timeout(
-            Duration::from_millis(self.cfg.request_timeout_ms),
+            Duration::from_millis(timeout_ms3),
             stream.write_all(line.as_bytes()),
         )
         .await
-        .map_err(|_| Error::Timeout)??;
+        .map_err(|_| Error::timeout(timeout_ms3))??;
         timeout(
-            Duration::from_millis(self.cfg.request_timeout_ms),
+            Duration::from_millis(timeout_ms3),
             stream.flush(),
         )
         .await
-        .map_err(|_| Error::Timeout)??;
+        .map_err(|_| Error::timeout(timeout_ms3))??;
         // Drop first response line
         let mut buf = Vec::with_capacity(1024);
         read_one_line_with_timeout(&mut stream, &mut buf, self.cfg.request_timeout_ms).await?;
@@ -297,13 +298,13 @@ impl DaemonClient {
             stream.write_all(line.as_bytes()),
         )
         .await
-        .map_err(|_| Error::Timeout)??;
+        .map_err(|_| Error::timeout(self.cfg.request_timeout_ms))??;
         timeout(
             Duration::from_millis(self.cfg.request_timeout_ms),
             stream.flush(),
         )
         .await
-        .map_err(|_| Error::Timeout)??;
+        .map_err(|_| Error::timeout(self.cfg.request_timeout_ms))??;
         let mut buf = Vec::with_capacity(1024);
         read_one_line_with_timeout(&mut stream, &mut buf, self.cfg.request_timeout_ms).await?;
         let resp: RpcResponseValue =
@@ -423,11 +424,11 @@ async fn read_one_line_with_timeout<R: AsyncRead + Unpin>(
     loop {
         let remain = deadline.saturating_sub(start.elapsed());
         if remain.is_zero() {
-            return Err(Error::Timeout);
+            return Err(Error::timeout(timeout_ms));
         }
         let n = timeout(remain, reader.read(&mut buf))
             .await
-            .map_err(|_| Error::Timeout)?
+            .map_err(|_| Error::timeout(timeout_ms))?
             .map_err(|e| Error::Stream(e.to_string()))?;
         if n == 0 {
             break;
