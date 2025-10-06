@@ -10,7 +10,7 @@
 //! for common application use cases using actual NyxNet components.
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use nyx_crypto::aead::ChaCha20Poly1305;
+use chacha20poly1305::{ChaCha20Poly1305, KeyInit, aead::{Aead, AeadCore}};
 use nyx_transport::{TransportConfig, UdpTransport};
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -41,7 +41,7 @@ impl TestNetwork {
 
         // Create cipher for encryption
         let key = [0u8; 32]; // Test key
-        let cipher = Arc::new(Mutex::new(ChaCha20Poly1305::new(&key)));
+        let cipher = Arc::new(Mutex::new(ChaCha20Poly1305::new(&key.into())));
 
         Self {
             sender_socket,
@@ -60,9 +60,9 @@ impl TestNetwork {
         for chunk in data.chunks(CHUNK_SIZE) {
             // Encrypt chunk
             let encrypted = {
-                let mut cipher = self.cipher.lock().await;
+                let cipher = self.cipher.lock().await;
                 let nonce = [0u8; 12]; // Simplified for benchmark
-                cipher.encrypt(&nonce, chunk).unwrap()
+                cipher.encrypt(&nonce.into(), chunk).unwrap()
             };
 
             // Send via UDP
@@ -134,9 +134,9 @@ fn bench_messaging(c: &mut Criterion) {
 
                     // Encrypt and send
                     let encrypted = {
-                        let mut cipher = network.cipher.lock().await;
+                        let cipher = network.cipher.lock().await;
                         let nonce = [0u8; 12];
-                        cipher.encrypt(&nonce, &message).unwrap()
+                        cipher.encrypt(&nonce.into(), &message).unwrap()
                     };
 
                     network
@@ -150,9 +150,9 @@ fn bench_messaging(c: &mut Criterion) {
                     let (len, _) = network.receiver_socket.recv_from(&mut buf).await.unwrap();
 
                     let decrypted = {
-                        let mut cipher = network.cipher.lock().await;
+                        let cipher = network.cipher.lock().await;
                         let nonce = [0u8; 12];
-                        cipher.decrypt(&nonce, &buf[..len]).unwrap()
+                        cipher.decrypt(&nonce.into(), &buf[..len]).unwrap()
                     };
 
                     let latency = start.elapsed();
@@ -174,9 +174,9 @@ fn bench_messaging(c: &mut Criterion) {
 
             for _ in 0..count {
                 let encrypted = {
-                    let mut cipher = network.cipher.lock().await;
+                    let cipher = network.cipher.lock().await;
                     let nonce = [0u8; 12];
-                    cipher.encrypt(&nonce, &message).unwrap()
+                    cipher.encrypt(&nonce.into(), &message).unwrap()
                 };
 
                 network
@@ -223,9 +223,9 @@ fn bench_video_streaming(c: &mut Criterion) {
 
                     // Encrypt and send video chunk
                     let encrypted = {
-                        let mut cipher = network.cipher.lock().await;
+                        let cipher = network.cipher.lock().await;
                         let nonce = [0u8; 12];
-                        cipher.encrypt(&nonce, &chunk).unwrap()
+                        cipher.encrypt(&nonce.into(), &chunk).unwrap()
                     };
 
                     match network
@@ -284,9 +284,9 @@ fn bench_voip(c: &mut Criterion) {
 
                 // Encrypt and send voice frame
                 let encrypted = {
-                    let mut cipher = network.cipher.lock().await;
+                    let cipher = network.cipher.lock().await;
                     let nonce = [0u8; 12];
-                    cipher.encrypt(&nonce, &frame).unwrap()
+                    cipher.encrypt(&nonce.into(), &frame).unwrap()
                 };
 
                 network
@@ -300,9 +300,9 @@ fn bench_voip(c: &mut Criterion) {
                 let (len, _) = network.receiver_socket.recv_from(&mut buf).await.unwrap();
 
                 let _decrypted = {
-                    let mut cipher = network.cipher.lock().await;
+                    let cipher = network.cipher.lock().await;
                     let nonce = [0u8; 12];
-                    cipher.decrypt(&nonce, &buf[..len]).unwrap()
+                    cipher.decrypt(&nonce.into(), &buf[..len]).unwrap()
                 };
 
                 let latency = frame_start.elapsed();
@@ -393,9 +393,9 @@ fn bench_scalability(c: &mut Criterion) {
                             tokio::spawn(async move {
                                 // Encrypt and send
                                 let encrypted = {
-                                    let mut cipher = net.cipher.lock().await;
+                                    let cipher = net.cipher.lock().await;
                                     let nonce = [0u8; 12];
-                                    cipher.encrypt(&nonce, &msg).unwrap()
+                                    cipher.encrypt(&nonce.into(), &msg).unwrap()
                                 };
 
                                 net.sender_socket
@@ -409,9 +409,9 @@ fn bench_scalability(c: &mut Criterion) {
                                     net.receiver_socket.recv_from(&mut buf).await.unwrap();
 
                                 let _decrypted = {
-                                    let mut cipher = net.cipher.lock().await;
+                                    let cipher = net.cipher.lock().await;
                                     let nonce = [0u8; 12];
-                                    cipher.decrypt(&nonce, &buf[..len]).unwrap()
+                                    cipher.decrypt(&nonce.into(), &buf[..len]).unwrap()
                                 };
                             })
                         })

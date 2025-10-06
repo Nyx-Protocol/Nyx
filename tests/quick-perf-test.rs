@@ -3,7 +3,7 @@
 //
 // Run with: cargo run --release --bin quick-perf-test
 
-use nyx_crypto::aead::ChaCha20Poly1305;
+use chacha20poly1305::{ChaCha20Poly1305, KeyInit, aead::Aead};
 use std::time::Instant;
 use tokio::net::UdpSocket;
 
@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let receiver_addr = receiver.local_addr()?;
 
     let key = [0u8; 32];
-    let cipher = ChaCha20Poly1305::new(&key);
+    let cipher = ChaCha20Poly1305::new(&key.into());
     let nonce = [0u8; 12];
 
     // Latency Test
@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut latencies = Vec::new();
 
     for _ in 0..100 {
-        let encrypted = cipher.encrypt(&nonce, &message)?;
+        let encrypted = cipher.encrypt(&nonce.into(), &message).expect("encryption failed");
 
         let start = Instant::now();
         sender.send_to(&encrypted, receiver_addr).await?;
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (len, _) = receiver.recv_from(&mut buf).await?;
         buf.truncate(len);
 
-        let _decrypted = cipher.decrypt(&nonce, &buf)?;
+        let _decrypted = cipher.decrypt(&nonce.into(), &buf).expect("decryption failed");
         let elapsed = start.elapsed();
 
         latencies.push(elapsed.as_micros() as f64 / 1000.0);
@@ -62,7 +62,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let duration = std::time::Duration::from_secs(5);
 
     while start_time.elapsed() < duration {
-        let encrypted = cipher.encrypt(&nonce, &test_data)?;
+        let encrypted = cipher.encrypt(&nonce.into(), test_data.as_slice()).expect("encryption failed");
         sender.send_to(&encrypted, receiver_addr).await?;
         total_bytes += encrypted.len();
         packets_sent += 1;
