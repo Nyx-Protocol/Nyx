@@ -15,6 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .build_server(true) // Generate server traits
         .build_client(true) // Generate client stubs
         .build_transport(true) // Generate transport layer code
+        .protoc_arg("--experimental_allow_proto3_optional")
         .compile(&[proto_file], &["proto"])?;
 
     // Re-run build script when proto files change
