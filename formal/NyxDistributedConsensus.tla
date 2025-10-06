@@ -1,4 +1,5 @@
 ---- MODULE NyxDistributedConsensus ----
+LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Distributed Consensus and Coordination                   *)
 (*                                                                          *)
