@@ -1,5 +1,4 @@
 ---- MODULE NyxMonitoring ----
-LOCAL INSTANCE NyxHelpers
 (****************************************************************************)
 (* Nyx Protocol - Comprehensive Monitoring and Observability               *)
 (*                                                                          *)
@@ -16,12 +15,12 @@ LOCAL INSTANCE NyxHelpers
 (*   - Dashboards and visualization                                        *)
 (*   - SLI/SLO tracking                                                    *)
 (****************************************************************************)
-
-EXTENDS Naturals, Sequences, FiniteSets, Integers, Reals, TLC
-
 (****************************************************************************)
 (* Metrics Definitions                                                      *)
 (****************************************************************************)
+
+EXTENDS Naturals, Sequences, FiniteSets, Integers, Reals, TLC
+LOCAL INSTANCE NyxHelpers
 
 \* Metric types
 MetricType == {
@@ -89,9 +88,6 @@ Timer == [
     stddev : Nat
 ]
 
-(****************************************************************************)
-(* Core System Metrics                                                      *)
-(****************************************************************************)
 
 \* Connection metrics
 ConnectionMetrics == [
@@ -166,9 +162,6 @@ ErrorMetrics == [
     recoverable_errors : Nat
 ]
 
-(****************************************************************************)
-(* Metrics Collection                                                       *)
-(****************************************************************************)
 
 \* Metrics collector
 MetricsCollector == [
@@ -252,9 +245,6 @@ InitTimer(name) ==
         stddev |-> 0
     ]
 
-(****************************************************************************)
-(* Distributed Tracing                                                      *)
-(****************************************************************************)
 
 \* Trace context
 TraceContext == [
@@ -347,9 +337,6 @@ GenerateTraceId ==
 GenerateSpanId ==
     "span-" \o ToString(RandomInt(1, 1000000000))
 
-(****************************************************************************)
-(* Health Checks                                                            *)
-(****************************************************************************)
 
 \* Health check result
 HealthCheckResult == {
@@ -473,9 +460,6 @@ NetworkConnectivityHealthCheck ==
         message |-> ""
     ]
 
-(****************************************************************************)
-(* Alerting System                                                          *)
-(****************************************************************************)
 
 \* Alert severity
 AlertSeverity == {
@@ -594,9 +578,6 @@ ResourceExhaustionAlert ==
         annotations |-> [description |-> "CPU or memory usage above 90%"]
     ]
 
-(****************************************************************************)
-(* Service Level Indicators (SLI)                                           *)
-(****************************************************************************)
 
 \* SLI definition
 SLI == [
@@ -693,9 +674,6 @@ ThroughputSLO ==
         error_budget_consumed |-> 0
     ]
 
-(****************************************************************************)
-(* Performance Profiling                                                    *)
-(****************************************************************************)
 
 \* Profile sample
 ProfileSample == [
