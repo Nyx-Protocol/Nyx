@@ -72,14 +72,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      - name: Install OSV Scanner
+        run: |
+          curl -L https://github.com/google/osv-scanner/releases/download/v1.9.0/osv-scanner_1.9.0_linux_amd64 -o osv-scanner
+          chmod +x osv-scanner
+          sudo mv osv-scanner /usr/local/bin/
+      
       - name: Run OSV Scanner
-        uses: google/osv-scanner-action@v1.9.0
-        with:
-          scan-args: |
-            --recursive
-            --format json
-            --output osv-scan-results.json
-            ./
+        run: |
+          osv-scanner --recursive --format json --output osv-scan-results.json . || true
         continue-on-error: true
       
       - name: Upload OSV scan results
