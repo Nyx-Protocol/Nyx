@@ -63,25 +63,28 @@ fonts:
   padding: 0.8rem 1.5rem !important;
 }
 
+.slidev-layout h1,
 h1 { 
-  font-size: 1.5rem !important; 
-  margin-bottom: 0.3rem !important;
-  font-weight: 700;
-  line-height: 1.1 !important;
-}
-
-h2 { 
-  font-size: 1.1rem !important; 
-  margin-bottom: 0.25rem !important;
-  font-weight: 700;
-  line-height: 1.1 !important;
-}
-
-h3 { 
-  font-size: 0.95rem !important; 
+  font-size: 1.2rem !important; 
   margin-bottom: 0.2rem !important;
-  font-weight: 700;
-  line-height: 1.1 !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+.slidev-layout h2,
+h2 { 
+  font-size: 0.9rem !important; 
+  margin-bottom: 0.2rem !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+.slidev-layout h3,
+h3 { 
+  font-size: 0.8rem !important; 
+  margin-bottom: 0.15rem !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
 }
 
 h4, h5, h6 {
@@ -988,14 +991,14 @@ pub struct ExtendedHeader {
 <style>
 .multipath-section, .algo-section, .perf-metrics {
   background: rgba(96, 165, 250, 0.08);
-  padding: 1rem;
-  border-radius: 12px;
+  padding: 0.5rem;
+  border-radius: 10px;
   border: 1px solid rgba(96, 165, 250, 0.25);
 }
 
 .section-header, .diagram-title, .code-title {
-  font-size: 1rem;
-  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
   display: flex;
   align-items: center;
 }
@@ -1012,34 +1015,35 @@ pub struct ExtendedHeader {
 
 .algo-box {
   background: rgba(167, 139, 250, 0.1);
-  padding: 1rem;
-  border-radius: 10px;
+  padding: 0.6rem;
+  border-radius: 8px;
   border: 1px solid rgba(167, 139, 250, 0.3);
 }
 
 .algo-title {
   font-weight: 700;
   color: #a78bfa;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3rem;
   font-family: 'Fira Code', monospace;
+  font-size: 0.75rem;
 }
 
 .algo-formula {
   text-align: center;
-  font-size: 1.1rem;
-  margin: 0.5rem 0;
-  padding: 0.3rem;
+  font-size: 0.9rem;
+  margin: 0.3rem 0;
+  padding: 0.2rem;
 }
 
 .algo-desc {
-  font-size: 0.85rem;
+  font-size: 0.7rem;
   text-align: center;
   opacity: 0.85;
 }
 
 .metric-header {
-  font-size: 0.95rem;
-  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
   display: flex;
   align-items: center;
 }
@@ -1047,8 +1051,8 @@ pub struct ExtendedHeader {
 .metric-grid {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.5rem 1rem;
-  font-size: 0.85rem;
+  gap: 0.3rem 0.8rem;
+  font-size: 0.7rem;
 }
 
 .metric-value {

@@ -12,7 +12,7 @@ readme = "README.md"
 features = []
 
 [dependencies]
-reed-solomon-erasure = "6"
+reed-solomon-erasure = { version = "6", default-features = false, features = ["std"] }
 ## Keep the crate lean: other deps were unused in this crate. Add back only if required.
 
 [features]

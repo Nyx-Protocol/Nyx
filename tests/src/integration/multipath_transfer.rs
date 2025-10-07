@@ -14,8 +14,9 @@
 
 use crate::test_harness::{ClientHandle, DaemonConfig, NetworkConfig, TestHarness, TestResult};
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
+use tracing::{info, warn};
 
 /// Test payload size for throughput measurement (1 MB)
 #[allow(dead_code)]
