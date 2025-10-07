@@ -141,6 +141,7 @@ EOF
 for i in $(seq 1 $NUM_NODES); do
     PORT=$((9999 + i - 1))
     GRPC_PORT=$((50051 + i - 1))
+    IP_ADDR=$((10 + i))
     
     cat >> docker-compose.multinode.yml <<EOF
   nyx-node-${i}:
@@ -149,7 +150,7 @@ for i in $(seq 1 $NUM_NODES); do
     hostname: nyx-node-${i}
     networks:
       nyx-network:
-        ipv4_address: 172.20.0.$((10 + i))
+        ipv4_address: 172.20.0.${IP_ADDR}
     environment:
       - NODE_ID=node-${i}
       - LISTEN_PORT=${PORT}
