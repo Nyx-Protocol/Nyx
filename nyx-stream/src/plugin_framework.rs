@@ -105,7 +105,7 @@ pub struct PluginCapability {
     /// Whether this capability is required
     pub required: bool,
     /// Optional capability parameters
-    pub parameters: HashMap<String, serde_cbor::Value>,
+    pub parameters: HashMap<String, ciborium::Value>,
 }
 
 /// Plugin metadata and registration information
@@ -128,7 +128,7 @@ pub struct PluginMetadata {
     /// Plugin load priority (higher = first)
     pub priority: i32,
     /// Plugin configuration schema
-    pub config_schema: Option<serde_cbor::Value>,
+    pub config_schema: Option<ciborium::Value>,
 }
 
 /// Plugin instance lifecycle state
@@ -157,7 +157,7 @@ pub trait Plugin: Send + Sync {
     fn metadata(&self) -> &PluginMetadata;
 
     /// Initialize the plugin with configuration
-    async fn initialize(&mut self, config: serde_cbor::Value) -> PluginResult<()>;
+    async fn initialize(&mut self, config: ciborium::Value) -> PluginResult<()>;
 
     /// Process incoming frame data
     async fn process_frame(
@@ -169,8 +169,8 @@ pub trait Plugin: Send + Sync {
     /// Handle control messages
     async fn handle_control(
         &mut self,
-        message: serde_cbor::Value,
-    ) -> PluginResult<serde_cbor::Value>;
+        message: ciborium::Value,
+    ) -> PluginResult<ciborium::Value>;
 
     /// Periodic heartbeat/maintenance
     async fn heartbeat(&mut self) -> PluginResult<()>;
@@ -200,7 +200,7 @@ pub struct PluginInstance {
     /// Error count
     error_count: u64,
     /// Configuration
-    config: Option<serde_cbor::Value>,
+    config: Option<ciborium::Value>,
 }
 
 impl PluginInstance {
@@ -236,7 +236,7 @@ impl PluginInstance {
         stats
     }
 
-    pub async fn initialize(&mut self, config: serde_cbor::Value) -> PluginResult<()> {
+    pub async fn initialize(&mut self, config: ciborium::Value) -> PluginResult<()> {
         self.state = PluginState::Loading;
 
         match self.plugin.initialize(config.clone()).await {
@@ -341,7 +341,7 @@ impl Default for PluginManagerConfig {
 #[derive(Debug, Clone)]
 pub enum PluginMessage {
     Frame { header: PluginHeader, frame: Frame },
-    Control { message: serde_cbor::Value },
+    Control { message: ciborium::Value },
     Heartbeat,
     Shutdown,
 }
@@ -401,7 +401,7 @@ impl PluginManager {
         let mut instance = PluginInstance::new(plugin);
 
         // Initialize with default configuration
-        let default_config = serde_cbor::Value::Map(BTreeMap::new());
+        let default_config = ciborium::Value::Map(Vec::new());
         instance.initialize(default_config).await?;
 
         // Register capabilities
@@ -492,7 +492,7 @@ impl PluginManager {
     /// Process a plugin frame
     pub async fn process_plugin_frame(&self, frame: &Frame) -> PluginResult<Vec<Frame>> {
         // Decode plugin header from frame payload
-        let header: PluginHeader = serde_cbor::from_slice(&frame.payload)
+        let header: PluginHeader = ciborium::from_reader(&frame.payload[..])
             .map_err(|e| PluginError::SerializationError(e.to_string()))?;
 
         let plugin_id = header.id;
@@ -523,7 +523,8 @@ impl PluginManager {
         plugin_type: PluginFrameType,
         header: &PluginHeader,
     ) -> PluginResult<Frame> {
-        let payload = serde_cbor::to_vec(header)
+        let mut payload = Vec::new();
+        ciborium::into_writer(header, &mut payload)
             .map_err(|e| PluginError::SerializationError(e.to_string()))?;
 
         if payload.len() > self.config.max_frame_size {
@@ -630,7 +631,8 @@ impl CapabilityNegotiator {
     /// Create capability advertisement frame
     pub fn create_capability_frame(&self, stream_id: u32, seq: u64) -> PluginResult<Frame> {
         let capabilities = self.manager.get_capabilities();
-        let data = serde_cbor::to_vec(&capabilities)
+        let mut data = Vec::new();
+        ciborium::into_writer(&capabilities, &mut data)
             .map_err(|e| PluginError::SerializationError(e.to_string()))?;
 
         let header = PluginHeader {
@@ -645,10 +647,10 @@ impl CapabilityNegotiator {
 
     /// Process received capability advertisement
     pub fn process_capability_frame(&self, frame: &Frame) -> PluginResult<Vec<PluginCapability>> {
-        let header: PluginHeader = serde_cbor::from_slice(&frame.payload)
+        let header: PluginHeader = ciborium::from_reader(&frame.payload[..])
             .map_err(|e| PluginError::SerializationError(e.to_string()))?;
 
-        let capabilities: Vec<PluginCapability> = serde_cbor::from_slice(&header.data)
+        let capabilities: Vec<PluginCapability> = ciborium::from_reader(&header.data[..])
             .map_err(|e| PluginError::SerializationError(e.to_string()))?;
 
         Ok(capabilities)
@@ -747,7 +749,7 @@ impl Plugin for CompressionPlugin {
         &self.metadata
     }
 
-    async fn initialize(&mut self, _config: serde_cbor::Value) -> PluginResult<()> {
+    async fn initialize(&mut self, _config: ciborium::Value) -> PluginResult<()> {
         self.state = PluginState::Ready;
         info!("LZ4 Compression plugin initialized");
         Ok(())
@@ -777,10 +779,10 @@ impl Plugin for CompressionPlugin {
 
     async fn handle_control(
         &mut self,
-        _message: serde_cbor::Value,
-    ) -> PluginResult<serde_cbor::Value> {
+        _message: ciborium::Value,
+    ) -> PluginResult<ciborium::Value> {
         // Handle plugin-specific control messages
-        Ok(serde_cbor::Value::Text("OK".to_string()))
+        Ok(ciborium::Value::Text("OK".to_string()))
     }
 
     async fn heartbeat(&mut self) -> PluginResult<()> {

@@ -27,7 +27,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -120,7 +119,9 @@ func (ps *ProxyServer) Start(ctx context.Context) error {
 	// Close SOCKS5 server on context cancellation
 	go func() {
 		<-ctx.Done()
-		socks5Server.Close()
+		if err := socks5Server.Close(); err != nil {
+			log.Printf("Error closing SOCKS5 server: %v", err)
+		}
 	}()
 
 	// Start HTTP CONNECT server (with Mix bridge integration)
@@ -140,7 +141,9 @@ func (ps *ProxyServer) Start(ctx context.Context) error {
 	// Close HTTP CONNECT server on context cancellation
 	go func() {
 		<-ctx.Done()
-		httpServer.Close()
+		if err := httpServer.Close(); err != nil {
+			log.Printf("Error closing HTTP CONNECT server: %v", err)
+		}
 	}()
 
 	// Start health check server
@@ -172,7 +175,13 @@ func (ps *ProxyServer) startHealthServer(ctx context.Context) {
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"status":"healthy","timestamp":"%s"}`, time.Now().UTC().Format(time.RFC3339))
+		response := map[string]string{
+			"status":    "healthy",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Failed to encode health response: %v", err)
+		}
 	})
 
 	// Readiness check endpoint - returns 200 OK if service is ready to accept traffic
@@ -182,12 +191,22 @@ func (ps *ProxyServer) startHealthServer(ctx context.Context) {
 		ready := time.Since(ps.startTime) > time.Second
 
 		w.Header().Set("Content-Type", "application/json")
+		var response map[string]string
 		if ready {
 			w.WriteHeader(http.StatusOK)
-			fmt.Fprintf(w, `{"status":"ready","timestamp":"%s"}`, time.Now().UTC().Format(time.RFC3339))
+			response = map[string]string{
+				"status":    "ready",
+				"timestamp": time.Now().UTC().Format(time.RFC3339),
+			}
 		} else {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			fmt.Fprintf(w, `{"status":"not_ready","timestamp":"%s"}`, time.Now().UTC().Format(time.RFC3339))
+			response = map[string]string{
+				"status":    "not_ready",
+				"timestamp": time.Now().UTC().Format(time.RFC3339),
+			}
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Failed to encode readiness response: %v", err)
 		}
 	})
 
@@ -195,7 +214,13 @@ func (ps *ProxyServer) startHealthServer(ctx context.Context) {
 	mux.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, `{"status":"alive","timestamp":"%s"}`, time.Now().UTC().Format(time.RFC3339))
+		response := map[string]string{
+			"status":    "alive",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Failed to encode liveness response: %v", err)
+		}
 	})
 
 	// Metrics endpoint - returns basic proxy metrics
@@ -224,10 +249,15 @@ func (ps *ProxyServer) startHealthServer(ctx context.Context) {
 		}
 	})
 
-	// Create HTTP server
+	// Create HTTP server with security timeouts to prevent Slowloris attacks
 	server := &http.Server{
-		Addr:    ps.healthAddr,
-		Handler: mux,
+		Addr:              ps.healthAddr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 20, // 1 MB
 	}
 
 	// Start server in goroutine
@@ -255,10 +285,14 @@ func (ps *ProxyServer) startHealthServer(ctx context.Context) {
 func (ps *ProxyServer) Shutdown() {
 	close(ps.shutdown)
 	if ps.mixBridge != nil {
-		ps.mixBridge.Close()
+		if err := ps.mixBridge.Close(); err != nil {
+			log.Printf("Error closing Mix bridge: %v", err)
+		}
 	}
 	if ps.exitNode != nil {
-		ps.exitNode.Close()
+		if err := ps.exitNode.Close(); err != nil {
+			log.Printf("Error closing exit node: %v", err)
+		}
 	}
 }
 

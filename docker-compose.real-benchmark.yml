@@ -20,6 +20,10 @@ services:
       - NODE_ROLE=entry
     cap_add:
       - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
     command: ["/usr/bin/nyx-daemon"]
     healthcheck:
       test: ["CMD", "true"]
@@ -41,6 +45,10 @@ services:
       - NODE_ROLE=relay
     cap_add:
       - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
     command: ["/usr/bin/nyx-daemon"]
     depends_on:
       mix-node-1:
@@ -60,6 +68,10 @@ services:
       - NODE_ROLE=relay
     cap_add:
       - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
     command: ["/usr/bin/nyx-daemon"]
     depends_on:
       mix-node-2:
@@ -79,6 +91,10 @@ services:
       - NODE_ROLE=exit
     cap_add:
       - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
     command: ["/usr/bin/nyx-daemon"]
     depends_on:
       mix-node-3:
@@ -102,6 +118,10 @@ services:
       - ENTRY_NODE=172.25.0.11
     cap_add:
       - NET_ADMIN
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
     depends_on:
       - mix-node-1
       - mix-node-2
@@ -110,6 +130,7 @@ services:
     command: ["sleep", "infinity"]
 
   # Network delay controller
+  # Note: privileged mode is required for network manipulation capabilities
   delay-controller:
     image: nicolaka/netshoot
     container_name: nyx-delay-controller
@@ -119,7 +140,9 @@ services:
         ipv4_address: 172.25.0.100
     cap_add:
       - NET_ADMIN
-    privileged: true
+    security_opt:
+      - no-new-privileges:true
+    privileged: true  # Required for tc (traffic control) and network emulation
     command: ["sleep", "infinity"]
 
 networks:

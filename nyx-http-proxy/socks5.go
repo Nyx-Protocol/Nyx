@@ -156,7 +156,9 @@ func (s *SOCKS5Server) handleConnection(clientConn net.Conn) {
 		log.Printf("SOCKS5 send reply failed: %v", err)
 		s.stats.Errors.Add(1)
 		// Close the Mix stream on reply failure
-		s.mixBridge.ProxyClose(result.StreamID)
+		if closeErr := s.mixBridge.ProxyClose(result.StreamID); closeErr != nil {
+			log.Printf("Failed to close Mix stream after reply failure: %v", closeErr)
+		}
 		return
 	}
 
@@ -167,7 +169,9 @@ func (s *SOCKS5Server) handleConnection(clientConn net.Conn) {
 	// Ensure Mix stream is closed on exit
 	defer func() {
 		log.Printf("SOCKS5 client disconnected from %s, closing Mix stream %s", targetAddr, result.StreamID)
-		s.mixBridge.ProxyClose(result.StreamID)
+		if closeErr := s.mixBridge.ProxyClose(result.StreamID); closeErr != nil {
+			log.Printf("Failed to close Mix stream on exit: %v", closeErr)
+		}
 	}()
 
 	// Start bidirectional relay
@@ -557,7 +561,10 @@ func (s *SOCKS5Server) sendReply(conn net.Conn, rep byte, bindAddr net.Addr) err
 			reply = append(reply, ip...)
 		}
 
-		// Add port (big-endian)
+		// Add port (big-endian) with overflow check
+		if port < 0 || port > 65535 {
+			return fmt.Errorf("invalid port number: %d", port)
+		}
 		portBytes := make([]byte, 2)
 		binary.BigEndian.PutUint16(portBytes, uint16(port))
 		reply = append(reply, portBytes...)

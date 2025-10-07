@@ -169,7 +169,9 @@ func (s *HTTPConnectServer) handleConnection(clientConn net.Conn) {
 		log.Printf("HTTP CONNECT send response failed: %v", err)
 		s.stats.Errors.Add(1)
 		// Close the Mix stream on reply failure
-		s.mixBridge.ProxyClose(result.StreamID)
+		if closeErr := s.mixBridge.ProxyClose(result.StreamID); closeErr != nil {
+			log.Printf("Failed to close Mix stream after reply failure: %v", closeErr)
+		}
 		return
 	}
 
@@ -187,7 +189,9 @@ func (s *HTTPConnectServer) handleConnection(clientConn net.Conn) {
 	// Ensure Mix stream is closed on exit
 	defer func() {
 		log.Printf("HTTP CONNECT client disconnected from %s, closing Mix stream %s", targetAddr, result.StreamID)
-		s.mixBridge.ProxyClose(result.StreamID)
+		if closeErr := s.mixBridge.ProxyClose(result.StreamID); closeErr != nil {
+			log.Printf("Failed to close Mix stream on exit: %v", closeErr)
+		}
 	}()
 
 	// Start bidirectional relay

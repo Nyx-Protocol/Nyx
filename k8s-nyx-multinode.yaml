@@ -39,6 +39,16 @@ spec:
   - name: nyx-daemon
     image: nyx-daemon:latest
     imagePullPolicy: Never  # Use local image
+    securityContext:
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+      runAsUser: 65532
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: false  # Daemon requires write access for state
+      seccompProfile:
+        type: RuntimeDefault
     ports:
     - containerPort: 9999
       protocol: UDP
@@ -70,6 +80,16 @@ spec:
   - name: nyx-daemon
     image: nyx-daemon:latest
     imagePullPolicy: Never
+    securityContext:
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+      runAsUser: 65532
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: false  # Daemon requires write access for state
+      seccompProfile:
+        type: RuntimeDefault
     ports:
     - containerPort: 9999
       protocol: UDP
@@ -101,6 +121,16 @@ spec:
   - name: nyx-daemon
     image: nyx-daemon:latest
     imagePullPolicy: Never
+    securityContext:
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+      runAsUser: 65532
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: false  # Daemon requires write access for state
+      seccompProfile:
+        type: RuntimeDefault
     ports:
     - containerPort: 9999
       protocol: UDP
@@ -174,6 +204,16 @@ spec:
   - name: benchmark
     image: nyx-daemon:latest
     imagePullPolicy: Never
+    securityContext:
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+      runAsUser: 65532
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: false
+      seccompProfile:
+        type: RuntimeDefault
     command: ["/bin/sleep", "infinity"]
     env:
     - name: MIX_NODE_1

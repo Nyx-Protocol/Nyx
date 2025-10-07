@@ -108,7 +108,9 @@ func (mbc *MixBridgeClient) Connect() error {
 
 	// Close existing connection if any
 	if mbc.conn != nil {
-		mbc.conn.Close()
+		if err := mbc.conn.Close(); err != nil {
+			log.Printf("Error closing existing connection: %v", err)
+		}
 		mbc.conn = nil
 		mbc.reader = nil
 		mbc.writer = nil
@@ -336,19 +338,25 @@ func (mbc *MixBridgeClient) sendRequest(request JsonRpcRequest) (*JsonRpcRespons
 	// Send request (newline-delimited JSON-RPC)
 	if _, err := mbc.writer.Write(requestJSON); err != nil {
 		// Connection error - mark as disconnected
-		mbc.conn.Close()
+		if closeErr := mbc.conn.Close(); closeErr != nil {
+			log.Printf("Error closing connection after write failure: %v", closeErr)
+		}
 		mbc.conn = nil
 		return nil, fmt.Errorf("failed to write request: %w", err)
 	}
 	if err := mbc.writer.WriteByte('\n'); err != nil {
 		// Connection error - mark as disconnected
-		mbc.conn.Close()
+		if closeErr := mbc.conn.Close(); closeErr != nil {
+			log.Printf("Error closing connection after WriteByte failure: %v", closeErr)
+		}
 		mbc.conn = nil
 		return nil, fmt.Errorf("failed to write newline: %w", err)
 	}
 	if err := mbc.writer.Flush(); err != nil {
 		// Connection error - mark as disconnected
-		mbc.conn.Close()
+		if closeErr := mbc.conn.Close(); closeErr != nil {
+			log.Printf("Error closing connection after Flush failure: %v", closeErr)
+		}
 		mbc.conn = nil
 		return nil, fmt.Errorf("failed to flush writer: %w", err)
 	}
@@ -360,7 +368,9 @@ func (mbc *MixBridgeClient) sendRequest(request JsonRpcRequest) (*JsonRpcRespons
 	responseJSON, err := mbc.reader.ReadBytes('\n')
 	if err != nil {
 		// Connection error - mark as disconnected
-		mbc.conn.Close()
+		if closeErr := mbc.conn.Close(); closeErr != nil {
+			log.Printf("Error closing connection after read failure: %v", closeErr)
+		}
 		mbc.conn = nil
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
