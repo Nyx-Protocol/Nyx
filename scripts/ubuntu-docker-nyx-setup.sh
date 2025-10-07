@@ -111,6 +111,22 @@ log_info "Building Nyx Docker image..."
 docker build -t nyx-daemon:latest .
 log_success "Docker image built"
 
+# 基本的なNyx設定ファイルを生成
+log_info "Generating Nyx configuration..."
+cat > nyx.toml <<EOF
+[network]
+listen_addr = "0.0.0.0:9999"
+bootstrap_nodes = []
+
+[mixing]
+path_length = 3
+delay_distribution = "exponential"
+
+[logging]
+level = "info"
+EOF
+log_success "Configuration generated"
+
 # Docker Compose設定の生成
 log_info "Generating Docker Compose configuration..."
 NUM_NODES=4
@@ -143,13 +159,14 @@ for i in $(seq 1 $NUM_NODES); do
     ports:
       - "${PORT}:${PORT}/udp"
       - "${GRPC_PORT}:${GRPC_PORT}/tcp"
-    # distrolessイメージには/bin/shがないため、ENTRYPOINTをオーバーライド
-    entrypoint: []
-    command: ["/bin/sleep", "infinity"]
+    # Nyxデーモンを直接起動
+    command: ["/usr/local/bin/nyx-daemon", "--config", "/etc/nyx/nyx.toml"]
+    volumes:
+      - ./nyx.toml:/etc/nyx/nyx.toml:ro
     restart: unless-stopped
     # 単純なヘルスチェック
     healthcheck:
-      test: ["CMD", "true"]
+      test: ["CMD", "/usr/local/bin/nyx-daemon", "--version"]
       interval: 30s
       timeout: 10s
       retries: 3
