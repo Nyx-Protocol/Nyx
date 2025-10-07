@@ -890,7 +890,7 @@ layout: default
 </v-clicks>
 </div>
 
-<div class="algo-section mt-4">
+<div class="algo-section mt-3">
   <div class="section-header">
     <carbon:chart-network class="inline-block mr-2 text-purple-400"/>
     <span class="font-bold">スケジューリング</span>
@@ -898,20 +898,20 @@ layout: default
 
 <v-clicks>
 
-  <div class="algo-box">
-    <div class="algo-title">WeightedRTT Algorithm</div>
-    <div class="algo-formula">
-      $$weight_i = \frac{1}{RTT_i}$$
-    </div>
-    <div class="algo-desc">
-      低レイテンシの経路を優先的に選択
-    </div>
-  </div>
+<div class="algo-box">
+<div class="algo-title">WeightedRTT Algorithm</div>
+<div class="algo-formula">
+$$weight_i = \frac{1}{RTT_i}$$
+</div>
+<div class="algo-desc">
+低レイテンシの経路を優先的に選択
+</div>
+</div>
 
 </v-clicks>
 </div>
 
-<div class="perf-metrics mt-4">
+<div class="perf-metrics mt-3">
   <div class="metric-header">
     <carbon:dashboard class="inline-block mr-2 text-green-400"/>
     <strong>実測性能</strong>
@@ -935,7 +935,7 @@ layout: default
   <strong>マルチパス動作</strong>
 </div>
 
-```mermaid {scale: 0.35}
+```mermaid {scale: 0.28}
 graph LR
     subgraph "Client"
         APP[📱 Application]
@@ -964,18 +964,18 @@ graph LR
     style SRV fill:#f472b6,stroke:#ec4899,stroke-width:3px,color:#fff
 ```
 
-<div class="code-title mt-6 mb-3">
+<div class="code-title mt-3 mb-2">
   <carbon:code class="inline-block mr-2 text-purple-400"/>
   <strong>パケットヘッダ拡張</strong>
 </div>
 
 ```rust
 pub struct ExtendedHeader {
-    connection_id: ConnectionId, // 12 bytes
-    frame_type: u8,               // 1 byte
-    path_id: u8,    // ✨ NEW! マルチパス識別
-    sequence: u16,                // 2 bytes
-    length: u16,                  // 2 bytes
+    connection_id: ConnectionId,
+    frame_type: u8,
+    path_id: u8,    // ✨ NEW!
+    sequence: u16,
+    length: u16,
 }
 ```
 
@@ -1091,11 +1091,11 @@ layout: default
 <div class="perf-section">
   <div class="perf-header">
     <carbon:time class="inline-block mr-2 text-blue-400"/>
-    <span class="font-bold text-lg">レイテンシ比較</span>
+    <span class="font-bold">レイテンシ比較</span>
   </div>
   <div class="perf-subtitle">実際のネットワーク環境での推定値</div>
 
-  <div class="comparison-table mt-4">
+  <div class="comparison-table mt-2">
     <div class="table-row header-row">
       <div>環境</div><div>NyxNet</div><div>Tor</div><div>改善率</div>
     </div>
@@ -1119,7 +1119,7 @@ layout: default
     </div>
   </div>
 
-  <div class="visual-comparison mt-4">
+  <div class="visual-comparison mt-2">
     <div class="compare-bar tor-bar">
       <span class="bar-label">Tor</span>
       <div class="bar-fill tor-fill" style="width: 100%">1224ms</div>
@@ -1130,7 +1130,7 @@ layout: default
     </div>
   </div>
 
-  <div class="method-box mt-4">
+  <div class="method-box mt-2">
     <carbon:information class="inline-block mr-2 text-yellow-400"/>
     <strong>測定方法</strong>
     <ul class="method-list">
@@ -1148,10 +1148,10 @@ layout: default
 <div class="throughput-section">
   <div class="perf-header">
     <carbon:cloud-upload class="inline-block mr-2 text-green-400"/>
-    <span class="font-bold text-lg">スループット比較</span>
+    <span class="font-bold">スループット比較</span>
   </div>
 
-  <div class="throughput-table mt-4">
+  <div class="throughput-table mt-2">
     <div class="table-row header-row">
       <div>環境</div><div>NyxNet</div><div>Tor</div>
     </div>
@@ -1172,7 +1172,7 @@ layout: default
     </div>
   </div>
 
-  <div class="reason-box mt-4">
+  <div class="reason-box mt-2">
     <div class="reason-title">
       <carbon:lightning class="inline-block mr-2 text-yellow-400"/>
       <strong>なぜNyxNetが速いか</strong>
@@ -1230,21 +1230,22 @@ layout: default
 <style>
 .perf-section, .throughput-section {
   background: rgba(96, 165, 250, 0.08);
-  padding: 0.8rem;
-  border-radius: 12px;
+  padding: 0.5rem;
+  border-radius: 10px;
   border: 1px solid rgba(96, 165, 250, 0.25);
 }
 
 .perf-header {
   display: flex;
   align-items: center;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.15rem;
+  font-size: 0.75rem;
 }
 
 .perf-subtitle {
-  font-size: 0.8rem;
+  font-size: 0.65rem;
   opacity: 0.7;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3rem;
 }
 
 .comparison-table, .throughput-table {

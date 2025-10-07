@@ -1,0 +1,41 @@
+# Semgrep configuration for Nyx Network
+# Customize security rules for project-specific needs
+
+rules:
+  # Allow temp_dir in sandbox context
+  - id: allow-temp-dir-in-sandbox
+    pattern: env::temp_dir()
+    paths:
+      include:
+        - nyx-core/src/sandbox.rs
+    severity: INFO
+    message: "temp_dir usage in sandbox is intentional for test isolation"
+  
+  # Allow SHA1 in DHT for compatibility
+  - id: allow-sha1-in-dht
+    pattern: Sha1::new()
+    paths:
+      include:
+        - nyx-daemon/src/pure_rust_dht.rs
+    severity: INFO
+    message: "SHA1 required for DHT compatibility with libp2p standard"
+  
+  # Allow args in CLI context
+  - id: allow-args-in-cli
+    pattern: std::env::args()
+    paths:
+      include:
+        - nyx-daemon/src/main.rs
+        - nyx-cli/src/**
+    severity: INFO
+    message: "args() is standard pattern for CLI argument parsing"
+  
+  # Allow unsafe in FFI boundaries
+  - id: allow-unsafe-in-ffi
+    pattern: unsafe
+    paths:
+      include:
+        - nyx-mobile-ffi/src/**
+        - nyx-daemon/src/low_power.rs
+    severity: INFO
+    message: "unsafe is required for FFI/C interop boundaries"

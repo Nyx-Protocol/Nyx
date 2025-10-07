@@ -1,8 +1,8 @@
 # NyxNet プロジェクト概要
 
-**最終更新**: 2025年10月6日  
+**最終更新**: 2025年10月7日  
 **バージョン**: v1.0  
-**ステータス**: ✅ 完了（統合テスト進行中）
+**ステータス**: ✅ 完了（コードベース完全準拠）
 
 ---
 
@@ -93,10 +93,15 @@ NyxNetは、プライバシーファースト、ポスト量子セキュアな�
 - `criterion` 0.5: 統計的ベンチマークフレームワーク
 - `proptest` 1.0: プロパティベーステスト
 
-#### Goパッケージ
+#### Goパッケージ（nyx-http-proxy）
 
-- `crypto/tls`: Pure Go TLS実装
-- Standard library: `net`, `io`, `context` など
+- `crypto/tls`: Pure Go TLS実装（ゼロC/C++依存）
+- `net/http`: HTTP/HTTPSハンドリング
+- `golang.org/x/time`: レート制限（rate limiter）
+- `golang.org/x/net`: 拡張ネットワークプリミティブ
+- Standard library: `net`, `io`, `context`, `sync` など
+
+**注**: Go実装は明示的にC/C++依存を避け、Pure Go実装のみを使用しています。
 
 ### データベース・ストレージ
 

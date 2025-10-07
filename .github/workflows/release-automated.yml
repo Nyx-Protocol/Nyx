@@ -277,10 +277,10 @@ jobs:
           echo "::group::Generating SBOM for release $VERSION"
           
           # CycloneDX format (JSON)
-          cargo sbom --output-format cyclonedx_json > sbom-${VERSION}-cyclonedx.json
+          cargo sbom --output-format cyclone_dx_json_1_6 > sbom-${VERSION}-cyclonedx.json
           
           # SPDX format (JSON)
-          cargo sbom --output-format spdx_json > sbom-${VERSION}-spdx.json
+          cargo sbom --output-format spdx_json_2_3 > sbom-${VERSION}-spdx.json
           
           # Human-readable format
           cargo sbom > sbom-${VERSION}.txt

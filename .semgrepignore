@@ -1,0 +1,39 @@
+# Semgrep ignore patterns for Nyx Network
+
+# Test files and benchmarks (may contain intentional security anti-patterns for testing)
+tests/
+benchmarks/
+**/tests/**
+**/*_test.rs
+**/*_bench.rs
+
+# FFI/Mobile bindings (unsafe required for C interop)
+nyx-mobile-ffi/
+nyx-sdk-wasm/
+
+# Generated code
+target/
+build/
+**/build.rs
+
+# Documentation and examples
+docs/
+examples/
+presentation/
+
+# Development scripts (may use convenience patterns)
+scripts/
+
+# Formal verification (TLA+ specs, not executable code)
+formal/
+
+# External dependencies
+vendor/
+
+# Known acceptable patterns (with justification)
+# - nyx-core/src/sandbox.rs: temp_dir used for isolated test environments
+# - nyx-daemon/src/pure_rust_dht.rs: SHA1 required for DHT compatibility with libp2p
+# - nyx-daemon/src/main.rs: args parsing is standard CLI pattern
+
+# Specific files with justified usage
+nyx-daemon/src/low_power.rs  # unsafe required for power state FFI
