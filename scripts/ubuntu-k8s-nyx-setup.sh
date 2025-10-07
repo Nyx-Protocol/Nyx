@@ -100,7 +100,18 @@ if [ ! -d "$REPO_DIR" ]; then
 else
     log_info "Repository already exists, pulling latest changes..."
     cd "$REPO_DIR"
-    git pull
+    
+    # Cargo.lockの変更をstashして、pullしてから再適用
+    if ! git diff --quiet Cargo.lock 2>/dev/null; then
+        log_warn "Cargo.lock has local changes, stashing..."
+        git stash push -m "Auto-stash before pull" Cargo.lock
+    fi
+    
+    git pull || {
+        log_warn "Git pull failed, resetting to remote state..."
+        git fetch origin
+        git reset --hard origin/main
+    }
 fi
 
 cd "$REPO_DIR"
