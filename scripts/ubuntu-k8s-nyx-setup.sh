@@ -4,8 +4,20 @@
 
 set -e
 
-echo "🚀 Starting Complete Nyx Setup on Ubuntu Server"
-echo "================================================"
+echo "🚀 Starting Complete Nyx Setup on Ubuntu Server (Kubernetes)"
+echo "============================================================="
+echo ""
+echo "⚠️  WARNING: This script uses Kind (Kubernetes in Docker)"
+echo "   If you encounter cgroup errors, use the Docker Compose version instead:"
+echo "   bash scripts/ubuntu-docker-nyx-setup.sh"
+echo ""
+read -p "Continue with Kubernetes setup? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Aborting. Use Docker Compose version instead:"
+    echo "  bash scripts/ubuntu-docker-nyx-setup.sh"
+    exit 1
+fi
 
 # 色付き出力
 RED='\033[0;31m'
