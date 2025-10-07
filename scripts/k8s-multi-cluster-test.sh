@@ -591,22 +591,28 @@ test_throughput() {
             
             local dst_cluster="${CLUSTERS[$j]}"
             local dst_pod="test-pod-$((j + 1))"
-            local dst_container="${dst_cluster}-control-plane"
-            local dst_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${dst_container}" 2>/dev/null || echo "")
+            
+            # 宛先PodのIPアドレスを取得
+            kubectl config use-context "kind-${dst_cluster}" > /dev/null
+            local dst_ip=$(kubectl get pod "${dst_pod}" -n "${TEST_NAMESPACE}" -o jsonpath='{.status.podIP}' 2>/dev/null || echo "")
+            kubectl config use-context "kind-${src_cluster}" > /dev/null
             
             if [ -z "$dst_ip" ]; then
-                log_warning "Could not resolve IP for ${dst_cluster}"
+                log_warning "Could not resolve Pod IP for ${dst_pod} in ${dst_cluster}"
+                FAILED_TESTS=$((FAILED_TESTS + 1))
+                TOTAL_TESTS=$((TOTAL_TESTS + 1))
+                TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|Pod IP resolution failed")
                 continue
             fi
             
             test_count=$((test_count + 1))
             TOTAL_TESTS=$((TOTAL_TESTS + 1))
             
-            log_info "Measuring throughput: ${src_cluster} → ${dst_cluster} (${dst_ip})"
+            log_info "Measuring throughput: ${src_cluster} → ${dst_cluster} (Pod IP: ${dst_ip})"
             
-            # まず接続テスト
-            if ! kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- nc -zv "${dst_ip}" 5201 > /dev/null 2>&1; then
-                log_warning "iperf3 port 5201 not reachable on ${dst_ip}"
+            # まず接続テスト（DockerネットワークでPodIPに到達可能か確認）
+            if ! kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- nc -zv -w 2 "${dst_ip}" 5201 > /dev/null 2>&1; then
+                log_warning "iperf3 port 5201 not reachable on Pod ${dst_ip}"
                 FAILED_TESTS=$((FAILED_TESTS + 1))
                 TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|iperf3 server not reachable")
                 continue

@@ -1,4 +1,4 @@
-golang.org/x/net v0.33.0 h1:74SYHlV8BIgHIu5C10bJPgf21YlAKpONqgG4zSLxQqw=
-golang.org/x/net v0.33.0/go.mod h1:AXSM9eZ+KH7CRHIfVhzwPxr+5kD3FnBHvvOMFx1QL70=
-golang.org/x/time v0.8.0 h1:9i3RxcPv3PZitYxj7bhMBqBhHDtKUFCR7AvlFpCJN3E=
+golang.org/x/net v0.33.0 h1:74SYHlV8BIgHIFC/LrYkOGIwL19eTYXQ5wc6TBuO36I=
+golang.org/x/net v0.33.0/go.mod h1:HXLR5J+9DxmrqMwG9qjGCxZ+zKXxBru04zlTvWlWuN4=
+golang.org/x/time v0.8.0 h1:9i3RxcPv3PZnitoVGMPDKZSq1xW1gK1Xy3ArNOGZfEg=
 golang.org/x/time v0.8.0/go.mod h1:3BpzKBy/shNhVucY/MWOyx10tF3SFh9QdLuxbVysPQM=

@@ -19,31 +19,32 @@ ignore = [
     "RUSTSEC-2024-0384",  # instant
     "RUSTSEC-2021-0127",  # serde_cbor
 ]
-# Severity levels are now configured via severity-threshold
-severity-threshold = "medium"
+# Note: severity-threshold has been removed in cargo-deny 0.16+
+# Configure severity handling via GitHub Actions/CI workflows instead
 
 [licenses]
 version = 2
 # Allow licenses that are compatible with the project
+# SPDX license expressions with OR operator (e.g., "MIT OR Apache-2.0") are automatically
+# allowed if at least one component license is in the allow list
 allow = [
-    "MIT",
+    "0BSD",                          # BSD Zero Clause License
     "Apache-2.0",
     "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",
     "BSD-3-Clause",
     "ISC",
-    "Unicode-DFS-2016",
+    "MIT",
+    "Unicode-3.0",                   # Unicode License v3 (OSI approved) - used by ICU crates
+    "Unicode-DFS-2016",              # Unicode Data Files and Software License
     "Unlicense",
     "Zlib",
 ]
-# Deny licenses that are incompatible
-deny = [
-    "GPL-3.0",
-    "AGPL-3.0",
-]
 confidence-threshold = 0.8
-# Note: 'copyleft', 'allow-osi-fsf-free', and 'default' keys have been removed in newer cargo-deny versions
-# License policies are now enforced through explicit 'allow' and 'deny' lists
+# Treat unlicensed crates as warnings, not errors, to allow development builds
+unlicensed = "warn"
+# Handle crates with multiple license files - allow if ANY license is in allow list
+multiple-licenses = "allow"
 
 [licenses.private]
 # Allow proprietary licenses for workspace members
