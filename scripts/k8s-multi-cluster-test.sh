@@ -377,6 +377,13 @@ spec:
     env:
     - name: CLUSTER_NAME
       value: "${cluster}"
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "500m"
 ---
 apiVersion: v1
 kind: Service
@@ -465,15 +472,28 @@ test_network_connectivity() {
             local dst_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${dst_container}" 2>/dev/null || echo "")
             
             if [ -n "$dst_ip" ]; then
-                if kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- ping -c 1 -W 2 "${dst_ip}" > /dev/null 2>&1; then
-                    log_success "Connection successful: ${src_cluster} → ${dst_cluster} (${dst_ip})"
-                    passed=$((passed + 1))
-                    PASSED_TESTS=$((PASSED_TESTS + 1))
-                    TEST_DETAILS+=("PASS|${src_cluster}|${dst_cluster}|Ping to ${dst_ip}")
+                # レイテンシ測定 (10回ping)
+                local ping_output=$(kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- ping -c 10 -W 2 "${dst_ip}" 2>/dev/null || echo "")
+                
+                if echo "$ping_output" | grep -q "10 packets transmitted"; then
+                    # 平均レイテンシを抽出
+                    local latency=$(echo "$ping_output" | grep "rtt min/avg/max" | awk -F'/' '{print $5}' || echo "0")
+                    local packet_loss=$(echo "$ping_output" | grep "packet loss" | awk '{print $6}' | sed 's/%//' || echo "100")
+                    
+                    if [ "${packet_loss%.*}" -lt 50 ]; then
+                        log_success "Connection successful: ${src_cluster} → ${dst_cluster} | Latency: ${latency}ms | Loss: ${packet_loss}%"
+                        passed=$((passed + 1))
+                        PASSED_TESTS=$((PASSED_TESTS + 1))
+                        TEST_DETAILS+=("PASS|${src_cluster}|${dst_cluster}|Latency ${latency}ms, Loss ${packet_loss}%")
+                    else
+                        log_error "High packet loss: ${src_cluster} → ${dst_cluster} | Loss: ${packet_loss}%"
+                        FAILED_TESTS=$((FAILED_TESTS + 1))
+                        TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|High packet loss ${packet_loss}%")
+                    fi
                 else
                     log_error "Connection failed: ${src_cluster} → ${dst_cluster} (${dst_ip})"
                     FAILED_TESTS=$((FAILED_TESTS + 1))
-                    TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|Ping to ${dst_ip}")
+                    TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|Ping failed to ${dst_ip}")
                 fi
             else
                 log_warning "Could not resolve IP for ${dst_cluster}"
@@ -522,6 +542,86 @@ test_pod_communication() {
     
     echo ""
     log_info "Pod communication tests completed: ${passed}/${test_count} passed"
+}
+
+# スループット測定テスト
+test_throughput() {
+    log_section "Testing network throughput between clusters"
+    
+    local test_count=0
+    local passed=0
+    
+    # 各クラスターにiperfサーバーを起動
+    log_info "Starting iperf3 servers in all clusters..."
+    
+    for i in "${!CLUSTERS[@]}"; do
+        local cluster="${CLUSTERS[$i]}"
+        local pod="test-pod-$((i + 1))"
+        
+        kubectl config use-context "kind-${cluster}" > /dev/null
+        
+        # バックグラウンドでiperfサーバー起動
+        kubectl exec -n "${TEST_NAMESPACE}" "${pod}" -- sh -c "iperf3 -s -D" > /dev/null 2>&1 || log_warning "Failed to start iperf3 server on ${cluster}"
+    done
+    
+    sleep 2
+    
+    # スループット測定
+    for i in "${!CLUSTERS[@]}"; do
+        local src_cluster="${CLUSTERS[$i]}"
+        local src_pod="test-pod-$((i + 1))"
+        
+        kubectl config use-context "kind-${src_cluster}" > /dev/null
+        
+        for j in "${!CLUSTERS[@]}"; do
+            if [ $i -eq $j ]; then
+                continue
+            fi
+            
+            local dst_cluster="${CLUSTERS[$j]}"
+            local dst_container="${dst_cluster}-control-plane"
+            local dst_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${dst_container}" 2>/dev/null || echo "")
+            
+            if [ -z "$dst_ip" ]; then
+                continue
+            fi
+            
+            test_count=$((test_count + 1))
+            TOTAL_TESTS=$((TOTAL_TESTS + 1))
+            
+            log_info "Measuring throughput: ${src_cluster} → ${dst_cluster}"
+            
+            # iperf3で5秒間測定
+            local iperf_output=$(kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- iperf3 -c "${dst_ip}" -t 5 -J 2>/dev/null || echo "")
+            
+            if [ -n "$iperf_output" ]; then
+                # JSONから送信速度を抽出 (bits_per_second)
+                local bits_per_sec=$(echo "$iperf_output" | jq -r '.end.sum_sent.bits_per_second // 0' 2>/dev/null || echo "0")
+                local mbits_per_sec=$(echo "scale=2; $bits_per_sec / 1000000" | bc 2>/dev/null || echo "0")
+                
+                # 再送信回数
+                local retransmits=$(echo "$iperf_output" | jq -r '.end.sum_sent.retransmits // 0' 2>/dev/null || echo "0")
+                
+                if [ "${mbits_per_sec%.*}" -gt 0 ]; then
+                    log_success "Throughput: ${src_cluster} → ${dst_cluster} | ${mbits_per_sec} Mbits/sec | Retransmits: ${retransmits}"
+                    passed=$((passed + 1))
+                    PASSED_TESTS=$((PASSED_TESTS + 1))
+                    TEST_DETAILS+=("PASS|${src_cluster}|${dst_cluster}|Throughput ${mbits_per_sec} Mbits/sec")
+                else
+                    log_error "Low throughput: ${src_cluster} → ${dst_cluster}"
+                    FAILED_TESTS=$((FAILED_TESTS + 1))
+                    TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|Throughput test failed")
+                fi
+            else
+                log_error "Failed to measure throughput: ${src_cluster} → ${dst_cluster}"
+                FAILED_TESTS=$((FAILED_TESTS + 1))
+                TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|iperf3 failed")
+            fi
+        done
+    done
+    
+    echo ""
+    log_info "Throughput tests completed: ${passed}/${test_count} passed"
 }
 
 # DNS解決テスト
@@ -851,6 +951,7 @@ main() {
     test_pod_communication
     test_dns_resolution
     test_network_connectivity
+    test_throughput
     
     # 結果計算
     local end_time=$(date +%s)
