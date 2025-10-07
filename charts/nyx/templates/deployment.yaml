@@ -98,7 +98,7 @@ spec:
             - name: NYX_PROMETHEUS_ADDR
               value: "0.0.0.0:{{ .Values.service.metricsPort }}"
             - name: RUST_LOG
-              value: "{{ .Values.config.logLevel | default \"info\" }}"
+              value: {{ .Values.config.logLevel | default "info" | quote }}
           envFrom:
 {{- $sec := (default (dict) .Values.secrets) -}}
 {{- if $sec.create }}

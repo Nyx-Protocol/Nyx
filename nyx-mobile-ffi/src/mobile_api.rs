@@ -42,7 +42,7 @@ pub extern "C" fn nyx_mobile_send_data(
 
     // Verify connection exists
     let connection_exists = if let Ok(connections) = client_state.connections.read() {
-        connections.contains_key(&connection_id)
+        connections.contains_key(&(connection_id as u64))
     } else {
         false
     };
@@ -102,7 +102,7 @@ pub extern "C" fn nyx_mobile_receive_data(
 
     // Verify connection exists
     let connection_exists = if let Ok(connections) = client_state.connections.read() {
-        connections.contains_key(&connection_id)
+        connections.contains_key(&(connection_id as u64))
     } else {
         false
     };
@@ -143,7 +143,7 @@ pub extern "C" fn nyx_mobile_disconnect(connection_id: c_ulong) -> c_int {
     client_state.runtime.block_on(async {
         // Remove connection from state
         let removed = if let Ok(mut connections) = client_state.connections.write() {
-            connections.remove(&connection_id).is_some()
+            connections.remove(&(connection_id as u64)).is_some()
         } else {
             false
         };
@@ -177,7 +177,7 @@ pub extern "C" fn nyx_mobile_get_connection_stats(
 
     // Verify connection exists
     let connection_exists = if let Ok(connections) = client_state.connections.read() {
-        connections.contains_key(&connection_id)
+        connections.contains_key(&(connection_id as u64))
     } else {
         false
     };

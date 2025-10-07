@@ -11,7 +11,7 @@
 //! - Backward compatibility with v0.1 implementations
 
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 use thiserror::Error;
@@ -167,10 +167,7 @@ pub trait Plugin: Send + Sync {
     ) -> PluginResult<Vec<Frame>>;
 
     /// Handle control messages
-    async fn handle_control(
-        &mut self,
-        message: ciborium::Value,
-    ) -> PluginResult<ciborium::Value>;
+    async fn handle_control(&mut self, message: ciborium::Value) -> PluginResult<ciborium::Value>;
 
     /// Periodic heartbeat/maintenance
     async fn heartbeat(&mut self) -> PluginResult<()>;
@@ -777,10 +774,7 @@ impl Plugin for CompressionPlugin {
         Ok(vec![compressed_frame])
     }
 
-    async fn handle_control(
-        &mut self,
-        _message: ciborium::Value,
-    ) -> PluginResult<ciborium::Value> {
+    async fn handle_control(&mut self, _message: ciborium::Value) -> PluginResult<ciborium::Value> {
         // Handle plugin-specific control messages
         Ok(ciborium::Value::Text("OK".to_string()))
     }
