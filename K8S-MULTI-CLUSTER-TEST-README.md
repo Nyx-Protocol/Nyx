@@ -1,117 +1,73 @@
 # Nyx Multi-Cluster Kubernetes Test Framework
 
-## 🚀 概要
+## 概要
 
-このフレームワークは、1つのサーバー内で複数のKubernetesクラスター(Kind)を立ち上げ、クラスター間の相互通信をテストするための統合テストシステムです。
+1つのサーバー内で複数のKubernetesクラスター(Kind)を立ち上げ、クラスター間の相互通信とパフォーマンスをテストするためのフレームワークです。
 
-**素のUbuntuで実行可能！** 必要な依存関係を全て自動インストールします。
+## 特徴
 
-## ✨ 特徴
+- 完全自動セットアップ: Docker、kubectl、kindを自動インストール
+- ゼロコンフィグ: 素のUbuntuで即実行可能
+- 高速テスト実行: 並列処理による効率的なテスト実行
+- 詳細なレポート: JSON/HTML形式でのテスト結果出力
+- クラスター間通信テスト: レイテンシ、スループット、パケットロスの測定
+- 自動クリーンアップ: テスト終了後に全リソースを自動削除
 
-- 🎯 **完全自動セットアップ**: Docker、kubectl、kindを自動インストール
-- 🔧 **ゼロコンフィグ**: 素のUbuntuで即実行可能
-- ⚡ **高速テスト実行**: 並列処理による効率的なテスト実行
-- 📊 **詳細なレポート**: JSON/HTML形式での美麗なテスト結果出力
-- 🔗 **クラスター間通信テスト**: Pod間、DNS、ネットワーク接続の包括的なテスト
-- 🧹 **自動クリーンアップ**: テスト終了後に全リソースを自動削除
-
-## 📋 前提条件
-
-**必要なのはUbuntu/Debianだけ！**
+## 前提条件
 
 - Ubuntu 20.04 LTS以降 (または Debian系Linux)
 - 最低4GB RAM (推奨: 8GB以上)
 - 最低10GB空きディスク容量 (推奨: 20GB以上)
 - インターネット接続 (初回のみ)
 
-その他の依存関係は**全て自動でインストール**されます！
+その他の依存関係(Docker、kubectl、kind等)は全て自動でインストールされます。
 
-## 🎯 クイックスタート
+## クイックスタート
 
-### 素のUbuntuでワンコマンド実行
+### 基本的な実行方法
 
 ```bash
-# リポジトリをクローン（まだの場合）
-git clone https://github.com/Aqua-218/NyxNet.git
-cd NyxNet
+# リポジトリをクローン
+git clone https://github.com/SeleniaProject/Nyx.git
+cd Nyx
 
-# これだけで全てOK！
+# テスト実行
 bash setup-and-test.sh
 ```
 
-**たったこれだけです！** スクリプトが以下を全て自動で行います：
+スクリプトは以下を自動で実行します:
 
-1. ✅ システム要件チェック
-2. ✅ Docker自動インストール
-3. ✅ kubectl自動インストール  
-4. ✅ kind自動インストール
-5. ✅ クラスター作成
-6. ✅ テスト実行
-7. ✅ レポート生成
-8. ✅ クリーンアップ
+1. システム要件チェック
+2. Docker自動インストール
+3. kubectl自動インストール
+4. kind自動インストール
+5. 3つのKubernetesクラスター作成
+6. テストPod展開
+7. 通信テスト実行
+8. レポート生成
+9. クリーンアップ
 
-### 実行例
+### 実行の流れ
 
-```bash
-ubuntu@server:~$ cd Nyx
-ubuntu@server:~/Nyx$ bash setup-and-test.sh
-
-════════════════════════════════════════════════════════════════════
-    🚀 NYX MULTI-CLUSTER TEST - AUTO SETUP 🚀
-════════════════════════════════════════════════════════════════════
-
-✅  Detected OS: Ubuntu 22.04.3 LTS
-✅  Memory: 8GB
-✅  Disk space: 45GB available
-✅  CPU cores: 4
-
-📦  Installing Docker...
-📦  Installing kubectl...
-📦  Installing kind...
-🚀  Creating cluster: nyx-cluster-1... (87s)
-🚀  Creating cluster: nyx-cluster-2... (82s)
-🚀  Creating cluster: nyx-cluster-3... (76s)
-✅  All clusters created in 245s
-
-🧪  Running tests...
-✅  Pod health checks: 3/3 passed
-✅  DNS resolution: 3/3 passed
-✅  Network connectivity: 6/6 passed
-    ├─ nyx-cluster-1 → nyx-cluster-2: Latency 0.234ms | Loss 0%
-    ├─ nyx-cluster-1 → nyx-cluster-3: Latency 0.189ms | Loss 0%
-    └─ ... (and more)
-    
-🚀  Throughput tests: 6/6 passed
-    ├─ nyx-cluster-1 → nyx-cluster-2: 2847.53 Mbits/sec
-    ├─ nyx-cluster-2 → nyx-cluster-1: 2923.17 Mbits/sec
-    └─ ... (and more)
-
-✅  18/18 tests passed
-
-📊  Report saved to: test-results/test-results-20251007-120000.html
-```
-
-### 何が起きるか
-
-1. **システムチェック** - メモリ、ディスク、CPUを確認
-2. **システム制限調整** - inotify、ファイルディスクリプタ制限を最適化
-3. **依存関係インストール** - Docker、kubectl、kindを自動インストール
-4. **クラスター作成** - 3つのKindクラスターを並列に作成
-5. **環境準備** - 各クラスターにテスト用の名前空間とリソースを作成
-6. **Pod展開** - ネットワークテスト用のPod(netshoot + iperf3)を各クラスターに展開
-7. **テスト実行**:
+1. システムチェック - メモリ、ディスク、CPUを確認
+2. システム制限調整 - inotify、ファイルディスクリプタ制限を最適化
+3. 依存関係インストール - Docker、kubectl、kindを自動インストール
+4. クラスター作成 - 3つのKindクラスターを並列に作成
+5. 環境準備 - 各クラスターにテスト用の名前空間とリソースを作成
+6. Pod展開 - ネットワークテスト用のPod(netshoot + iperf3)を各クラスターに展開
+7. テスト実行:
    - Pod健全性チェック
    - DNS解決テスト
    - クラスター間ネットワーク接続テスト (レイテンシ・パケットロス測定)
    - スループット測定 (iperf3による実速度計測)
-8. **結果出力** - JSON/HTML形式でテスト結果を保存
-9. **自動クリーンアップ** - 全クラスターを削除
+8. 結果出力 - JSON/HTML形式でテスト結果を保存
+9. 自動クリーンアップ - 全クラスターを削除
 
-## 📁 ファイル構成
+## ファイル構成
 
 ```
 Nyx/
-├── setup-and-test.sh                 # 🚀 メインエントリーポイント（これを実行）
+├── setup-and-test.sh                 # メインエントリーポイント
 ├── k8s-multi-cluster-config-1.yaml   # Cluster 1設定
 ├── k8s-multi-cluster-config-2.yaml   # Cluster 2設定
 ├── k8s-multi-cluster-config-3.yaml   # Cluster 3設定
@@ -124,7 +80,7 @@ Nyx/
     └── test-results-YYYYMMDD-HHMMSS.html
 ```
 
-## 🔧 設定詳細
+## 設定詳細
 
 ### クラスター構成
 
@@ -143,28 +99,28 @@ Nyx/
 - 1 x Control Plane Node
 - 2 x Worker Nodes
 
-## 🧪 テスト内容
+## テスト内容
 
 ### 1. Pod健全性テスト
-各クラスター内のPodが正常に起動し、コマンドを実行できることを確認
+各クラスター内のPodが正常に起動し、コマンドを実行できることを確認します。
 
 ### 2. DNS解決テスト
-Kubernetes内部DNSが正常に機能していることを確認
+Kubernetes内部DNSが正常に機能していることを確認します。
 
 ### 3. クラスター間通信テスト
-Dockerネットワーク経由で、異なるクラスター間でのネットワーク接続を確認
-- **レイテンシ測定**: 10回のpingで平均レイテンシを計測
-- **パケットロス**: パケット損失率を測定
-- **結果例**: `Latency: 0.234ms | Loss: 0%`
+Dockerネットワーク経由で、異なるクラスター間でのネットワーク接続を確認します。
+- レイテンシ測定: 10回のpingで平均レイテンシを計測
+- パケットロス: パケット損失率を測定
+- 結果例: Latency: 0.234ms | Loss: 0%
 
-### 4. スループット測定テスト 🚀
-iperf3を使用してクラスター間の実際の通信速度を測定
-- **送信速度**: Mbits/sec単位で測定
-- **再送信回数**: TCP再送信の回数
-- **測定時間**: 各接続で5秒間
-- **結果例**: `Throughput: 2847.53 Mbits/sec | Retransmits: 0`
+### 4. スループット測定テスト
+iperf3を使用してクラスター間の実際の通信速度を測定します。
+- 送信速度: Mbits/sec単位で測定
+- 再送信回数: TCP再送信の回数
+- 測定時間: 各接続で5秒間
+- 結果例: Throughput: 2847.53 Mbits/sec | Retransmits: 0
 
-## 📊 テスト結果
+## テスト結果
 
 ### JSON出力例
 
@@ -184,21 +140,13 @@ iperf3を使用してクラスター間の実際の通信速度を測定
 
 ### HTML出力
 
-美しいグラデーションとカラフルなデザインのHTMLレポートが生成されます:
+HTMLレポートが生成されます:
 
 - サマリーカード(総テスト数、成功、失敗、実行時間)
 - 詳細なテスト結果テーブル
 - レスポンシブデザイン
 
-## 🎨 ログ出力の特徴
-
-- 🚀 絵文字による視覚的な情報表示
-- 🌈 カラフルなログレベル表示
-- 📊 プログレスバー
-- ⏱️ スピナーアニメーション
-- 📦 美しいボックス描画
-
-## 🛠️ カスタマイズ
+## カスタマイズ
 
 ### クラスター数の変更
 
@@ -226,7 +174,7 @@ test_custom_feature() {
 }
 ```
 
-## 🧹 クリーンアップ
+## 手動クリーンアップ
 
 テストは自動的にクリーンアップされますが、手動でクリーンアップする場合:
 
@@ -240,22 +188,65 @@ kind delete cluster --name nyx-cluster-3
 kind delete clusters --all
 ```
 
-## 📝 トラブルシューティング
+## トラブルシューティング
 
-### 依存関係のインストールに失敗
+### 重要: 失敗時の対処方法
 
-スクリプトは自動でインストールしますが、失敗する場合：
+**テストが失敗した場合や、途中でエラーが発生した場合は、以下の手順を実行してください:**
+
+```bash
+# 1. プロジェクトディレクトリを完全に削除
+cd ~
+rm -rf Nyx
+
+# 2. 再度クローンしてやり直す
+git clone https://github.com/SeleniaProject/Nyx.git
+cd Nyx
+bash setup-and-test.sh
+```
+
+この方法により、中途半端な状態や残存リソースによる問題を回避できます。
+
+### Docker/Kubernetesインストール後の再起動
+
+DockerやKubernetesのインストール後、システムから再起動を求められる場合があります。
+
+**再起動が必要な場合の手順:**
+
+```bash
+# 1. システムを再起動
+sudo reboot
+
+# 2. 再起動後、プロジェクトディレクトリを削除
+cd ~
+rm -rf Nyx
+
+# 3. 再度クローンして実行
+git clone https://github.com/SeleniaProject/Nyx.git
+cd Nyx
+bash setup-and-test.sh
+```
+
+再起動後は必ずクリーンな状態から始めることを推奨します。
+
+### その他のエラー
+
+#### 依存関係のインストールに失敗
 
 ```bash
 # システムパッケージを更新
 sudo apt-get update
 sudo apt-get upgrade
 
-# 再度実行
+# プロジェクトを削除して再クローン
+cd ~
+rm -rf Nyx
+git clone https://github.com/SeleniaProject/Nyx.git
+cd Nyx
 bash setup-and-test.sh
 ```
 
-### Docker権限エラー
+#### Docker権限エラー
 
 ```bash
 # dockerグループに追加後、ログアウト/ログインが必要な場合があります
@@ -264,11 +255,11 @@ sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-### ポート競合
+#### ポート競合
 
 他のサービスがポート6443-6445を使用している場合、設定ファイルのapiServerPortを変更してください。
 
-### メモリ不足
+#### メモリ不足
 
 最低4GB必要ですが、8GB以上推奨です。クラスター数を減らすことで対応可能：
 
@@ -277,7 +268,7 @@ newgrp docker
 CLUSTERS=("nyx-cluster-1" "nyx-cluster-2")  # 3→2に減らす
 ```
 
-### "Too many open files" エラー
+#### "Too many open files" エラー
 
 システムのファイル監視制限に達した場合、スクリプトが自動で調整しますが、手動で設定する場合：
 
@@ -292,26 +283,21 @@ echo "fs.inotify.max_user_instances=512" | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
 ```
 
-## 🚀 パフォーマンス
+## パフォーマンス目安
 
-- システム制限調整: ~5秒
-- 依存関係インストール: ~5-10分 (初回のみ)
-- クラスター作成: ~2-3分 (並列処理)
-- テスト実行: ~30-60秒
-- 合計実行時間: ~3-5分 (2回目以降), ~10-15分 (初回)
+- システム制限調整: 約5秒
+- 依存関係インストール: 約5-10分 (初回のみ)
+- クラスター作成: 約2-3分 (並列処理)
+- テスト実行: 約30-60秒
+- 合計実行時間: 約3-5分 (2回目以降), 約10-15分 (初回)
 
-## 📄 ライセンス
+## 注意事項
+
+- このフレームワークは動作確認用のテストツールです
+- 本番環境での使用は想定していません
+- テスト実行後はリソースが自動的にクリーンアップされます
+- 問題が発生した場合は、プロジェクトディレクトリを削除して再クローンすることを推奨します
+
+## ライセンス
 
 このプロジェクトは、親プロジェクト(Nyx)のライセンスに従います。
-
-## 🤝 コントリビューション
-
-プルリクエストを歓迎します!大きな変更の場合は、まずissueを開いて変更内容を議論してください。
-
-## 📧 サポート
-
-問題が発生した場合は、GitHubのissueを作成してください。
-
----
-
-Made with ❤️ for Nyx Network Project
