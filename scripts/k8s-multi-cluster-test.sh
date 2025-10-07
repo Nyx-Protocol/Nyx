@@ -210,6 +210,54 @@ check_system() {
     echo ""
 }
 
+# システム制限の調整
+adjust_system_limits() {
+    log_section "Adjusting system limits"
+    
+    # inotify制限の確認と調整
+    local current_watches=$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || echo "0")
+    local current_instances=$(cat /proc/sys/fs/inotify/max_user_instances 2>/dev/null || echo "0")
+    
+    log_info "Current inotify watches: ${current_watches}"
+    log_info "Current inotify instances: ${current_instances}"
+    
+    # 制限を増やす
+    if [ "$current_watches" -lt 524288 ]; then
+        log_info "Increasing inotify max_user_watches to 524288..."
+        echo 524288 | $SUDO_CMD tee /proc/sys/fs/inotify/max_user_watches > /dev/null
+        
+        # 永続化
+        if [ ! -f /etc/sysctl.d/99-k8s-inotify.conf ]; then
+            echo "fs.inotify.max_user_watches=524288" | $SUDO_CMD tee /etc/sysctl.d/99-k8s-inotify.conf > /dev/null
+            echo "fs.inotify.max_user_instances=512" | $SUDO_CMD tee -a /etc/sysctl.d/99-k8s-inotify.conf > /dev/null
+        fi
+    fi
+    
+    if [ "$current_instances" -lt 512 ]; then
+        log_info "Increasing inotify max_user_instances to 512..."
+        echo 512 | $SUDO_CMD tee /proc/sys/fs/inotify/max_user_instances > /dev/null
+    fi
+    
+    # ファイルディスクリプタ制限の確認
+    local file_max=$(cat /proc/sys/fs/file-max 2>/dev/null || echo "0")
+    log_info "System file-max: ${file_max}"
+    
+    if [ "$file_max" -lt 2097152 ]; then
+        log_info "Increasing fs.file-max to 2097152..."
+        echo 2097152 | $SUDO_CMD tee /proc/sys/fs/file-max > /dev/null
+        
+        if [ ! -f /etc/sysctl.d/99-k8s-limits.conf ]; then
+            echo "fs.file-max=2097152" | $SUDO_CMD tee /etc/sysctl.d/99-k8s-limits.conf > /dev/null
+        fi
+    fi
+    
+    # ulimit調整
+    ulimit -n 65536 2>/dev/null || log_warning "Could not adjust ulimit"
+    
+    log_success "System limits adjusted successfully"
+    echo ""
+}
+
 # Kindクラスター作成
 create_clusters() {
     log_section "Creating Kind clusters"
@@ -738,6 +786,9 @@ main() {
     
     # システムチェック
     check_system
+    
+    # システム制限調整
+    adjust_system_limits
     
     # 依存関係インストール
     install_dependencies

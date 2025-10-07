@@ -32,8 +32,8 @@
 
 ```bash
 # リポジトリをクローン（まだの場合）
-git clone https://github.com/SeleniaProject/Nyx.git
-cd Nyx
+git clone https://github.com/Aqua-218/NyxNet.git
+cd NyxNet
 
 # これだけで全てOK！
 bash setup-and-test.sh
@@ -253,11 +253,28 @@ newgrp docker
 CLUSTERS=("nyx-cluster-1" "nyx-cluster-2")  # 3→2に減らす
 ```
 
+### "Too many open files" エラー
+
+システムのファイル監視制限に達した場合、スクリプトが自動で調整しますが、手動で設定する場合：
+
+```bash
+# 一時的な対応
+sudo sysctl fs.inotify.max_user_watches=524288
+sudo sysctl fs.inotify.max_user_instances=512
+
+# 永続化
+echo "fs.inotify.max_user_watches=524288" | sudo tee -a /etc/sysctl.conf
+echo "fs.inotify.max_user_instances=512" | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
+```
+
 ## 🚀 パフォーマンス
 
+- システム制限調整: ~5秒
+- 依存関係インストール: ~5-10分 (初回のみ)
 - クラスター作成: ~2-3分 (並列処理)
 - テスト実行: ~30-60秒
-- 合計実行時間: ~3-5分
+- 合計実行時間: ~3-5分 (2回目以降), ~10-15分 (初回)
 
 ## 📄 ライセンス
 
