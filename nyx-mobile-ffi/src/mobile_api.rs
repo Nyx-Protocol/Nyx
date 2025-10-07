@@ -40,9 +40,9 @@ pub extern "C" fn nyx_mobile_send_data(
 
     update_activity();
 
-    // Verify connection exists
+    // Verify connection exists - convert c_ulong to u64 for platform independence
     let connection_exists = if let Ok(connections) = client_state.connections.read() {
-        connections.contains_key(&(connection_id as u64))
+        connections.contains_key(&u64::from(connection_id))
     } else {
         false
     };
@@ -100,9 +100,9 @@ pub extern "C" fn nyx_mobile_receive_data(
 
     update_activity();
 
-    // Verify connection exists
+    // Verify connection exists - convert c_ulong to u64 for platform independence
     let connection_exists = if let Ok(connections) = client_state.connections.read() {
-        connections.contains_key(&connection_id)
+        connections.contains_key(&u64::from(connection_id))
     } else {
         false
     };
@@ -141,9 +141,9 @@ pub extern "C" fn nyx_mobile_disconnect(connection_id: c_ulong) -> c_int {
     update_activity();
 
     client_state.runtime.block_on(async {
-        // Remove connection from state
+        // Remove connection from state - convert c_ulong to u64 for platform independence
         let removed = if let Ok(mut connections) = client_state.connections.write() {
-            connections.remove(&connection_id).is_some()
+            connections.remove(&u64::from(connection_id)).is_some()
         } else {
             false
         };
@@ -175,9 +175,9 @@ pub extern "C" fn nyx_mobile_get_connection_stats(
         None => return NyxStatus::NotInitialized as c_int,
     };
 
-    // Verify connection exists
+    // Verify connection exists - convert c_ulong to u64 for platform independence
     let connection_exists = if let Ok(connections) = client_state.connections.read() {
-        connections.contains_key(&connection_id)
+        connections.contains_key(&u64::from(connection_id))
     } else {
         false
     };

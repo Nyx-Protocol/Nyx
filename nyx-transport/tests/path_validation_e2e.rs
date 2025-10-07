@@ -185,17 +185,16 @@ async fn multiple_paths_concurrent_validation_succeeds() -> Result<(), Box<dyn s
             for _ in 0..3 {
                 // timeout returns Result<Result<(usize, SocketAddr), io::Error>, Elapsed>
                 // First Ok checks timeout didn't expire, second Ok checks recv_from succeeded
-                if let Ok(recv_result) =
+                // Collapsed nested if-let for better readability
+                if let Ok(Ok((n, _))) =
                     tokio::time::timeout(Duration::from_millis(2000), sock.recv_from(&mut buf))
                         .await
                 {
-                    if let Ok((n, _)) = recv_result {
-                        if n >= 1 && buf[0] == PATH_CHALLENGE_FRAME_TYPE {
-                            let mut frame_local = Vec::with_capacity(17);
-                            frame_local.push(PATH_RESPONSE_FRAME_TYPE);
-                            frame_local.extend_from_slice(&buf[1..(1 + 16).min(n)]);
-                            let _ = sock.send_to(&frame_local, dst).await;
-                        }
+                    if n >= 1 && buf[0] == PATH_CHALLENGE_FRAME_TYPE {
+                        let mut frame_local = Vec::with_capacity(17);
+                        frame_local.push(PATH_RESPONSE_FRAME_TYPE);
+                        frame_local.extend_from_slice(&buf[1..(1 + 16).min(n)]);
+                        let _ = sock.send_to(&frame_local, dst).await;
                     }
                 }
             }
@@ -214,7 +213,7 @@ async fn multiple_paths_concurrent_validation_succeeds() -> Result<(), Box<dyn s
     // Check that we got at least some successful validations
     // In CI environments, timing can be unpredictable
     assert!(
-        results.len() >= 1,
+        !results.is_empty(),
         "Expected at least 1 validation, got {}",
         results.len()
     );
