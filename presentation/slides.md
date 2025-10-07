@@ -55,50 +55,50 @@ fonts:
 </div>
 
 <style>
-/* グローバルスタイル - 完璧にフィット */
+/* グローバルスタイル - 16:9バランス調整 */
 .slidev-layout {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  font-size: 0.7rem !important;
-  line-height: 1.3 !important;
+  font-size: 0.75rem !important;
+  line-height: 1.4 !important;
   padding: 0.8rem 1.5rem !important;
 }
 
 h1 { 
-  font-size: 1.4rem !important; 
-  margin-bottom: 0.2rem !important;
+  font-size: 1.5rem !important; 
+  margin-bottom: 0.3rem !important;
   font-weight: 700;
   line-height: 1.1 !important;
 }
 
 h2 { 
-  font-size: 1rem !important; 
-  margin-bottom: 0.2rem !important;
+  font-size: 1.1rem !important; 
+  margin-bottom: 0.25rem !important;
   font-weight: 700;
   line-height: 1.1 !important;
 }
 
 h3 { 
-  font-size: 0.9rem !important; 
-  margin-bottom: 0.15rem !important;
+  font-size: 0.95rem !important; 
+  margin-bottom: 0.2rem !important;
   font-weight: 700;
   line-height: 1.1 !important;
 }
 
 h4, h5, h6 {
   font-weight: 700;
-  margin-bottom: 0.15rem !important;
-  font-size: 0.8rem !important;
+  margin-bottom: 0.2rem !important;
+  font-size: 0.85rem !important;
 }
 
 p {
-  margin-bottom: 0.2rem !important;
-  line-height: 1.3 !important;
+  margin-bottom: 0.3rem !important;
+  line-height: 1.4 !important;
 }
 
 ul, ol {
-  margin-top: 0.2rem !important;
-  margin-bottom: 0.2rem !important;
-  padding-left: 1.2rem !important;
+  margin-top: 0.3rem !important;
+  margin-bottom: 0.3rem !important;
+  padding-left: 1.5rem !important;
 }
 
 li {
@@ -107,26 +107,26 @@ li {
 }
 
 code {
-  font-size: 0.65rem !important;
+  font-size: 0.7rem !important;
   padding: 0.1rem 0.3rem !important;
 }
 
-.mt-2 { margin-top: 0.2rem !important; }
-.mt-3 { margin-top: 0.3rem !important; }
-.mt-4 { margin-top: 0.4rem !important; }
-.mt-5 { margin-top: 0.5rem !important; }
-.mt-6 { margin-top: 0.6rem !important; }
-.mt-8 { margin-top: 0.8rem !important; }
-.mt-12 { margin-top: 1rem !important; }
-.mb-2 { margin-bottom: 0.2rem !important; }
-.mb-3 { margin-bottom: 0.3rem !important; }
-.mb-4 { margin-bottom: 0.4rem !important; }
-.mb-6 { margin-bottom: 0.6rem !important; }
-.gap-4 { gap: 0.4rem !important; }
-.gap-6 { gap: 0.6rem !important; }
-.gap-8 { gap: 0.8rem !important; }
-.p-4 { padding: 0.4rem !important; }
-.p-6 { padding: 0.6rem !important; }
+.mt-2 { margin-top: 0.3rem !important; }
+.mt-3 { margin-top: 0.5rem !important; }
+.mt-4 { margin-top: 0.6rem !important; }
+.mt-5 { margin-top: 0.8rem !important; }
+.mt-6 { margin-top: 1rem !important; }
+.mt-8 { margin-top: 1.2rem !important; }
+.mt-12 { margin-top: 1.5rem !important; }
+.mb-2 { margin-bottom: 0.3rem !important; }
+.mb-3 { margin-bottom: 0.5rem !important; }
+.mb-4 { margin-bottom: 0.6rem !important; }
+.mb-6 { margin-bottom: 1rem !important; }
+.gap-4 { gap: 0.6rem !important; }
+.gap-6 { gap: 0.8rem !important; }
+.gap-8 { gap: 1rem !important; }
+.p-4 { padding: 0.6rem !important; }
+.p-6 { padding: 0.8rem !important; }
 </style>
 
 ---
@@ -136,7 +136,7 @@ class: text-center
 
 # <span class="text-gradient">Why NyxNet?</span>
 
-<div class="grid grid-cols-3 gap-6 mt-6 px-4">
+<div class="grid grid-cols-3 gap-3 mt-2 px-3">
 
 <div v-click class="problem-card">
   <div class="icon-wrapper mb-4">
@@ -189,7 +189,7 @@ class: text-center
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  padding: 1.2rem;
+  padding: 0.8rem;
   transition: all 0.3s ease;
 }
 
@@ -268,12 +268,12 @@ layout: two-cols
 
 <div class="ml-6">
 
-<div class="arch-title mb-4">
+<div class="arch-title mb-2">
   <carbon:diagram class="inline-block mr-2 text-blue-400"/>
   <span class="font-bold text-lg">システムアーキテクチャ</span>
 </div>
 
-```mermaid {scale: 0.4}
+```mermaid {scale: 0.35}
 graph TB
     A[Application<br/>アプリケーション]
     B[nyx-sdk<br/>SDK]
@@ -388,11 +388,11 @@ layout: default
 
 # <span class="text-gradient">System Architecture</span>
 
-<div class="arch-subtitle mb-4">レイヤー化された12モジュール構成</div>
+<div class="arch-subtitle mb-2">レイヤー化された12モジュール構成</div>
 
-<div class="mt-2">
+<div class="mermaid-container">
 
-```mermaid {scale: 0.4}
+```mermaid {scale: 0.35}
 graph TB
     subgraph "Application Layer"
         APP[🌐 Web Browsers]
@@ -486,19 +486,19 @@ graph TB
 .arch-footer {
   display: flex;
   justify-content: center;
-  gap: 2rem;
-  margin-top: 1.5rem;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
   flex-wrap: wrap;
 }
 
 .arch-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.5rem 1.25rem;
+  padding: 0.3rem 0.8rem;
   background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(167, 139, 250, 0.1));
   border: 1px solid rgba(96, 165, 250, 0.3);
   border-radius: 20px;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   transition: all 0.3s ease;
 }
 
@@ -506,6 +506,14 @@ graph TB
   background: linear-gradient(135deg, rgba(96, 165, 250, 0.2), rgba(167, 139, 250, 0.2));
   border-color: rgba(96, 165, 250, 0.5);
   transform: translateY(-2px);
+}
+
+.mermaid-container {
+  max-height: 70vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 </style>
 
@@ -563,7 +571,7 @@ layout: two-cols
   フロー
 </div>
 
-```mermaid {scale: 0.4}
+```mermaid {scale: 0.35}
 sequenceDiagram
     participant C as 🖥️ Client
     participant S as 🖥️ Server
@@ -700,7 +708,7 @@ layout: default
 # <span class="text-gradient">工夫した点 ②</span>
 ## 🧅 Sphinxオニオンルーティング
 
-<div class="grid grid-cols-2 gap-6 mt-3">
+<div class="grid grid-cols-2 gap-3 mt-2">
 
 <div>
 
@@ -760,7 +768,7 @@ layout: default
   <strong>通信フロー</strong>
 </div>
 
-```mermaid {scale: 0.5}
+```mermaid {scale: 0.35}
 sequenceDiagram
     participant A as 👤 Alice
     participant M1 as 🔀 Mix 1
@@ -893,7 +901,7 @@ layout: default
 # <span class="text-gradient">工夫した点 ③</span>
 ## 🛰️ マルチパスQUICトランスポート
 
-<div class="grid grid-cols-2 gap-6 mt-3">
+<div class="grid grid-cols-2 gap-3 mt-2">
 
 <div>
 
@@ -966,7 +974,7 @@ layout: default
   <strong>マルチパス動作</strong>
 </div>
 
-```mermaid {scale: 0.5}
+```mermaid {scale: 0.35}
 graph LR
     subgraph "Client"
         APP[📱 Application]
@@ -1115,7 +1123,7 @@ layout: default
 # <span class="text-gradient">Performance Comparison</span>
 ## 📊 NyxNet vs Tor
 
-<div class="grid grid-cols-2 gap-6 mt-3">
+<div class="grid grid-cols-2 gap-3 mt-2">
 
 <div>
 
@@ -1444,7 +1452,7 @@ layout: default
 # <span class="text-gradient">Technology Stack</span>
 ## ☁️ 技術スタックと品質保証
 
-<div class="grid grid-cols-2 gap-6 mt-3">
+<div class="grid grid-cols-2 gap-3 mt-2">
 
 <div>
 
@@ -1601,7 +1609,7 @@ nyx-cli         # CLI
 }
 
 .stat-icon {
-  font-size: 2rem;
+  font-size: 1.3rem;
 }
 
 .stat-content {
@@ -1615,7 +1623,7 @@ nyx-cli         # CLI
 }
 
 .stat-value-large {
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   font-weight: 800;
   background: linear-gradient(135deg, #60a5fa, #a78bfa);
   -webkit-background-clip: text;
@@ -1690,7 +1698,7 @@ nyx-cli         # CLI
 }
 
 .quality-icon {
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   flex-shrink: 0;
 }
 
@@ -1721,7 +1729,7 @@ layout: default
 # <span class="text-gradient">実装完成度</span>
 ## ✅ Production Ready
 
-<div class="grid grid-cols-2 gap-4 mt-4">
+<div class="grid grid-cols-2 gap-3 mt-2">
 
 <div>
 
@@ -1841,19 +1849,19 @@ layout: default
 }
 
 .production-banner {
-  margin-top: 2rem;
+  margin-top: 1rem;
   background: linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(16, 185, 129, 0.1));
   border: 2px solid rgba(52, 211, 153, 0.4);
   border-radius: 16px;
-  padding: 1.5rem 2rem;
+  padding: 0.8rem 1rem;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.8rem;
   box-shadow: 0 8px 24px rgba(52, 211, 153, 0.15);
 }
 
 .banner-icon {
-  font-size: 3rem;
+  font-size: 1.8rem;
   color: #34d399;
   flex-shrink: 0;
 }
@@ -1976,7 +1984,7 @@ layout: default
 
 # Demo Screenshots
 
-<div class="grid grid-cols-2 gap-4 mt-3">
+<div class="grid grid-cols-2 gap-3 mt-2">
 
 <div>
 
@@ -2137,8 +2145,8 @@ layout: default
 }
 
 .uniqueness-section {
-  margin-top: 2.5rem;
-  padding: 1.5rem;
+  margin-top: 1rem;
+  padding: 0.8rem;
   background: rgba(96, 165, 250, 0.05);
   border-radius: 14px;
   border: 1px solid rgba(96, 165, 250, 0.2);
@@ -2153,7 +2161,7 @@ layout: default
 }
 
 .uniqueness-card {
-  padding: 1.5rem;
+  padding: 0.8rem;
   border-radius: 14px;
   text-align: center;
   transition: all 0.3s ease;
@@ -2181,8 +2189,8 @@ layout: default
 }
 
 .card-icon {
-  font-size: 3rem;
-  margin-bottom: 0.75rem;
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
 }
 
 .card-title {
@@ -2203,133 +2211,511 @@ layout: default
 layout: default
 ---
 
-# 開発で得た学び
+# <span class="text-gradient">開発で得た学び</span>
 
-<div class="grid grid-cols-2 gap-4 mt-3">
-
-<div>
-
-## 💡 技術的チャレンジ
+<div class="grid grid-cols-2 gap-3 mt-2">
 
 <v-clicks>
 
-### 1. 非同期Rust
-- **Tokio Runtime**: 複雑な並行処理の設計
-- **ライフタイム管理**: 所有権システムとの格闘
-- **パフォーマンス**: ゼロコスト抽象化の実現
+<div class="learning-card tech-card">
+  <div class="card-header">
+    <carbon:code class="card-icon"/>
+    <h3>非同期Rust</h3>
+  </div>
+  <div class="card-content">
+    <div class="learning-item">
+      <strong>Tokio Runtime</strong>
+      <span>複雑な並行処理の設計</span>
+    </div>
+    <div class="learning-item">
+      <strong>ライフタイム管理</strong>
+      <span>所有権システムとの格闘</span>
+    </div>
+    <div class="learning-item">
+      <strong>パフォーマンス</strong>
+      <span>ゼロコスト抽象化の実現</span>
+    </div>
+  </div>
+</div>
 
-### 2. 暗号実装
-- **ML-KEM-768**: NIST標準の正確な実装
-- **タイミング攻撃**: 定数時間アルゴリズム
-- **メモリ安全**: `zeroize`による秘密鍵の確実な消去
+<div class="learning-card crypto-card">
+  <div class="card-header">
+    <carbon:locked class="card-icon"/>
+    <h3>暗号実装</h3>
+  </div>
+  <div class="card-content">
+    <div class="learning-item">
+      <strong>ML-KEM-768</strong>
+      <span>NIST標準の正確な実装</span>
+    </div>
+    <div class="learning-item">
+      <strong>タイミング攻撃</strong>
+      <span>定数時間アルゴリズム</span>
+    </div>
+    <div class="learning-item">
+      <strong>メモリ安全</strong>
+      <span>zeroizeによる鍵消去</span>
+    </div>
+  </div>
+</div>
 
-### 3. プロトコル設計
-- **Sphinx**: 玉ねぎルーティングの実装
-- **マルチパス**: 経路選択アルゴリズム
-- **FEC**: Forward Error Correctionによる信頼性向上
+<div class="learning-card protocol-card">
+  <div class="card-header">
+    <carbon:network-3 class="card-icon"/>
+    <h3>プロトコル設計</h3>
+  </div>
+  <div class="card-content">
+    <div class="learning-item">
+      <strong>Sphinx</strong>
+      <span>玉ねぎルーティング実装</span>
+    </div>
+    <div class="learning-item">
+      <strong>マルチパス</strong>
+      <span>経路選択アルゴリズム</span>
+    </div>
+    <div class="learning-item">
+      <strong>FEC</strong>
+      <span>Forward Error Correction</span>
+    </div>
+  </div>
+</div>
+
+<div class="learning-card arch-card">
+  <div class="card-header">
+    <carbon:cube class="card-icon"/>
+    <h3>大規模アーキテクチャ</h3>
+  </div>
+  <div class="card-content">
+    <div class="learning-item">
+      <strong>モジュール分割</strong>
+      <span>12クレート構成</span>
+    </div>
+    <div class="learning-item">
+      <strong>依存関係</strong>
+      <span>循環依存の回避</span>
+    </div>
+    <div class="learning-item">
+      <strong>API設計</strong>
+      <span>一貫性と使いやすさ</span>
+    </div>
+  </div>
+</div>
+
+<div class="learning-card qa-card">
+  <div class="card-header">
+    <carbon:checkmark-outline class="card-icon"/>
+    <h3>品質保証</h3>
+  </div>
+  <div class="card-content">
+    <div class="learning-item">
+      <strong>テスト戦略</strong>
+      <span>Unit/Integration/E2E</span>
+    </div>
+    <div class="learning-item">
+      <strong>TDD実践</strong>
+      <span>400+テストケース</span>
+    </div>
+    <div class="learning-item">
+      <strong>Property Testing</strong>
+      <span>proptest網羅検証</span>
+    </div>
+  </div>
+</div>
+
+<div class="learning-card doc-card">
+  <div class="card-header">
+    <carbon:document class="card-icon"/>
+    <h3>ドキュメント</h3>
+  </div>
+  <div class="card-content">
+    <div class="learning-item">
+      <strong>rustdoc</strong>
+      <span>自動生成API文書</span>
+    </div>
+    <div class="learning-item">
+      <strong>ADR</strong>
+      <span>Architecture Decision Records</span>
+    </div>
+    <div class="learning-item">
+      <strong>TLA+</strong>
+      <span>形式仕様による証明</span>
+    </div>
+  </div>
+</div>
 
 </v-clicks>
 
 </div>
 
-<div>
+<style>
+.learning-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
 
-## 🎯 プロジェクト管理
+.learning-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
 
-<v-clicks>
+.tech-card { border-left: 3px solid #60a5fa; }
+.tech-card:hover { border-left-color: #3b82f6; background: rgba(96, 165, 250, 0.1); }
 
-### 大規模アーキテクチャ
-- **モジュール分割**: 12クレート構成
-- **依存関係**: 循環依存の回避
-- **API設計**: 一貫性と使いやすさの両立
+.crypto-card { border-left: 3px solid #a78bfa; }
+.crypto-card:hover { border-left-color: #8b5cf6; background: rgba(167, 139, 250, 0.1); }
 
-### 品質保証
-- **テスト戦略**: Unit/Integration/E2E
-- **TDD実践**: 400+テストケース
-- **Property Testing**: `proptest`による網羅的検証
-- **Fuzzing**: `libFuzzer`で脆弱性発見
+.protocol-card { border-left: 3px solid #34d399; }
+.protocol-card:hover { border-left-color: #10b981; background: rgba(52, 211, 153, 0.1); }
 
-### ドキュメンテーション
-- **コード文書**: `rustdoc`による自動生成
-- **設計書**: Architecture Decision Records
-- **形式仕様**: TLA+による正当性証明
+.arch-card { border-left: 3px solid #fbbf24; }
+.arch-card:hover { border-left-color: #f59e0b; background: rgba(251, 191, 36, 0.1); }
 
-</v-clicks>
+.qa-card { border-left: 3px solid #f472b6; }
+.qa-card:hover { border-left-color: #ec4899; background: rgba(244, 114, 182, 0.1); }
 
-</div>
+.doc-card { border-left: 3px solid #fb923c; }
+.doc-card:hover { border-left-color: #f97316; background: rgba(251, 146, 60, 0.1); }
 
-</div>
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-icon {
+  font-size: 1.1rem;
+  color: #60a5fa;
+}
+
+.card-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.learning-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.3rem 0;
+}
+
+.learning-item strong {
+  color: #60a5fa;
+  font-size: 0.85rem;
+}
+
+.learning-item span {
+  opacity: 0.8;
+  font-size: 0.75rem;
+}
+</style>
 
 ---
 layout: default
 ---
 
-# 今後の展望
+# <span class="text-gradient">今後の展望</span>
 
-<div class="grid grid-cols-2 gap-4 mt-3">
-
-<div>
-
-## 🚀 Version 2.0 の計画
+<div class="grid grid-cols-2 gap-3 mt-2">
 
 <v-clicks>
 
-### 暗号技術の強化
+<div class="future-card crypto-future">
+  <div class="card-header">
+    <carbon:security class="card-icon"/>
+    <h3>暗号技術の強化</h3>
+  </div>
+  <div class="card-content">
+    <div class="future-item">
+      <carbon:locked class="item-icon"/>
+      <div>
+        <strong>SPHINCS+</strong>
+        <span>量子耐性デジタル署名</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <carbon:flash class="item-icon"/>
+      <div>
+        <strong>Dilithium</strong>
+        <span>より高速な署名方式</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <carbon:connect class="item-icon"/>
+      <div>
+        <strong>Hybrid署名</strong>
+        <span>移行期の互換性確保</span>
+      </div>
+    </div>
+  </div>
+</div>
 
-- **SPHINCS+**: 量子耐性デジタル署名
-- **Dilithium**: より高速な署名方式
-- **Hybrid署名**: 移行期の互換性確保
+<div class="future-card network-future">
+  <div class="card-header">
+    <carbon:network-3 class="card-icon"/>
+    <h3>ネットワーク機能</h3>
+  </div>
+  <div class="card-content">
+    <div class="future-item">
+      <carbon:data-2 class="item-icon"/>
+      <div>
+        <strong>Fountain Codes</strong>
+        <span>より効率的なFEC</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <carbon:tree-view class="item-icon"/>
+      <div>
+        <strong>Kademlia DHT</strong>
+        <span>完全分散型ノード発見</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <carbon:gateway class="item-icon"/>
+      <div>
+        <strong>ブリッジノード</strong>
+        <span>検閲回避の強化</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <carbon:ai-results class="item-icon"/>
+      <div>
+        <strong>ML最適化</strong>
+        <span>機械学習でリレー選択</span>
+      </div>
+    </div>
+  </div>
+</div>
 
-### ネットワーク機能
+<div class="future-card ux-future">
+  <div class="card-header">
+    <div class="card-icon">👤</div>
+    <h3>ユーザー体験</h3>
+  </div>
+  <div class="card-content">
+    <div class="future-item">
+      <div class="item-icon">🖥️</div>
+      <div>
+        <strong>Tauri GUI</strong>
+        <span>クロスプラットフォームアプリ</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <carbon:mobile class="item-icon"/>
+      <div>
+        <strong>モバイルアプリ</strong>
+        <span>iOS/Android ネイティブ</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <div class="item-icon">🌐</div>
+      <div>
+        <strong>ブラウザ拡張</strong>
+        <span>ワンクリック接続</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <carbon:help class="item-icon"/>
+      <div>
+        <strong>設定ウィザード</strong>
+        <span>初心者向けガイド</span>
+      </div>
+    </div>
+  </div>
+</div>
 
-- **Fountain Codes**: より効率的なFEC
-- **Kademlia DHT**: 完全分散型ノード発見
-- **ブリッジノード**: 検閲回避の強化
-- **リレー選択**: 機械学習による最適化
+<div class="future-card security-future">
+  <div class="card-header">
+    <carbon:security class="card-icon"/>
+    <h3>セキュリティ監査</h3>
+  </div>
+  <div class="card-content">
+    <div class="future-item">
+      <div class="item-icon">👨‍💼</div>
+      <div>
+        <strong>専門家レビュー</strong>
+        <span>Trail of Bits等に依頼</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <carbon:locked class="item-icon"/>
+      <div>
+        <strong>暗号実装検証</strong>
+        <span>数学的正当性の証明</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <div class="item-icon">🔍</div>
+      <div>
+        <strong>ペネトレーション</strong>
+        <span>実環境攻撃シミュレーション</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <div class="item-icon">👁️</div>
+      <div>
+        <strong>継続監視</strong>
+        <span>脆弱性の早期発見</span>
+      </div>
+    </div>
+  </div>
+</div>
 
-### ユーザー体験
+<div class="future-card community-future">
+  <div class="card-header">
+    <div class="card-icon">👥</div>
+    <h3>コミュニティ構築</h3>
+  </div>
+  <div class="card-content">
+    <div class="future-item">
+      <carbon:logo-github class="item-icon"/>
+      <div>
+        <strong>オープンソース</strong>
+        <span>GitHub完全公開</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <div class="item-icon">💬</div>
+      <div>
+        <strong>開発者支援</strong>
+        <span>Discord/Matrix コミュニティ</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <div class="item-icon">💰</div>
+      <div>
+        <strong>バグバウンティ</strong>
+        <span>報奨金プログラム</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <div class="item-icon">🌏</div>
+      <div>
+        <strong>多言語対応</strong>
+        <span>グローバル展開</span>
+      </div>
+    </div>
+  </div>
+</div>
 
-- **Tauri GUI**: クロスプラットフォームアプリ
-- **モバイルアプリ**: iOS/Android ネイティブ
-- **ブラウザ拡張**: ワンクリック接続
-- **設定ウィザード**: 初心者向けガイド
+<div class="future-card social-future">
+  <div class="card-header">
+    <div class="card-icon">🌍</div>
+    <h3>社会実装</h3>
+  </div>
+  <div class="card-content">
+    <div class="future-item">
+      <div class="item-icon">🤝</div>
+      <div>
+        <strong>NGO連携</strong>
+        <span>ジャーナリスト・活動家支援</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <div class="item-icon">📚</div>
+      <div>
+        <strong>教育活動</strong>
+        <span>プライバシー啓発</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <div class="item-icon">🔬</div>
+      <div>
+        <strong>実証実験</strong>
+        <span>大学・研究機関との協力</span>
+      </div>
+    </div>
+    <div class="future-item">
+      <carbon:wifi class="item-icon"/>
+      <div>
+        <strong>検閲国支援</strong>
+        <span>安全な通信手段の提供</span>
+      </div>
+    </div>
+  </div>
+</div>
 
 </v-clicks>
 
 </div>
 
-<div>
+<style>
+.future-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
 
-## 🌍 実世界への展開
+.future-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
 
-<v-clicks>
+.crypto-future { border-left: 3px solid #a78bfa; }
+.crypto-future:hover { border-left-color: #8b5cf6; background: rgba(167, 139, 250, 0.1); }
 
-### セキュリティ監査
+.network-future { border-left: 3px solid #60a5fa; }
+.network-future:hover { border-left-color: #3b82f6; background: rgba(96, 165, 250, 0.1); }
 
-- **専門家レビュー**: Trail of Bits等に依頼
-- **暗号実装**: 数学的正当性の検証
-- **ペネトレーション**: 実環境での攻撃シミュレーション
-- **継続監視**: 脆弱性の早期発見
+.ux-future { border-left: 3px solid #f472b6; }
+.ux-future:hover { border-left-color: #ec4899; background: rgba(244, 114, 182, 0.1); }
 
-### コミュニティ構築
+.security-future { border-left: 3px solid #34d399; }
+.security-future:hover { border-left-color: #10b981; background: rgba(52, 211, 153, 0.1); }
 
-- **オープンソース**: GitHub完全公開
-- **開発者支援**: Discord/Matrix コミュニティ
-- **バグバウンティ**: 報奨金プログラム
-- **ドキュメント**: 多言語対応
+.community-future { border-left: 3px solid #fbbf24; }
+.community-future:hover { border-left-color: #f59e0b; background: rgba(251, 191, 36, 0.1); }
 
-### 社会実装
+.social-future { border-left: 3px solid #fb923c; }
+.social-future:hover { border-left-color: #f97316; background: rgba(251, 146, 60, 0.1); }
 
-- **NGO連携**: ジャーナリスト・活動家支援
-- **教育活動**: プライバシー啓発
-- **実証実験**: 大学・研究機関との協力
-- **検閲国支援**: 安全な通信手段の提供
+.future-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+}
 
-</v-clicks>
+.item-icon {
+  font-size: 1.2rem;
+  color: #60a5fa;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
 
-</div>
+.future-item div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
 
-</div>
+.future-item strong {
+  color: #60a5fa;
+  font-size: 0.85rem;
+}
+
+.future-item span {
+  opacity: 0.8;
+  font-size: 0.75rem;
+}
+</style>
 
 ---
 layout: center
@@ -2338,9 +2724,9 @@ class: text-center
 
 # <span class="text-gradient-rainbow">まとめ</span>
 
-<div class="mt-4">
+<div class="mt-3">
 
-<div class="grid grid-cols-3 gap-6 mt-6 px-6">
+<div class="grid grid-cols-3 gap-3 mt-2 px-3">
 
 <v-clicks>
 
@@ -2385,7 +2771,7 @@ class: text-center
   background: linear-gradient(90deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-size: 3rem;
+  font-size: 1.8rem;
   font-weight: 800;
 }
 
@@ -2530,7 +2916,7 @@ class: text-center
   <div class="logo-subtitle">Post-Quantum Anonymous Network</div>
 </div>
 
-<div class="grid grid-cols-2 gap-12 mt-12 px-12">
+<div class="grid grid-cols-2 gap-6 mt-4 px-6">
 
 <div class="info-section">
 
@@ -2601,12 +2987,12 @@ class: text-center
 
 <style>
 .final-slide {
-  padding: 2rem 0;
+  padding: 0.8rem 0;
 }
 
 .final-logo {
   position: relative;
-  padding: 2rem 0;
+  padding: 0.8rem 0;
 }
 
 .logo-glow {
@@ -2626,7 +3012,7 @@ class: text-center
 }
 
 .logo-text {
-  font-size: 3rem;
+  font-size: 1.8rem;
   font-weight: 900;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
   -webkit-background-clip: text;
@@ -2645,7 +3031,7 @@ class: text-center
 .info-section, .stats-section {
   text-align: left;
   background: rgba(96, 165, 250, 0.05);
-  padding: 1.2rem;
+  padding: 0.8rem;
   border-radius: 16px;
   border: 1px solid rgba(96, 165, 250, 0.2);
 }
@@ -2727,8 +3113,8 @@ class: text-center
 }
 
 .stat-icon {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
+  font-size: 1.3rem;
+  margin-bottom: 0.3rem;
 }
 
 .stat-value {
@@ -2803,20 +3189,20 @@ class: text-center
 }
 
 .thank-you {
-  margin-top: 3rem;
-  padding: 2rem;
+  margin-top: 1rem;
+  padding: 1rem;
   background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(167, 139, 250, 0.1));
   border-radius: 20px;
   border: 2px solid rgba(96, 165, 250, 0.3);
 }
 
 .thank-text {
-  font-size: 2.5rem;
+  font-size: 1.5rem;
   font-weight: 800;
   background: linear-gradient(135deg, #667eea, #764ba2);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .questions-text {

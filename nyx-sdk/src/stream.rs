@@ -311,11 +311,14 @@ mod tests {
         // The underlying AsyncStream implementation immediately returns None when no data is available
         // because it uses try_recv internally. This is the expected behavior for non-blocking streams.
         let result = stream.recv_with_timeout(100).await;
-        
+
         // Verify the result - AsyncStream returns Ok(None) when no data is available
         // This is correct behavior as the stream is open but empty
         assert!(
-            matches!(result, Ok(None) | Err(Error::Timeout { .. }) | Err(Error::Stream(_))),
+            matches!(
+                result,
+                Ok(None) | Err(Error::Timeout { .. }) | Err(Error::Stream(_))
+            ),
             "Expected Ok(None), Timeout, or Stream error, but got: {:?}",
             result
         );
