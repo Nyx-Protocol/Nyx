@@ -144,15 +144,27 @@ for i in $(seq 1 $NUM_NODES); do
       - "${PORT}:${PORT}/udp"
       - "${GRPC_PORT}:${GRPC_PORT}/tcp"
     command: >
-      /bin/sh -c "echo 'Node ${i} starting...'; 
-                  sleep $((i * 2)); 
-                  tail -f /dev/null"
+      /bin/sh -c "
+        echo '=================================';
+        echo 'Nyx Node ${i} Starting';
+        echo 'IP: 172.20.0.$((10 + i))';
+        echo 'UDP Port: ${PORT}';
+        echo 'gRPC Port: ${GRPC_PORT}';
+        echo '=================================';
+        echo 'Installing network tools...';
+        apk add --no-cache curl netcat-openbsd bash 2>/dev/null || 
+          apt-get update -qq && apt-get install -y -qq curl netcat-openbsd bash 2>/dev/null || 
+          echo 'Network tools installation skipped';
+        echo 'Node ${i} ready - keeping container alive';
+        tail -f /dev/null
+      "
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "true"]
+      test: ["CMD-SHELL", "test -e /proc/1/status || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 10s
 
 EOF
 done
