@@ -102,7 +102,7 @@ pub extern "C" fn nyx_mobile_receive_data(
 
     // Verify connection exists
     let connection_exists = if let Ok(connections) = client_state.connections.read() {
-        connections.contains_key(&(connection_id as u64))
+        connections.contains_key(&connection_id)
     } else {
         false
     };
@@ -177,7 +177,7 @@ pub extern "C" fn nyx_mobile_get_connection_stats(
 
     // Verify connection exists
     let connection_exists = if let Ok(connections) = client_state.connections.read() {
-        connections.contains_key(&(connection_id as u64))
+        connections.contains_key(&connection_id)
     } else {
         false
     };
