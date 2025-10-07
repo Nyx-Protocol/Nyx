@@ -63,12 +63,80 @@ fonts:
   padding: 0.8rem 1.5rem !important;
 }
 
+/* タイトル以外のスライド用アニメーション背景 */
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+}
+
+.slidev-page:not(:first-child) .slidev-layout {
+  background: 
+    linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+  background-size: 400% 400%;
+  animation: gradient-shift 15s ease infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+.slidev-page:not(:first-child) .slidev-layout::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: 
+    radial-gradient(circle at 30% 40%, rgba(102, 126, 234, 0.4) 0%, transparent 50%),
+    radial-gradient(circle at 70% 60%, rgba(244, 114, 182, 0.4) 0%, transparent 50%);
+  animation: pulse-glow 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.slidev-page:not(:first-child) .slidev-layout::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0px, transparent 2px, transparent 10px, rgba(255, 255, 255, 0.05) 12px),
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.03) 0px, transparent 2px, transparent 10px, rgba(255, 255, 255, 0.03) 12px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.slidev-layout > * {
+  position: relative;
+  z-index: 1;
+}
+
 .slidev-layout h1,
 h1 { 
   font-size: 1.2rem !important; 
   margin-bottom: 0.2rem !important;
   font-weight: 700 !important;
   line-height: 1 !important;
+  position: relative;
+  padding-bottom: 0.4rem;
+}
+
+.slidev-layout h1::after,
+h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  border-radius: 2px;
 }
 
 .slidev-layout h2,
@@ -112,6 +180,37 @@ li {
 code {
   font-size: 0.7rem !important;
   padding: 0.1rem 0.3rem !important;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+  border-radius: 4px;
+}
+
+/* グローバルカードスタイル */
+div[class*="-section"],
+div[class*="-card"],
+div[class*="-box"] {
+  position: relative;
+  overflow: hidden;
+}
+
+div[class*="-section"]::before,
+div[class*="-card"]::before,
+div[class*="-box"]::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+div[class*="-section"]:hover::before,
+div[class*="-card"]:hover::before,
+div[class*="-box"]:hover::before {
+  opacity: 1;
 }
 
 .mt-2 { margin-top: 0.3rem !important; }
@@ -188,16 +287,19 @@ class: text-center
 }
 
 .problem-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.3);
   border-radius: 16px;
   padding: 0.8rem;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.1);
 }
 
 .problem-card:hover {
   transform: translateY(-8px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+  border-color: rgba(102, 126, 234, 0.5);
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.2);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
@@ -274,7 +376,7 @@ layout: two-cols
   <span class="font-bold text-lg">システムアーキテクチャ</span>
 </div>
 
-```mermaid {scale: 0.35}
+```mermaid {scale: 0.5}
 graph TB
     A[Application<br/>アプリケーション]
     B[nyx-sdk<br/>SDK]
@@ -896,7 +998,7 @@ layout: default
 <div class="algo-box">
 <div class="algo-title">WeightedRTT Algorithm</div>
 <div class="algo-formula">
-$$weight_i = \frac{1}{RTT_i}$$
+weight<sub>i</sub> = 1 / RTT<sub>i</sub>
 </div>
 <div class="algo-desc">
 低レイテンシの経路を優先的に選択
@@ -1089,7 +1191,7 @@ layout: default
   </div>
   <div class="perf-subtitle">実際のネットワーク環境での推定値</div>
 
-  <div class="comparison-table mt-2">
+  <div class="comparison-table mt-1">
     <div class="table-row header-row">
       <div>環境</div><div>NyxNet</div><div>Tor</div><div>改善率</div>
     </div>
@@ -1113,7 +1215,7 @@ layout: default
     </div>
   </div>
 
-  <div class="visual-comparison mt-2">
+  <div class="visual-comparison mt-1">
     <div class="compare-bar tor-bar">
       <span class="bar-label">Tor</span>
       <div class="bar-fill tor-fill" style="width: 100%">1224ms</div>
@@ -1124,7 +1226,7 @@ layout: default
     </div>
   </div>
 
-  <div class="method-box mt-2">
+  <div class="method-box mt-1">
     <carbon:information class="inline-block mr-2 text-yellow-400"/>
     <strong>測定方法</strong>
     <ul class="method-list">
@@ -1145,7 +1247,7 @@ layout: default
     <span class="font-bold">スループット比較</span>
   </div>
 
-  <div class="throughput-table mt-2">
+  <div class="throughput-table mt-1">
     <div class="table-row header-row">
       <div>環境</div><div>NyxNet</div><div>Tor</div>
     </div>
@@ -1166,7 +1268,7 @@ layout: default
     </div>
   </div>
 
-  <div class="reason-box mt-2">
+  <div class="reason-box mt-1">
     <div class="reason-title">
       <carbon:lightning class="inline-block mr-2 text-yellow-400"/>
       <strong>なぜNyxNetが速いか</strong>
@@ -1224,7 +1326,7 @@ layout: default
 <style>
 .perf-section, .throughput-section {
   background: rgba(96, 165, 250, 0.08);
-  padding: 0.4rem;
+  padding: 0.3rem;
   border-radius: 8px;
   border: 1px solid rgba(96, 165, 250, 0.25);
 }
@@ -1232,14 +1334,14 @@ layout: default
 .perf-header {
   display: flex;
   align-items: center;
-  margin-bottom: 0.15rem;
-  font-size: 0.75rem;
+  margin-bottom: 0.1rem;
+  font-size: 0.7rem;
 }
 
 .perf-subtitle {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   opacity: 0.7;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.2rem;
 }
 
 .comparison-table, .throughput-table {
@@ -1251,9 +1353,9 @@ layout: default
 .table-row {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr 0.8fr;
-  gap: 0.4rem;
-  padding: 0.4rem 0.6rem;
-  font-size: 0.75rem;
+  gap: 0.3rem;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.7rem;
 }
 
 .throughput-table .table-row {
@@ -1293,25 +1395,25 @@ layout: default
 
 .visual-comparison {
   background: rgba(0, 0, 0, 0.2);
-  padding: 0.6rem;
+  padding: 0.4rem;
   border-radius: 8px;
 }
 
 .compare-bar {
-  margin: 0.5rem 0;
+  margin: 0.3rem 0;
 }
 
 .bar-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   display: block;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
 }
 
 .bar-fill {
-  padding: 0.4rem 0.75rem;
+  padding: 0.3rem 0.6rem;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   font-family: 'Fira Code', monospace;
 }
@@ -1327,36 +1429,36 @@ layout: default
 .method-box {
   background: rgba(251, 191, 36, 0.1);
   border: 1px solid rgba(251, 191, 36, 0.3);
-  padding: 0.5rem;
+  padding: 0.4rem;
   border-radius: 8px;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
 }
 
 .method-list {
-  margin-top: 0.5rem;
-  margin-left: 1.5rem;
-  font-size: 0.75rem;
-  line-height: 1.6;
+  margin-top: 0.3rem;
+  margin-left: 1.2rem;
+  font-size: 0.7rem;
+  line-height: 1.5;
 }
 
 .reason-box {
   background: rgba(0, 0, 0, 0.2);
-  padding: 0.6rem;
+  padding: 0.4rem;
   border-radius: 8px;
 }
 
 .reason-title {
-  font-size: 0.85rem;
-  margin-bottom: 0.4rem;
+  font-size: 0.75rem;
+  margin-bottom: 0.3rem;
   display: flex;
   align-items: center;
 }
 
 .reason-item {
   display: flex;
-  gap: 0.5rem;
-  margin: 0.3rem 0;
-  padding: 0.35rem;
+  gap: 0.4rem;
+  margin: 0.25rem 0;
+  padding: 0.3rem;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 6px;
 }
@@ -1376,17 +1478,17 @@ layout: default
 
 .reason-content {
   flex: 1;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
 }
 
 .reason-content strong {
   display: block;
-  margin-bottom: 0.125rem;
+  margin-bottom: 0.1rem;
   color: #60a5fa;
 }
 
 .reason-detail {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   opacity: 0.85;
   line-height: 1.3;
 }
@@ -1542,7 +1644,7 @@ nyx-cli         # CLI
 <style>
 .stats-section, .tech-section, .modules-section, .quality-section {
   background: rgba(96, 165, 250, 0.08);
-  padding: 0.8rem;
+  padding: 0.6rem;
   border-radius: 12px;
   border: 1px solid rgba(96, 165, 250, 0.25);
 }
@@ -1550,22 +1652,22 @@ nyx-cli         # CLI
 .stats-header, .tech-header, .modules-header, .quality-header {
   display: flex;
   align-items: center;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.5rem;
 }
 
 .stat-item-large {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem;
-  margin: 0.3rem 0;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  margin: 0.25rem 0;
   background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(167, 139, 250, 0.1));
   border-radius: 10px;
   border: 1px solid rgba(96, 165, 250, 0.2);
 }
 
 .stat-icon {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
 }
 
 .stat-content {
@@ -1573,13 +1675,13 @@ nyx-cli         # CLI
 }
 
 .stat-label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   opacity: 0.7;
-  margin-bottom: 0.125rem;
+  margin-bottom: 0.1rem;
 }
 
 .stat-value-large {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 800;
   background: linear-gradient(135deg, #60a5fa, #a78bfa);
   -webkit-background-clip: text;
@@ -1590,32 +1692,32 @@ nyx-cli         # CLI
 .test-breakdown {
   background: rgba(251, 191, 36, 0.1);
   border: 1px solid rgba(251, 191, 36, 0.3);
-  padding: 0.875rem;
+  padding: 0.7rem;
   border-radius: 10px;
-  font-size: 0.85rem;
-  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  margin-top: 0.6rem;
 }
 
 .test-list {
-  margin-top: 0.5rem;
-  margin-left: 1.75rem;
-  font-size: 0.75rem;
-  line-height: 1.7;
+  margin-top: 0.4rem;
+  margin-left: 1.5rem;
+  font-size: 0.7rem;
+  line-height: 1.6;
 }
 
 .tech-category {
-  padding: 0.625rem 0.875rem;
-  margin: 0.4rem 0;
+  padding: 0.5rem 0.7rem;
+  margin: 0.3rem 0;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   display: flex;
   align-items: center;
 }
 
 .modules-tree {
   background: rgba(0, 0, 0, 0.3);
-  padding: 1rem;
+  padding: 0.8rem;
   border-radius: 10px;
   font-family: 'Fira Code', monospace;
   font-size: 0.8rem;
@@ -1842,22 +1944,23 @@ layout: default
 </style>
 
 ---
-layout: image-right
-image: https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800
+layout: default
 ---
 
 # <span class="text-gradient">Use Cases</span>
 
-<div class="mt-4">
+<div class="mt-3">
 
 <v-clicks>
 
 <div class="usecase-box journalist">
   <div class="usecase-icon">🎤</div>
   <div class="usecase-content">
-    <div class="usecase-title">ジャーナリスト</div>
+    <div class="usecase-title">ジャーナリスト・活動家</div>
     <div class="usecase-items">
-      <div>✓ 情報源保護・検閲回避</div>
+      <div>✓ <strong>情報源の匿名性保護</strong> - 内部告発者との通信を追跡不可能に</div>
+      <div>✓ <strong>検閲回避</strong> - 国家レベルのファイアウォールを突破</div>
+      <div>✓ <strong>量子時代対応</strong> - 将来の暗号解読からアーカイブを保護</div>
     </div>
   </div>
 </div>
@@ -1865,19 +1968,11 @@ image: https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800
 <div class="usecase-box enterprise">
   <div class="usecase-icon">🏢</div>
   <div class="usecase-content">
-    <div class="usecase-title">企業</div>
+    <div class="usecase-title">企業・研究機関</div>
     <div class="usecase-items">
-      <div>✓ 量子耐性・機密通信</div>
-    </div>
-  </div>
-</div>
-
-<div class="usecase-box developer">
-  <div class="usecase-icon">💻</div>
-  <div class="usecase-content">
-    <div class="usecase-title">開発者</div>
-    <div class="usecase-items">
-      <div>✓ SDK (Rust/WASM/FFI)</div>
+      <div>✓ <strong>機密通信保護</strong> - M&A交渉、研究データの漏洩防止</div>
+      <div>✓ <strong>コンプライアンス</strong> - GDPR/個人情報保護法の匿名化要件に対応</div>
+      <div>✓ <strong>高速性能</strong> - 業務を阻害しない80 MB/s・20msレイテンシ</div>
     </div>
   </div>
 </div>
@@ -1889,9 +1984,9 @@ image: https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800
 <style>
 .usecase-box {
   display: flex;
-  gap: 0.6rem;
-  padding: 0.6rem;
-  margin: 0.5rem 0;
+  gap: 0.8rem;
+  padding: 0.9rem 1.2rem;
+  margin: 0.7rem 0;
   background: rgba(96, 165, 250, 0.08);
   border-left: 4px solid rgba(96, 165, 250, 0.5);
   border-radius: 10px;
@@ -1912,6 +2007,7 @@ image: https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800
 .usecase-icon {
   font-size: 2.5rem;
   flex-shrink: 0;
+  margin-top: 0.2rem;
 }
 
 .usecase-content {
@@ -1920,15 +2016,19 @@ image: https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800
 
 .usecase-title {
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1rem;
   margin-bottom: 0.5rem;
   color: #60a5fa;
 }
 
 .usecase-items {
-  font-size: 0.85rem;
-  line-height: 1.7;
+  font-size: 0.8rem;
+  line-height: 1.6;
   opacity: 0.9;
+}
+
+.usecase-items > div {
+  margin-bottom: 0.25rem;
 }
 </style>
 
@@ -1988,7 +2088,7 @@ layout: default
 
 # <span class="text-gradient">競合比較</span>
 
-<div class="comparison-table-modern mt-4">
+<div class="comparison-table-modern mt-3">
   <div class="table-header-row">
     <div class="header-cell">機能</div>
     <div class="header-cell">Tor</div>
@@ -1999,10 +2099,10 @@ layout: default
   
   <div class="table-data-row">
     <div class="feature-cell"><carbon:locked class="inline mr-1"/>量子耐性</div>
-    <div class="value-cell bad">❌</div>
-    <div class="value-cell bad">❌</div>
-    <div class="value-cell bad">❌</div>
-    <div class="value-cell good"><strong>✅</strong></div>
+    <div class="value-cell bad">❌ RSA</div>
+    <div class="value-cell bad">❌ X25519</div>
+    <div class="value-cell bad">❌ ElGamal</div>
+    <div class="value-cell good"><strong>✅ ML-KEM-768</strong></div>
   </div>
   
   <div class="table-data-row highlight">
@@ -2010,11 +2110,11 @@ layout: default
     <div class="value-cell bad">1224ms</div>
     <div class="value-cell medium">10ms</div>
     <div class="value-cell medium">500ms</div>
-    <div class="value-cell excellent"><strong>20ms</strong></div>
+    <div class="value-cell excellent"><strong>20ms (61倍速)</strong></div>
   </div>
   
   <div class="table-data-row">
-    <div class="feature-cell"><carbon:cloud-upload class="inline mr-1"/>速度</div>
+    <div class="feature-cell"><carbon:cloud-upload class="inline mr-1"/>スループット</div>
     <div class="value-cell medium">39 MB/s</div>
     <div class="value-cell good">100+ MB/s</div>
     <div class="value-cell bad">20 MB/s</div>
@@ -2026,7 +2126,39 @@ layout: default
     <div class="value-cell bad">❌</div>
     <div class="value-cell bad">❌</div>
     <div class="value-cell bad">❌</div>
-    <div class="value-cell good"><strong>✅</strong></div>
+    <div class="value-cell good"><strong>✅ QUIC</strong></div>
+  </div>
+  
+  <div class="table-data-row">
+    <div class="feature-cell"><carbon:security class="inline mr-1"/>匿名性</div>
+    <div class="value-cell good">強い</div>
+    <div class="value-cell bad">業者依存</div>
+    <div class="value-cell good">強い</div>
+    <div class="value-cell good"><strong>Sphinx+FEC</strong></div>
+  </div>
+  
+  <div class="table-data-row highlight">
+    <div class="feature-cell">📱 モバイル対応</div>
+    <div class="value-cell medium">限定的</div>
+    <div class="value-cell good">対応</div>
+    <div class="value-cell bad">非対応</div>
+    <div class="value-cell excellent"><strong>iOS/Android SDK</strong></div>
+  </div>
+  
+  <div class="table-data-row">
+    <div class="feature-cell">🔌 SDK提供</div>
+    <div class="value-cell bad">❌</div>
+    <div class="value-cell bad">❌</div>
+    <div class="value-cell bad">❌</div>
+    <div class="value-cell good"><strong>✅ Rust/WASM/FFI</strong></div>
+  </div>
+  
+  <div class="table-data-row">
+    <div class="feature-cell">🛡️ 検閲耐性</div>
+    <div class="value-cell medium">中 (DPI検知)</div>
+    <div class="value-cell bad">弱い</div>
+    <div class="value-cell good">強い</div>
+    <div class="value-cell excellent"><strong>強い (FEC難読化)</strong></div>
   </div>
 </div>
 
@@ -2042,8 +2174,8 @@ layout: default
   display: grid;
   grid-template-columns: 1.8fr repeat(4, 1fr);
   gap: 0.5rem;
-  padding: 0.8rem 1rem;
-  font-size: 0.85rem;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.78rem;
 }
 
 .table-header-row {

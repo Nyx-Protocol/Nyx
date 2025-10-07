@@ -156,7 +156,9 @@ func (ps *ProxyServer) Start(ctx context.Context) error {
 
 	// Close Mix Bridge connection
 	if ps.mixBridge != nil {
-		ps.mixBridge.Close()
+		if err := ps.mixBridge.Close(); err != nil {
+			log.Printf("Warning: failed to close mix bridge: %v", err)
+		}
 	}
 
 	return nil
