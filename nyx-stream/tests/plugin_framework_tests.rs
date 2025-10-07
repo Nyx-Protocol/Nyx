@@ -15,12 +15,12 @@
 //! in Nyx Protocol v1.0, including capability negotiation, plugin
 //! lifecycle management, and cross-plugin communication.
 
+use ciborium::Value as CborValue;
 use nyx_stream::frame::{Frame, FrameType};
 use nyx_stream::plugin_framework::{
     Plugin, PluginCapability, PluginError, PluginFrameType, PluginHeader, PluginManager,
     PluginManagerConfig, PluginMetadata, PluginState,
 };
-use ciborium::Value as CborValue;
 use std::collections::HashMap;
 use tokio::test;
 use tracing_test::traced_test;
@@ -84,10 +84,7 @@ impl Plugin for TestCompressionPlugin {
         Ok(vec![frame.clone()])
     }
 
-    async fn handle_control(
-        &mut self,
-        _message: CborValue,
-    ) -> Result<CborValue, PluginError> {
+    async fn handle_control(&mut self, _message: CborValue) -> Result<CborValue, PluginError> {
         Ok(CborValue::Text("OK".to_string()))
     }
 

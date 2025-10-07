@@ -19,8 +19,8 @@ use serde::Serialize;
 // Re-export FFI functions from nyx-mobile-ffi. These are normal Rust functions with C ABI
 // and are safe to call directly (no unsafe block needed).
 use nyx_mobile_ffi::{
-    nyx_mobile_init, nyx_mobile_set____log_level, nyx_mobile_shutdown, nyx_power_get_state,
-    rust_get_power_state, rust_get_resume_count, rust_get_wake_count, NyxPowerState, NyxStatus,
+    nyx_mobile_init, nyx_mobile_set____log_level, nyx_mobile_shutdown, rust_get_power_state,
+    rust_get_resume_count, rust_get_wake_count, NyxPowerState, NyxStatus,
 };
 
 /// Background task handle for the low-power bridge.
@@ -96,12 +96,8 @@ impl LowPowerBridge {
 
             loop {
                 intv.tick().await;
-                // Primary source via FFI getter
-                let mut cur: u32 = 0;
-                let rc = unsafe { nyx_power_get_state(&mut cur as *mut u32) };
-                if rc != NyxStatus::Ok as i32 {
-                    cur = rust_get_power_state();
-                }
+                // Primary source via FFI getter (safe wrapper)
+                let cur = rust_get_power_state();
 
                 let now = now_ms();
                 if prev_state != Some(cur) {

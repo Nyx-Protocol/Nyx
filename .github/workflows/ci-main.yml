@@ -130,6 +130,12 @@ jobs:
         with:
           components: clippy, rustfmt
       
+      # Install protobuf compiler for tonic-build
+      - name: Install protobuf compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev
+      
       # Advanced caching: Multi-level cache with fallback strategy
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
@@ -137,7 +143,7 @@ jobs:
           # Use specific cache key for lint job to maximize hit rate
           shared-key: "lint-format-${{ runner.os }}"
           cache-on-failure: true
-          # Cache additional directories for protoc-bin-vendored
+          # Cache additional directories
           cache-directories: |
             ~/.cargo/registry/index
             ~/.cargo/registry/cache
@@ -197,6 +203,12 @@ jobs:
       
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+      
+      # Install protobuf compiler for tonic-build
+      - name: Install protobuf compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev
       
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
@@ -275,7 +287,13 @@ jobs:
           shared-key: "build-test-${{ matrix.os }}"
           cache-on-failure: true
       
-      # Install protobuf on non-Linux platforms (Linux uses protoc-bin-vendored)
+      # Install protobuf compiler on all platforms for tonic-build
+      - name: Install protobuf (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev
+      
       - name: Install protobuf (Windows)
         if: matrix.os == 'windows-latest'
         run: choco install protoc -y
@@ -502,6 +520,12 @@ jobs:
       
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+      
+      # Install protobuf compiler for tonic-build
+      - name: Install protobuf compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libprotobuf-dev
       
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2

@@ -91,16 +91,7 @@
 //! - [`NyxStream`] - High-level stream abstraction
 //! - [`DaemonClient`] - Daemon JSON-RPC client
 //! - [`Error`] - Rich error type with context
-//! - [`Result<T>`] - Convenience type alias for `Result<T, Error>`unsafe_code)]
-
-//! Nyx SDK  EApplication-facing API surface
-//!
-//! - Error/Result type_s (`nyx_sdk::Error` / `nyx_sdk::Result<T>`)
-//! - Lightweight stream API for app_s (`NyxStream`)
-//! - Daemon IPC client (JSON over Unix Domain Socket / windows Named Pipe)
-//! - JSON model_s that mirror future gRPC/prost type_s (`proto`)
-//!
-//! Designed to minimize dependencie_s and integrate cleanly with `nyx-stream` and `nyx-core`.
+//! - [`Result<T>`] - Convenience type alias for `Result<T, Error>`
 
 pub mod config;
 pub mod daemon;
