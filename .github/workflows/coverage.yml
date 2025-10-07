@@ -62,8 +62,10 @@ jobs:
       - name: Generate coverage (workspace)
         run: |
           cargo llvm-cov clean --workspace
+          # Generate LCOV format coverage report
           cargo llvm-cov --workspace --all-features --no-fail-fast \
             --lcov --output-path lcov-workspace.info
+          # Generate HTML coverage report (requires separate invocation)
           cargo llvm-cov --workspace --all-features --no-fail-fast \
             --html --output-dir coverage-html-workspace
       
@@ -75,8 +77,10 @@ jobs:
                      nyx-daemon nyx-sdk nyx-conformance; do
             echo "Generating coverage for $pkg..."
             cargo llvm-cov clean -p $pkg
+            # Generate LCOV format coverage report for package
             cargo llvm-cov -p $pkg --all-features --no-fail-fast \
               --lcov --output-path coverage-per-package/$pkg.lcov || true
+            # Generate HTML coverage report for package (separate invocation required)
             cargo llvm-cov -p $pkg --all-features --no-fail-fast \
               --html --output-dir coverage-per-package/$pkg-html || true
           done

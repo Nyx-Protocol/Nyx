@@ -162,8 +162,11 @@ jobs:
       
       - name: Run workspace tests with coverage
         run: |
+          # Generate LCOV format coverage report
           cargo llvm-cov --workspace --all-features --no-fail-fast \
-            --lcov --output-path lcov.info \
+            --lcov --output-path lcov.info
+          # Generate HTML coverage report (requires separate invocation)
+          cargo llvm-cov --workspace --all-features --no-fail-fast \
             --html --output-dir coverage-html
       
       - name: Run daemon metrics tests (experimental-metrics)
