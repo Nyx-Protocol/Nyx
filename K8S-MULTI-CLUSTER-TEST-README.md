@@ -28,8 +28,10 @@
 - ✅ **Contabo VPS** (KVM, ネスト仮想化有効)
 - ✅ **物理サーバー** (直接実行)
 - ✅ **AWS EC2** (metal/bare metalインスタンス)
+- ✅ **WSL 2** (Windows 11/10, Docker Desktop使用)
 - ⚠️ **Proxmox VM** (デフォルト設定では動作しない - 下記参照)
 - ⚠️ **VirtualBox/VMware** (追加設定が必要)
+- ❌ **WSL 1** (Docker in Dockerが非サポート)
 
 ## クイックスタート
 
@@ -356,9 +358,34 @@ lscpu | grep Virtualization
 - **VirtualBox**: Settings → System → Processor → Enable "Enable Nested VT-x/AMD-V"
 - **VMware**: VM Settings → Processors → Virtualization Engine → "Virtualize Intel VT-x/EPT or AMD-V/RVI"
 
+**WSL (Windows Subsystem for Linux) 環境:**
+
+WSL 2を使用している場合は追加設定なしで動作します:
+
+```bash
+# WSLバージョン確認 (Windows PowerShellで実行)
+wsl --list --verbose
+# VERSION が 2 なら OK
+
+# WSL 1の場合はWSL 2にアップグレード
+wsl --set-version Ubuntu 2
+```
+
+**WSL 2での実行手順:**
+
+```bash
+# WSL 2 Ubuntu内で実行
+cd ~
+git clone https://github.com/Aqua-218/NyxNet.git
+cd NyxNet
+bash setup-and-test.sh
+```
+
+注意: Docker DesktopがインストールされていてWSL 2統合が有効になっている必要があります。
+
 **それでも解決しない場合:**
 
-物理サーバーまたはContabo/AWS等のネスト仮想化対応VPSでの実行を推奨します。
+物理サーバー、WSL 2、またはContabo/AWS等のネスト仮想化対応VPSでの実行を推奨します。
 
 ## パフォーマンス目安
 

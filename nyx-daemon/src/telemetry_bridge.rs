@@ -2,8 +2,8 @@
 //!
 //! This module bridges nyx-stream telemetry (TelemetrySpan) to nyx-telemetry
 //! OTLP exporter and Prometheus metrics. It maintains clean dependency graph:
-//! nyx-daemon → nyx-stream (telemetry generation)
-//! nyx-daemon → nyx-telemetry (export)
+//! nyx-daemon -> nyx-stream (telemetry generation)
+//! nyx-daemon -> nyx-telemetry (export)
 //!
 //! Architecture:
 //! ```text
