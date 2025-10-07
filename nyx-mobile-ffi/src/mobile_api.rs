@@ -143,7 +143,7 @@ pub extern "C" fn nyx_mobile_disconnect(connection_id: c_ulong) -> c_int {
     client_state.runtime.block_on(async {
         // Remove connection from state
         let removed = if let Ok(mut connections) = client_state.connections.write() {
-            connections.remove(&(connection_id as u64)).is_some()
+            connections.remove(&connection_id).is_some()
         } else {
             false
         };
