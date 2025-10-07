@@ -1,7 +1,6 @@
 [target.x86_64-pc-windows-msvc]
-linker = "rust-lld.exe"
-ar = "llvm-ar.exe"
 rustflags = [
+    "-C", "linker=rust-lld.exe",
     "-C", "embed-bitcode=yes",
     # Performance optimizations for Windows builds
     "-C", "link-arg=/OPT:REF",      # Remove unreferenced functions

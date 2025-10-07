@@ -253,7 +253,7 @@ layout: two-cols
 
 <div class="feature-box mb-4">
   <div class="flex items-center mb-2">
-    <carbon:network-3 class="text-2xl text-blue-400 mr-3"/>
+    <carbon:network-overlay class="text-2xl text-blue-400 mr-3"/>
     <span class="font-bold text-lg">Sphinxミックスネットワーク</span>
   </div>
   <ul class="ml-6 text-sm space-y-0 opacity-90">
@@ -874,7 +874,7 @@ layout: default
 
 <div class="multipath-section">
   <div class="section-header">
-    <carbon:network-3 class="inline-block mr-2 text-blue-400"/>
+    <carbon:network-overlay class="inline-block mr-2 text-blue-400"/>
     <span class="font-bold">マルチパス設計</span>
   </div>
 
@@ -1211,6 +1211,10 @@ layout: default
     </v-clicks>
 
   </div>
+
+</div>
+
+</div>
 
 </div>
 
@@ -2024,7 +2028,7 @@ layout: default
   </div>
   
   <div class="table-data-row">
-    <div class="feature-cell"><carbon:network-3 class="inline mr-1"/>マルチパス</div>
+    <div class="feature-cell"><carbon:network-overlay class="inline mr-1"/>マルチパス</div>
     <div class="value-cell bad">❌</div>
     <div class="value-cell bad">❌</div>
     <div class="value-cell bad">❌</div>

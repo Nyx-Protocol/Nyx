@@ -210,19 +210,47 @@ for i in $(seq 1 $NUM_NODES); do
 done
 log_success "Initial logs collected"
 
-# 簡易接続テスト
+# ネットワーク詳細情報の収集
+log_info "Collecting network details..."
+docker network ls > "$RESULTS_DIR/docker-networks.txt"
+for i in $(seq 1 $NUM_NODES); do
+    docker inspect nyx-node-${i} | jq '.[0].NetworkSettings' > "$RESULTS_DIR/node-${i}-network.json" 2>&1 || \
+        docker inspect nyx-node-${i} > "$RESULTS_DIR/node-${i}-inspect.txt" 2>&1
+done
+
+# 簡易接続テスト (nc/curlベース、pingが無い場合の代替)
 log_info "Testing inter-node connectivity..."
+CONNECTIVITY_OK=0
+CONNECTIVITY_FAIL=0
+
 for i in $(seq 1 $NUM_NODES); do
     for j in $(seq 1 $NUM_NODES); do
         if [ $i -ne $j ]; then
             IP="172.20.0.$((10 + j))"
-            log_info "Testing: node-${i} -> node-${j} (${IP})"
-            docker exec nyx-node-${i} ping -c 2 ${IP} > "$RESULTS_DIR/ping-${i}-to-${j}.log" 2>&1 && \
-                log_success "node-${i} -> node-${j}: OK" || \
-                log_warn "node-${i} -> node-${j}: FAILED"
+            TARGET_NAME="nyx-node-${j}"
+            
+            # 複数の方法で接続テスト
+            # 1. Docker内部DNSで名前解決テスト
+            if docker exec nyx-node-${i} sh -c "getent hosts ${TARGET_NAME}" > "$RESULTS_DIR/dns-${i}-to-${j}.log" 2>&1; then
+                log_success "node-${i} -> node-${j}: DNS OK"
+                ((CONNECTIVITY_OK++))
+            # 2. TCP接続テスト (nc使用)
+            elif docker exec nyx-node-${i} sh -c "timeout 2 nc -zv ${IP} 50051" > "$RESULTS_DIR/tcp-${i}-to-${j}.log" 2>&1; then
+                log_success "node-${i} -> node-${j}: TCP OK"
+                ((CONNECTIVITY_OK++))
+            # 3. より基本的なテスト: /dev/tcp
+            elif docker exec nyx-node-${i} sh -c "timeout 2 bash -c 'cat < /dev/null > /dev/tcp/${IP}/50051'" 2>/dev/null; then
+                log_success "node-${i} -> node-${j}: Connection OK"
+                ((CONNECTIVITY_OK++))
+            else
+                log_warn "node-${i} -> node-${j}: All tests failed"
+                ((CONNECTIVITY_FAIL++))
+            fi
         fi
     done
 done
+
+log_info "Connectivity Summary: ${CONNECTIVITY_OK} OK, ${CONNECTIVITY_FAIL} FAILED"
 
 # コンフォーマンステスト
 log_info "Running conformance tests..."
