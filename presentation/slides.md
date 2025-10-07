@@ -768,7 +768,9 @@ layout: default
   <strong>通信フロー</strong>
 </div>
 
-```mermaid {scale: 0.35}
+<div class="mermaid-large">
+
+```mermaid {scale: 0.5}
 sequenceDiagram
     participant A as 👤 Alice
     participant M1 as 🔀 Mix 1
@@ -791,26 +793,6 @@ sequenceDiagram
     Note over A,B: 各ノードは次のホップのみ知る
 ```
 
-<div class="packet-title mt-6 mb-3">
-  <carbon:document class="inline-block mr-2 text-purple-400"/>
-  <strong>パケット構造</strong>
-</div>
-
-<div class="packet-structure">
-<pre class="packet-pre">
-┌─────────────────────────────┐
-│ Version (1 byte)            │
-├─────────────────────────────┤
-│ Ephemeral PubKey (32 bytes) │
-├─────────────────────────────┤
-│ Routing Info (200 bytes)    │
-├─────────────────────────────┤
-│ MAC (16 bytes)              │
-├─────────────────────────────┤
-│ Payload (1250 bytes)        │
-└─────────────────────────────┘
-</pre>
-<div class="packet-total">Total: <span class="highlight-green">~1500 bytes</span> (固定長)</div>
 </div>
 
 </div>
@@ -866,26 +848,11 @@ sequenceDiagram
   font-size: 0.8rem;
 }
 
-.packet-structure {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 1rem;
-  border-radius: 10px;
-  border: 1px solid rgba(167, 139, 250, 0.3);
-}
-
-.packet-pre {
-  font-family: 'Fira Code', monospace;
-  font-size: 0.75rem;
-  line-height: 1.6;
-  color: #a78bfa;
-  margin: 0;
-}
-
-.packet-total {
-  text-align: center;
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
-  font-weight: 600;
+.mermaid-large {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
 }
 
 .highlight-green {
@@ -1070,8 +1037,9 @@ pub struct ExtendedHeader {
 
 .algo-formula {
   text-align: center;
-  font-size: 1.25rem;
-  margin: 0.75rem 0;
+  font-size: 1.1rem;
+  margin: 0.5rem 0;
+  padding: 0.3rem;
 }
 
 .algo-desc {
@@ -2078,10 +2046,6 @@ layout: default
 </div>
 
 <style>
-.comparison-wrapper {
-  margin-top: 1rem;
-}
-
 .comparison-table-modern {
   background: rgba(0, 0, 0, 0.2);
   border-radius: 12px;
@@ -2092,9 +2056,9 @@ layout: default
 .table-header-row, .table-data-row {
   display: grid;
   grid-template-columns: 1.8fr repeat(4, 1fr);
-  gap: 0.4rem;
-  padding: 0.6rem 0.8rem;
-  font-size: 0.75rem;
+  gap: 0.5rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.85rem;
 }
 
 .table-header-row {
@@ -2209,7 +2173,7 @@ layout: default
 
 # <span class="text-gradient">開発で得た学び</span>
 
-<div class="grid grid-cols-2 gap-3 mt-2">
+<div class="grid grid-cols-3 gap-4 mt-3">
 
 <v-clicks>
 
@@ -2221,15 +2185,11 @@ layout: default
   <div class="card-content">
     <div class="learning-item">
       <strong>Tokio Runtime</strong>
-      <span>複雑な並行処理の設計</span>
+      <span>並行処理の設計</span>
     </div>
     <div class="learning-item">
-      <strong>ライフタイム管理</strong>
-      <span>所有権システムとの格闘</span>
-    </div>
-    <div class="learning-item">
-      <strong>パフォーマンス</strong>
-      <span>ゼロコスト抽象化の実現</span>
+      <strong>ライフタイム</strong>
+      <span>所有権との格闘</span>
     </div>
   </div>
 </div>
@@ -2242,15 +2202,11 @@ layout: default
   <div class="card-content">
     <div class="learning-item">
       <strong>ML-KEM-768</strong>
-      <span>NIST標準の正確な実装</span>
+      <span>NIST標準実装</span>
     </div>
     <div class="learning-item">
-      <strong>タイミング攻撃</strong>
-      <span>定数時間アルゴリズム</span>
-    </div>
-    <div class="learning-item">
-      <strong>メモリ安全</strong>
-      <span>zeroizeによる鍵消去</span>
+      <strong>定数時間</strong>
+      <span>タイミング攻撃対策</span>
     </div>
   </div>
 </div>
@@ -2263,15 +2219,11 @@ layout: default
   <div class="card-content">
     <div class="learning-item">
       <strong>Sphinx</strong>
-      <span>玉ねぎルーティング実装</span>
+      <span>オニオンルーティング</span>
     </div>
     <div class="learning-item">
       <strong>マルチパス</strong>
-      <span>経路選択アルゴリズム</span>
-    </div>
-    <div class="learning-item">
-      <strong>FEC</strong>
-      <span>Forward Error Correction</span>
+      <span>経路選択最適化</span>
     </div>
   </div>
 </div>
@@ -2279,20 +2231,16 @@ layout: default
 <div class="learning-card arch-card">
   <div class="card-header">
     <carbon:cube class="card-icon"/>
-    <h3>大規模アーキテクチャ</h3>
+    <h3>大規模設計</h3>
   </div>
   <div class="card-content">
     <div class="learning-item">
-      <strong>モジュール分割</strong>
-      <span>12クレート構成</span>
+      <strong>12クレート</strong>
+      <span>モジュール分割</span>
     </div>
     <div class="learning-item">
-      <strong>依存関係</strong>
-      <span>循環依存の回避</span>
-    </div>
-    <div class="learning-item">
-      <strong>API設計</strong>
-      <span>一貫性と使いやすさ</span>
+      <strong>依存管理</strong>
+      <span>循環依存回避</span>
     </div>
   </div>
 </div>
@@ -2304,16 +2252,12 @@ layout: default
   </div>
   <div class="card-content">
     <div class="learning-item">
-      <strong>テスト戦略</strong>
-      <span>Unit/Integration/E2E</span>
-    </div>
-    <div class="learning-item">
       <strong>TDD実践</strong>
-      <span>400+テストケース</span>
+      <span>400+テスト</span>
     </div>
     <div class="learning-item">
-      <strong>Property Testing</strong>
-      <span>proptest網羅検証</span>
+      <strong>Property Test</strong>
+      <span>proptest検証</span>
     </div>
   </div>
 </div>
@@ -2321,20 +2265,16 @@ layout: default
 <div class="learning-card doc-card">
   <div class="card-header">
     <carbon:document class="card-icon"/>
-    <h3>ドキュメント</h3>
+    <h3>形式検証</h3>
   </div>
   <div class="card-content">
     <div class="learning-item">
-      <strong>rustdoc</strong>
-      <span>自動生成API文書</span>
+      <strong>TLA+</strong>
+      <span>プロトコル証明</span>
     </div>
     <div class="learning-item">
       <strong>ADR</strong>
-      <span>Architecture Decision Records</span>
-    </div>
-    <div class="learning-item">
-      <strong>TLA+</strong>
-      <span>形式仕様による証明</span>
+      <span>設計決定記録</span>
     </div>
   </div>
 </div>
@@ -2426,35 +2366,28 @@ layout: default
 
 # <span class="text-gradient">今後の展望</span>
 
-<div class="grid grid-cols-2 gap-3 mt-2">
+<div class="grid grid-cols-3 gap-4 mt-3">
 
 <v-clicks>
 
 <div class="future-card crypto-future">
   <div class="card-header">
     <carbon:security class="card-icon"/>
-    <h3>暗号技術の強化</h3>
+    <h3>暗号強化</h3>
   </div>
   <div class="card-content">
     <div class="future-item">
       <carbon:locked class="item-icon"/>
       <div>
         <strong>SPHINCS+</strong>
-        <span>量子耐性デジタル署名</span>
-      </div>
-    </div>
-    <div class="future-item">
-      <carbon:flash class="item-icon"/>
-      <div>
-        <strong>Dilithium</strong>
-        <span>より高速な署名方式</span>
+        <span>量子署名</span>
       </div>
     </div>
     <div class="future-item">
       <carbon:connect class="item-icon"/>
       <div>
         <strong>Hybrid署名</strong>
-        <span>移行期の互換性確保</span>
+        <span>移行期互換性</span>
       </div>
     </div>
   </div>
@@ -2463,35 +2396,21 @@ layout: default
 <div class="future-card network-future">
   <div class="card-header">
     <carbon:network-3 class="card-icon"/>
-    <h3>ネットワーク機能</h3>
+    <h3>ネットワーク</h3>
   </div>
   <div class="card-content">
-    <div class="future-item">
-      <carbon:data-2 class="item-icon"/>
-      <div>
-        <strong>Fountain Codes</strong>
-        <span>より効率的なFEC</span>
-      </div>
-    </div>
     <div class="future-item">
       <carbon:tree-view class="item-icon"/>
       <div>
         <strong>Kademlia DHT</strong>
-        <span>完全分散型ノード発見</span>
+        <span>分散ノード発見</span>
       </div>
     </div>
     <div class="future-item">
       <carbon:gateway class="item-icon"/>
       <div>
-        <strong>ブリッジノード</strong>
-        <span>検閲回避の強化</span>
-      </div>
-    </div>
-    <div class="future-item">
-      <carbon:ai-results class="item-icon"/>
-      <div>
-        <strong>ML最適化</strong>
-        <span>機械学習でリレー選択</span>
+        <strong>ブリッジ</strong>
+        <span>検閲回避</span>
       </div>
     </div>
   </div>
@@ -2500,35 +2419,21 @@ layout: default
 <div class="future-card ux-future">
   <div class="card-header">
     <div class="card-icon">👤</div>
-    <h3>ユーザー体験</h3>
+    <h3>UX向上</h3>
   </div>
   <div class="card-content">
     <div class="future-item">
       <div class="item-icon">🖥️</div>
       <div>
         <strong>Tauri GUI</strong>
-        <span>クロスプラットフォームアプリ</span>
+        <span>クロスプラットフォーム</span>
       </div>
     </div>
     <div class="future-item">
       <carbon:mobile class="item-icon"/>
       <div>
-        <strong>モバイルアプリ</strong>
-        <span>iOS/Android ネイティブ</span>
-      </div>
-    </div>
-    <div class="future-item">
-      <div class="item-icon">🌐</div>
-      <div>
-        <strong>ブラウザ拡張</strong>
-        <span>ワンクリック接続</span>
-      </div>
-    </div>
-    <div class="future-item">
-      <carbon:help class="item-icon"/>
-      <div>
-        <strong>設定ウィザード</strong>
-        <span>初心者向けガイド</span>
+        <strong>モバイル</strong>
+        <span>iOS/Android</span>
       </div>
     </div>
   </div>
@@ -2537,35 +2442,21 @@ layout: default
 <div class="future-card security-future">
   <div class="card-header">
     <carbon:security class="card-icon"/>
-    <h3>セキュリティ監査</h3>
+    <h3>監査</h3>
   </div>
   <div class="card-content">
     <div class="future-item">
       <div class="item-icon">👨‍💼</div>
       <div>
-        <strong>専門家レビュー</strong>
-        <span>Trail of Bits等に依頼</span>
-      </div>
-    </div>
-    <div class="future-item">
-      <carbon:locked class="item-icon"/>
-      <div>
-        <strong>暗号実装検証</strong>
-        <span>数学的正当性の証明</span>
+        <strong>専門家</strong>
+        <span>Trail of Bits</span>
       </div>
     </div>
     <div class="future-item">
       <div class="item-icon">🔍</div>
       <div>
-        <strong>ペネトレーション</strong>
-        <span>実環境攻撃シミュレーション</span>
-      </div>
-    </div>
-    <div class="future-item">
-      <div class="item-icon">👁️</div>
-      <div>
-        <strong>継続監視</strong>
-        <span>脆弱性の早期発見</span>
+        <strong>ペネトレ</strong>
+        <span>攻撃検証</span>
       </div>
     </div>
   </div>
@@ -2574,35 +2465,21 @@ layout: default
 <div class="future-card community-future">
   <div class="card-header">
     <div class="card-icon">👥</div>
-    <h3>コミュニティ構築</h3>
+    <h3>コミュニティ</h3>
   </div>
   <div class="card-content">
     <div class="future-item">
       <carbon:logo-github class="item-icon"/>
       <div>
-        <strong>オープンソース</strong>
-        <span>GitHub完全公開</span>
+        <strong>OSS</strong>
+        <span>GitHub公開</span>
       </div>
     </div>
     <div class="future-item">
       <div class="item-icon">💬</div>
       <div>
-        <strong>開発者支援</strong>
-        <span>Discord/Matrix コミュニティ</span>
-      </div>
-    </div>
-    <div class="future-item">
-      <div class="item-icon">💰</div>
-      <div>
-        <strong>バグバウンティ</strong>
-        <span>報奨金プログラム</span>
-      </div>
-    </div>
-    <div class="future-item">
-      <div class="item-icon">🌏</div>
-      <div>
-        <strong>多言語対応</strong>
-        <span>グローバル展開</span>
+        <strong>サポート</strong>
+        <span>Discord</span>
       </div>
     </div>
   </div>
@@ -2618,28 +2495,14 @@ layout: default
       <div class="item-icon">🤝</div>
       <div>
         <strong>NGO連携</strong>
-        <span>ジャーナリスト・活動家支援</span>
-      </div>
-    </div>
-    <div class="future-item">
-      <div class="item-icon">📚</div>
-      <div>
-        <strong>教育活動</strong>
-        <span>プライバシー啓発</span>
-      </div>
-    </div>
-    <div class="future-item">
-      <div class="item-icon">🔬</div>
-      <div>
-        <strong>実証実験</strong>
-        <span>大学・研究機関との協力</span>
+        <span>ジャーナリスト支援</span>
       </div>
     </div>
     <div class="future-item">
       <carbon:wifi class="item-icon"/>
       <div>
-        <strong>検閲国支援</strong>
-        <span>安全な通信手段の提供</span>
+        <strong>検閲回避</strong>
+        <span>安全な通信</span>
       </div>
     </div>
   </div>
