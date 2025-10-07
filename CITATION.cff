@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+title: NyxNet
+message: >-
+  If you use this software in your research, please cite it
+  using the metadata from this file.
+type: software
+authors:
+  - given-names: Selenia
+    family-names: Project
+    affiliation: SeleniaProject
+repository-code: 'https://github.com/SeleniaProject/NyxNet'
+url: 'https://github.com/SeleniaProject/NyxNet'
+abstract: >-
+  NyxNet is a privacy-first, post-quantum secure network
+  stack written in pure Rust. It provides anonymous
+  communication using mix network architecture with built-in
+  quantum-resistant cryptography.
+keywords:
+  - privacy
+  - anonymity
+  - post-quantum cryptography
+  - mix network
+  - rust
+  - networking
+  - security
+license: MIT AND Apache-2.0
+license-url: 'https://github.com/SeleniaProject/NyxNet/blob/main/LICENSE-MIT'

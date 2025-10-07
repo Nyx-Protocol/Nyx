@@ -4,3 +4,8 @@ dist
 *.log
 slides-export.pdf
 
+# Personal presentation materials
+script*.md
+script*.pdf
+*_backup.md
+*.pdf

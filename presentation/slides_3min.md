@@ -6,7 +6,7 @@ highlighter: shiki
 lineNumbers: true
 info: |
   ## NyxNet - Post-Quantum Anonymous Network
-  U-22 Programming Contest 2025 Presentation
+  U-22 Programming Contest 2025 Presentation (3-minute version)
 drawings:
   persist: false
 transition: slide-left
@@ -139,26 +139,11 @@ h1::after {
   border-radius: 2px;
 }
 
-.slidev-layout h2,
-h2 { 
-  font-size: 0.9rem !important; 
-  margin-bottom: 0.2rem !important;
-  font-weight: 700 !important;
-  line-height: 1 !important;
-}
-
-.slidev-layout h3,
 h3 { 
   font-size: 0.8rem !important; 
   margin-bottom: 0.15rem !important;
   font-weight: 700 !important;
   line-height: 1 !important;
-}
-
-h4, h5, h6 {
-  font-weight: 700;
-  margin-bottom: 0.2rem !important;
-  font-size: 0.85rem !important;
 }
 
 p {
@@ -184,7 +169,6 @@ code {
   border-radius: 4px;
 }
 
-/* グローバルカードスタイル */
 div[class*="-section"],
 div[class*="-card"],
 div[class*="-box"] {
@@ -212,23 +196,6 @@ div[class*="-card"]:hover::before,
 div[class*="-box"]:hover::before {
   opacity: 1;
 }
-
-.mt-2 { margin-top: 0.3rem !important; }
-.mt-3 { margin-top: 0.5rem !important; }
-.mt-4 { margin-top: 0.6rem !important; }
-.mt-5 { margin-top: 0.8rem !important; }
-.mt-6 { margin-top: 1rem !important; }
-.mt-8 { margin-top: 1.2rem !important; }
-.mt-12 { margin-top: 1.5rem !important; }
-.mb-2 { margin-bottom: 0.3rem !important; }
-.mb-3 { margin-bottom: 0.5rem !important; }
-.mb-4 { margin-bottom: 0.6rem !important; }
-.mb-6 { margin-bottom: 1rem !important; }
-.gap-4 { gap: 0.6rem !important; }
-.gap-6 { gap: 0.8rem !important; }
-.gap-8 { gap: 1rem !important; }
-.p-4 { padding: 0.6rem !important; }
-.p-6 { padding: 0.8rem !important; }
 </style>
 
 ---
@@ -237,7 +204,7 @@ layout: two-cols
 
 # <span class="text-gradient">NyxNet とは</span>
 
-<div class="subtitle mb-4">Rust製の次世代匿名通信ネットワークスタック</div>
+<div class="subtitle mb-4">Pure Rust製の次世代匿名通信ネットワークスタック</div>
 
 <v-clicks>
 
@@ -247,8 +214,8 @@ layout: two-cols
     <span class="font-bold text-lg">量子耐性暗号</span>
   </div>
   <ul class="ml-6 text-sm space-y-0 opacity-90">
-    <li>ML-KEM-768 (NIST)</li>
-    <li>X25519ハイブリッド</li>
+    <li>ML-KEM-768 (NIST標準)</li>
+    <li>X25519ハイブリッド方式</li>
   </ul>
 </div>
 
@@ -258,7 +225,7 @@ layout: two-cols
     <span class="font-bold text-lg">高性能トランスポート</span>
   </div>
   <ul class="ml-6 text-sm space-y-0 opacity-90">
-    <li>QUIC + UDP</li>
+    <li>QUIC + UDP (Torの5-60倍速)</li>
     <li>マルチパス対応</li>
   </ul>
 </div>
@@ -266,7 +233,7 @@ layout: two-cols
 <div class="feature-box mb-4">
   <div class="flex items-center mb-2">
     <carbon:network-overlay class="text-2xl text-blue-400 mr-3"/>
-    <span class="font-bold text-lg">Sphinxミックスネットワーク</span>
+    <span class="font-bold text-lg">Sphinxミックスネット</span>
   </div>
   <ul class="ml-6 text-sm space-y-0 opacity-90">
     <li>3ホップ匿名化</li>
@@ -282,7 +249,7 @@ layout: two-cols
 
 <div class="arch-title mb-2">
   <carbon:diagram class="inline-block mr-2 text-blue-400"/>
-  <span class="font-bold text-lg">システムアーキテクチャ</span>
+  <span class="font-bold text-lg">12モジュール構成</span>
 </div>
 
 ```mermaid {scale: 0.5}
@@ -326,6 +293,12 @@ graph TB
 </div>
 
 <style>
+.text-gradient {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .subtitle {
   font-size: 0.95rem;
   opacity: 0.75;
@@ -345,11 +318,6 @@ graph TB
   border-left-color: rgba(167, 139, 250, 1);
   transform: translateX(6px);
   box-shadow: 0 4px 12px rgba(167, 139, 250, 0.2);
-}
-
-.highlight {
-  color: #a78bfa;
-  font-weight: 700;
 }
 
 .arch-title {
@@ -398,7 +366,7 @@ graph TB
 layout: two-cols
 ---
 
-# <span class="text-gradient">工夫した点 ①</span>
+# <span class="text-gradient">工夫した点: ハイブリッド暗号</span>
 
 <v-clicks>
 
@@ -408,8 +376,9 @@ layout: two-cols
     なぜハイブリッド？
   </div>
   <ul class="info-list">
-    <li>ML-KEM-768: 量子耐性</li>
-    <li>X25519: 実績あり</li>
+    <li><strong>ML-KEM-768</strong>: 量子コンピュータ耐性</li>
+    <li><strong>X25519</strong>: 実績ある古典暗号</li>
+    <li>両方の強みを組み合わせて安全性最大化</li>
   </ul>
 </div>
 
@@ -419,16 +388,16 @@ layout: two-cols
     実装の難しさ
   </div>
   <ul class="info-list">
-    <li>鍵サイズ: 1216バイト</li>
-    <li>タイミング攻撃対策</li>
-    <li>メモリゼロ化</li>
+    <li>鍵サイズ: <strong class="emphasis">1216バイト</strong></li>
+    <li>タイミング攻撃対策 (定数時間実装)</li>
+    <li>メモリ安全性 (ゼロ化処理)</li>
   </ul>
 </div>
 
 <div class="perf-box">
   <div class="perf-title">
     <carbon:dashboard class="inline-block mr-2 text-green-400"/>
-    性能
+    実測性能
   </div>
   <div class="perf-grid">
     <div>ハンドシェイク</div><div class="perf-value">2.5ms</div>
@@ -444,7 +413,7 @@ layout: two-cols
 
 <div class="section-title mb-2">
   <carbon:flow class="inline-block mr-2 text-purple-400"/>
-  フロー
+  鍵交換フロー
 </div>
 
 ```mermaid {scale: 0.35}
@@ -467,25 +436,31 @@ sequenceDiagram
 
 <div class="section-title mb-3 mt-6">
   <carbon:code class="inline-block mr-2 text-blue-400"/>
-  コード例
+  コア実装
 </div>
 
 ```rust
 // nyx-crypto/src/hybrid_handshake.rs
 pub struct HybridPublicKey {
-    kyber: [u8; 1184],  // ML-KEM
+    kyber: [u8; 1184],  // ML-KEM-768
     x25519: [u8; 32],   // X25519
 }
 ```
 
 <div class="code-stats">
   <carbon:chart-line class="inline-block mr-1"/>
-  <strong>801行</strong>の実装 + <strong>300以上</strong>のテスト
+  <strong>801行</strong>の実装 + <strong>300以上</strong>のテストケース
 </div>
 
 </div>
 
 <style>
+.text-gradient {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .info-box {
   background: rgba(96, 165, 250, 0.08);
   border-left: 4px solid rgba(96, 165, 250, 0.5);
@@ -518,12 +493,6 @@ pub struct HybridPublicKey {
   position: absolute;
   left: 0.5rem;
   color: #60a5fa;
-}
-
-.tech-term {
-  color: #a78bfa;
-  font-weight: 700;
-  font-family: 'Fira Code', monospace;
 }
 
 .emphasis {
@@ -581,7 +550,7 @@ pub struct HybridPublicKey {
 layout: default
 ---
 
-# <span class="text-gradient">Performance Comparison</span>
+# <span class="text-gradient">Performance: Torの5-60倍速</span>
 
 <div class="grid grid-cols-2 gap-3 mt-2">
 
@@ -592,7 +561,6 @@ layout: default
     <carbon:time class="inline-block mr-2 text-blue-400"/>
     <span class="font-bold">レイテンシ比較</span>
   </div>
-  <div class="perf-subtitle">実際のネットワーク環境での推定値</div>
 
   <div class="comparison-table mt-1">
     <div class="table-row header-row">
@@ -629,15 +597,6 @@ layout: default
     </div>
   </div>
 
-  <div class="method-box mt-1">
-    <carbon:information class="inline-block mr-2 text-yellow-400"/>
-    <strong>測定方法</strong>
-    <ul class="method-list">
-      <li><strong>Tor</strong>: 実際のTorネットワーク経由（実測）</li>
-      <li><strong>NyxNet</strong>: 暗号化処理（実測）+ ネットワーク遅延（推定）</li>
-    </ul>
-  </div>
-
 </div>
 
 </div>
@@ -654,11 +613,6 @@ layout: default
     <div class="table-row header-row">
       <div>環境</div><div>NyxNet</div><div>Tor</div>
     </div>
-    <div class="table-row data-row">
-      <div>⚡ 暗号化のみ</div>
-      <div class="nyx-value">100.74 MB/s</div>
-      <div class="tor-value">-</div>
-    </div>
     <div class="table-row data-row highlight-row">
       <div>🏢 LAN</div>
       <div class="nyx-value">~80 MB/s</div>
@@ -674,7 +628,7 @@ layout: default
   <div class="reason-box mt-1">
     <div class="reason-title">
       <carbon:lightning class="inline-block mr-2 text-yellow-400"/>
-      <strong>なぜNyxNetが速いか</strong>
+      <strong>なぜ速いか</strong>
     </div>
 
 <v-clicks>
@@ -683,31 +637,23 @@ layout: default
   <span class="reason-number">1</span>
   <div class="reason-content">
     <strong>UDP vs TCP</strong>
-    <div class="reason-detail">Torは3-way handshake必要 → NyxNetは即座に送信開始</div>
+    <div class="reason-detail">Torは3-way handshake → NyxNetは即座に送信</div>
   </div>
 </div>
 
 <div class="reason-item">
   <span class="reason-number">2</span>
   <div class="reason-content">
-    <strong>暗号化方式</strong>
-    <div class="reason-detail">最適化されたChaCha20Poly1305</div>
+    <strong>最適化暗号</strong>
+    <div class="reason-detail">ChaCha20Poly1305 (高速AEAD)</div>
   </div>
 </div>
 
 <div class="reason-item">
   <span class="reason-number">3</span>
   <div class="reason-content">
-    <strong>トランスポート最適化</strong>
-    <div class="reason-detail">マルチパス + 適応的FEC</div>
-  </div>
-</div>
-
-<div class="reason-item">
-  <span class="reason-number">4</span>
-  <div class="reason-content">
-    <strong>実装言語</strong>
-    <div class="reason-detail">Rust（ゼロコスト抽象化）</div>
+    <strong>マルチパス</strong>
+    <div class="reason-detail">複数経路で並列伝送</div>
   </div>
 </div>
 
@@ -721,12 +667,13 @@ layout: default
 
 </div>
 
-<div class="disclaimer">
-  <carbon:warning-alt class="inline-block mr-1"/>
-  注: NyxNetの数値は暗号化処理の実測値とネットワーク遅延の合理的な推定値に基づく
-</div>
-
 <style>
+.text-gradient {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .perf-section, .throughput-section {
   background: rgba(96, 165, 250, 0.08);
   padding: 0.3rem;
@@ -739,12 +686,6 @@ layout: default
   align-items: center;
   margin-bottom: 0.1rem;
   font-size: 0.7rem;
-}
-
-.perf-subtitle {
-  font-size: 0.6rem;
-  opacity: 0.7;
-  margin-bottom: 0.2rem;
 }
 
 .comparison-table, .throughput-table {
@@ -829,21 +770,6 @@ layout: default
   background: linear-gradient(90deg, #34d399, #10b981);
 }
 
-.method-box {
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-  padding: 0.4rem;
-  border-radius: 8px;
-  font-size: 0.65rem;
-}
-
-.method-list {
-  margin-top: 0.3rem;
-  margin-left: 1.2rem;
-  font-size: 0.7rem;
-  line-height: 1.5;
-}
-
 .reason-box {
   background: rgba(0, 0, 0, 0.2);
   padding: 0.4rem;
@@ -895,23 +821,13 @@ layout: default
   opacity: 0.85;
   line-height: 1.3;
 }
-
-.disclaimer {
-  text-align: center;
-  margin-top: 1.5rem;
-  font-size: 0.75rem;
-  opacity: 0.6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 </style>
 
 ---
 layout: default
 ---
 
-# <span class="text-gradient">競合比較</span>
+# <span class="text-gradient">競合比較: 唯一の量子耐性</span>
 
 <div class="comparison-table-modern mt-3">
   <div class="table-header-row">
@@ -922,12 +838,12 @@ layout: default
     <div class="header-cell nyx-header">NyxNet</div>
   </div>
   
-  <div class="table-data-row">
+  <div class="table-data-row highlight">
     <div class="feature-cell"><carbon:locked class="inline mr-1"/>量子耐性</div>
     <div class="value-cell bad">❌ RSA</div>
     <div class="value-cell bad">❌ X25519</div>
     <div class="value-cell bad">❌ ElGamal</div>
-    <div class="value-cell good"><strong>✅ ML-KEM-768</strong></div>
+    <div class="value-cell excellent"><strong>✅ ML-KEM-768</strong></div>
   </div>
   
   <div class="table-data-row highlight">
@@ -946,22 +862,6 @@ layout: default
     <div class="value-cell good"><strong>80 MB/s</strong></div>
   </div>
   
-  <div class="table-data-row">
-    <div class="feature-cell"><carbon:network-overlay class="inline mr-1"/>マルチパス</div>
-    <div class="value-cell bad">❌</div>
-    <div class="value-cell bad">❌</div>
-    <div class="value-cell bad">❌</div>
-    <div class="value-cell good"><strong>✅ QUIC</strong></div>
-  </div>
-  
-  <div class="table-data-row">
-    <div class="feature-cell"><carbon:security class="inline mr-1"/>匿名性</div>
-    <div class="value-cell good">強い</div>
-    <div class="value-cell bad">業者依存</div>
-    <div class="value-cell good">強い</div>
-    <div class="value-cell good"><strong>Sphinx+FEC</strong></div>
-  </div>
-  
   <div class="table-data-row highlight">
     <div class="feature-cell">📱 モバイル対応</div>
     <div class="value-cell medium">限定的</div>
@@ -971,23 +871,26 @@ layout: default
   </div>
   
   <div class="table-data-row">
-    <div class="feature-cell">🔌 SDK提供</div>
-    <div class="value-cell bad">❌</div>
-    <div class="value-cell bad">❌</div>
-    <div class="value-cell bad">❌</div>
-    <div class="value-cell good"><strong>✅ Rust/WASM/FFI</strong></div>
-  </div>
-  
-  <div class="table-data-row">
-    <div class="feature-cell">🛡️ 検閲耐性</div>
-    <div class="value-cell medium">中 (DPI検知)</div>
-    <div class="value-cell bad">弱い</div>
+    <div class="feature-cell"><carbon:security class="inline mr-1"/>匿名性</div>
     <div class="value-cell good">強い</div>
-    <div class="value-cell excellent"><strong>強い (FEC難読化)</strong></div>
+    <div class="value-cell bad">業者依存</div>
+    <div class="value-cell good">強い</div>
+    <div class="value-cell good"><strong>Sphinx+FEC</strong></div>
   </div>
 </div>
 
+<div class="unique-message mt-6">
+  <carbon:trophy class="inline-block mr-2 text-2xl text-yellow-400"/>
+  <strong>NyxNet = 量子耐性 + 高速 + モバイル対応の唯一のソリューション</strong>
+</div>
+
 <style>
+.text-gradient {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 .comparison-table-modern {
   background: rgba(0, 0, 0, 0.2);
   border-radius: 12px;
@@ -1046,79 +949,26 @@ layout: default
   padding: 0.25rem;
 }
 
-.uniqueness-section {
-  margin-top: 1rem;
-  padding: 0.8rem;
-  background: rgba(96, 165, 250, 0.05);
-  border-radius: 14px;
-  border: 1px solid rgba(96, 165, 250, 0.2);
-}
-
-.uniqueness-title {
+.unique-message {
   text-align: center;
+  font-size: 1.1rem;
+  padding: 1rem;
+  background: rgba(251, 191, 36, 0.1);
+  border: 2px solid rgba(251, 191, 36, 0.4);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1rem;
-}
-
-.uniqueness-card {
-  padding: 0.8rem;
-  border-radius: 14px;
-  text-align: center;
-  transition: all 0.3s ease;
-  border: 2px solid transparent;
-}
-
-.uniqueness-card.quantum {
-  background: linear-gradient(135deg, rgba(52, 211, 153, 0.15), rgba(16, 185, 129, 0.1));
-  border-color: rgba(52, 211, 153, 0.3);
-}
-
-.uniqueness-card.performance {
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(37, 99, 235, 0.1));
-  border-color: rgba(96, 165, 250, 0.3);
-}
-
-.uniqueness-card.verification {
-  background: linear-gradient(135deg, rgba(167, 139, 250, 0.15), rgba(124, 58, 237, 0.1));
-  border-color: rgba(167, 139, 250, 0.3);
-}
-
-.uniqueness-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-}
-
-.card-icon {
-  font-size: 1.8rem;
-  margin-bottom: 0.5rem;
-}
-
-.card-title {
-  font-weight: 700;
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
-  color: #60a5fa;
-}
-
-.card-desc {
-  font-size: 0.85rem;
-  line-height: 1.6;
-  opacity: 0.9;
 }
 </style>
 
 ---
-layout: center
-class: text-center
+layout: default
 ---
 
 # <span class="text-gradient-rainbow">まとめ</span>
 
-<div class="mt-3">
-
-<div class="grid grid-cols-3 gap-3 mt-2 px-3">
+<div class="grid grid-cols-3 gap-3 mt-4 px-3">
 
 <v-clicks>
 
@@ -1127,8 +977,9 @@ class: text-center
   <div class="card-title">量子耐性</div>
   <div class="card-divider"></div>
   <div class="card-content">
-    NIST<br/>
-    <strong class="highlight-text">ML-KEM-768</strong>
+    NIST標準<br/>
+    <strong class="highlight-text">ML-KEM-768</strong><br/>
+    2030年代対応
   </div>
 </div>
 
@@ -1137,8 +988,9 @@ class: text-center
   <div class="card-title">高速</div>
   <div class="card-divider"></div>
   <div class="card-content">
-    Tor<strong class="highlight-text">5-60倍</strong><br/>
-    リアルタイム対応
+    Tor比<strong class="highlight-text">5-60倍</strong><br/>
+    LAN: 20ms<br/>
+    リアルタイム可能
   </div>
 </div>
 
@@ -1147,8 +999,9 @@ class: text-center
   <div class="card-title">本格実装</div>
   <div class="card-divider"></div>
   <div class="card-content">
-    <strong class="highlight-text">85K行</strong><br/>
-    TLA+検証済
+    <strong class="highlight-text">85,000行</strong>コード<br/>
+    TLA+形式検証<br/>
+    400+ テスト
   </div>
 </div>
 
@@ -1156,6 +1009,8 @@ class: text-center
 
 </div>
 
+<div class="final-message mt-8">
+  <div class="message-text">プライバシーは人権。NyxNetで未来を守る。</div>
 </div>
 
 <style>
@@ -1167,12 +1022,6 @@ class: text-center
   font-weight: 800;
 }
 
-.summary-subtitle {
-  font-size: 1.25rem;
-  opacity: 0.8;
-  margin-top: 1rem;
-}
-
 .summary-card {
   position: relative;
   padding: 2.5rem 2rem;
@@ -1180,21 +1029,6 @@ class: text-center
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   border: 2px solid transparent;
-}
-
-.summary-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: inherit;
-  filter: blur(20px);
-  opacity: 0;
-  transition: opacity 0.4s;
-  z-index: -1;
-}
-
-.summary-card:hover::before {
-  opacity: 0.5;
 }
 
 .quantum-card {
@@ -1220,33 +1054,6 @@ class: text-center
 .quantum-card:hover { border-color: rgba(52, 211, 153, 0.8); }
 .performance-card:hover { border-color: rgba(96, 165, 250, 0.8); }
 .implementation-card:hover { border-color: rgba(167, 139, 250, 0.8); }
-
-.card-glow {
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  opacity: 0;
-  transition: opacity 0.4s;
-  pointer-events: none;
-}
-
-.summary-card:hover .card-glow {
-  opacity: 0.3;
-}
-
-.quantum-glow {
-  background: radial-gradient(circle, rgba(52, 211, 153, 0.8) 0%, transparent 70%);
-}
-
-.performance-glow {
-  background: radial-gradient(circle, rgba(96, 165, 250, 0.8) 0%, transparent 70%);
-}
-
-.implementation-glow {
-  background: radial-gradient(circle, rgba(167, 139, 250, 0.8) 0%, transparent 70%);
-}
 
 .card-emoji {
   font-size: 2.5rem;
@@ -1293,6 +1100,22 @@ class: text-center
 .quantum-card .highlight-text { color: #34d399; }
 .performance-card .highlight-text { color: #60a5fa; }
 .implementation-card .highlight-text { color: #a78bfa; }
+
+.final-message {
+  text-align: center;
+  padding: 1.5rem;
+  background: rgba(96, 165, 250, 0.1);
+  border: 2px solid rgba(96, 165, 250, 0.3);
+  border-radius: 16px;
+}
+
+.message-text {
+  font-size: 1.3rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, #60a5fa, #a78bfa, #f093fb);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 </style>
 
 ---
@@ -1300,315 +1123,13 @@ layout: center
 class: text-center
 ---
 
-<div class="final-slide">
-
-<div class="final-logo">
-  <div class="logo-glow"></div>
-  <div class="logo-text">NyxNet</div>
-  <div class="logo-subtitle">Post-Quantum Anonymous Network</div>
-</div>
-
-<div class="grid grid-cols-2 gap-6 mt-4 px-6">
-
-<div class="info-section">
-
-  <div class="section-title">
-    <carbon:document class="inline-block mr-2 text-blue-400"/>
-    <strong>Links</strong>
-  </div>
-  
-  <div class="link-list">
-    <div class="link-item">
-      <carbon:logo-github class="inline-block mr-2 text-white"/>
-      github.com/SeleniaProject/NyxNet
-    </div>
-  </div>
-
-  <div class="qr-section">
-    <div class="qr-wrapper">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://github.com/SeleniaProject/NyxNet" alt="QR Code" class="qr-code">
-    </div>
-  </div>
-
-</div>
-
-<div class="stats-section">
-
-  <div class="section-title">
-    <carbon:chart-line class="inline-block mr-2 text-green-400"/>
-    <strong>Stats</strong>
-  </div>
-  
-  <div class="stat-grid">
-    <div class="stat-box">
-      <carbon:code class="stat-icon text-blue-400"/>
-      <div class="stat-value">85K+</div>
-      <div class="stat-label">Code</div>
-    </div>
-    <div class="stat-box">
-      <carbon:cube class="stat-icon text-purple-400"/>
-      <div class="stat-value">12</div>
-      <div class="stat-label">Modules</div>
-    </div>
-    <div class="stat-box">
-      <carbon:analytics class="stat-icon text-green-400"/>
-      <div class="stat-value">400+</div>
-      <div class="stat-label">Tests</div>
-    </div>
-  </div>
-
-  <div class="tech-tags">
-    <span class="tech-tag rust">Rust</span>
-    <span class="tech-tag go">Go</span>
-    <span class="tech-tag tla">TLA+</span>
-  </div>
-
-</div>
-
-</div>
-
-<div class="thank-you">
-  <div class="thank-text">Thank you!</div>
-  <div class="questions-text">
-    <carbon:help class="inline-block mr-2"/>
-    Questions?
-  </div>
-</div>
-
-</div>
-
-<style>
-.final-slide {
-  padding: 0.8rem 0;
-}
-
-.final-logo {
-  position: relative;
-  padding: 0.8rem 0;
-}
-
-.logo-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(96, 165, 250, 0.3) 0%, transparent 70%);
-  animation: pulse 4s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
-}
-
-.logo-text {
-  font-size: 1.8rem;
-  font-weight: 900;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 0.3rem;
-  position: relative;
-  z-index: 1;
-}
-
-.logo-subtitle {
-  font-size: 1rem;
-  opacity: 0.8;
-  font-weight: 600;
-}
-
-.info-section, .stats-section {
-  text-align: left;
-  background: rgba(96, 165, 250, 0.05);
-  padding: 0.8rem;
-  border-radius: 16px;
-  border: 1px solid rgba(96, 165, 250, 0.2);
-}
-
-.section-title {
-  font-size: 1.15rem;
-  margin-bottom: 0.6rem;
-  display: flex;
-  align-items: center;
-  color: #60a5fa;
-}
-
-.link-list {
-  margin-bottom: 1.5rem;
-}
-
-.link-item {
-  padding: 0.625rem 0;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-}
-
-.qr-section {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 12px;
-}
-
-.qr-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin-bottom: 0.75rem;
-}
-
-.qr-wrapper {
-  display: flex;
-  justify-content: center;
-  padding: 0.75rem;
-  background: white;
-  border-radius: 10px;
-  margin: 0 auto;
-  width: fit-content;
-}
-
-.qr-code {
-  display: block;
-  width: 150px;
-  height: 150px;
-}
-
-.qr-link {
-  margin-top: 0.75rem;
-  font-size: 0.8rem;
-  font-family: 'Fira Code', monospace;
-  opacity: 0.8;
-}
-
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.stat-box {
-  text-align: center;
-  padding: 1.25rem 0.75rem;
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(167, 139, 250, 0.1));
-  border-radius: 12px;
-  border: 1px solid rgba(96, 165, 250, 0.3);
-  transition: all 0.3s ease;
-}
-
-.stat-box:hover {
-  transform: translateY(-4px);
-  border-color: rgba(96, 165, 250, 0.6);
-}
-
-.stat-icon {
-  font-size: 1.3rem;
-  margin-bottom: 0.3rem;
-}
-
-.stat-value {
-  font-size: 1.75rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #60a5fa, #a78bfa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-family: 'Fira Code', monospace;
-}
-
-.stat-label {
-  font-size: 0.75rem;
-  opacity: 0.7;
-  margin-top: 0.25rem;
-}
-
-.tech-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.tech-tag {
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  border: 2px solid;
-  transition: all 0.3s ease;
-}
-
-.tech-tag:hover {
-  transform: translateY(-2px);
-}
-
-.tech-tag.rust {
-  background: rgba(222, 165, 132, 0.2);
-  border-color: rgba(222, 165, 132, 0.5);
-  color: #dea584;
-}
-
-.tech-tag.go {
-  background: rgba(0, 173, 216, 0.2);
-  border-color: rgba(0, 173, 216, 0.5);
-  color: #00add8;
-}
-
-.tech-tag.tla {
-  background: rgba(167, 139, 250, 0.2);
-  border-color: rgba(167, 139, 250, 0.5);
-  color: #a78bfa;
-}
-
-.tech-tag.docker, .tech-tag.k8s {
-  background: rgba(96, 165, 250, 0.2);
-  border-color: rgba(96, 165, 250, 0.5);
-  color: #60a5fa;
-}
-
-.license-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.625rem 1.25rem;
-  background: rgba(52, 211, 153, 0.15);
-  border: 1px solid rgba(52, 211, 153, 0.4);
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #34d399;
-}
-
-.thank-you {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(167, 139, 250, 0.1));
-  border-radius: 20px;
-  border: 2px solid rgba(96, 165, 250, 0.3);
-}
-
-.thank-text {
-  font-size: 1.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 0.5rem;
-}
-
-.questions-text {
-  font-size: 1.15rem;
-  opacity: 0.8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-</style>
-
----
-layout: end
----
-
 # ご清聴ありがとうございました
 
+<div class="mt-8 text-lg opacity-80">
+  <carbon:logo-github class="inline-block mr-2"/>
+  github.com/SeleniaProject/NyxNet
+</div>
+
+<div class="mt-6 text-sm opacity-60">
+  Questions?
+</div>

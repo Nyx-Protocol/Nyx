@@ -1,6 +1,11 @@
-# NyxNet Presentation for U-22 Programming Contest
+# NyxNet Presentations
 
-U-22プログラミングコンテスト用のNyxNetプレゼンテーションスライドです。
+This directory contains presentation materials for NyxNet.
+
+## Contents
+
+- `slides.md` - Main presentation slides
+- `slides_3min.md` - Short 3-minute presentation version
 
 ## Setup
 
@@ -11,19 +16,29 @@ npm install
 
 ## Development
 
+Start the development server:
+
 ```bash
 npm run dev
 ```
 
-ブラウザで `http://localhost:3030` が開きます。
+For the 3-minute version:
+
+```bash
+npx slidev slides_3min.md
+```
+
+The presentation will open in your browser at `http://localhost:3030`.
 
 ## Build
+
+Build for production:
 
 ```bash
 npm run build
 ```
 
-静的サイトが `dist/` に生成されます。
+Static files will be generated in the `dist/` directory.
 
 ## Export to PDF
 
@@ -31,23 +46,23 @@ npm run build
 npm run export
 ```
 
-`slides-export.pdf` が生成されます。
+This will generate `slides-export.pdf`.
 
 ## Keyboard Shortcuts
 
-- `Space` / `→`: 次のスライド
-- `←`: 前のスライド
-- `f`: フルスクリーン
-- `o`: スライド一覧
-- `d`: ダークモード切り替え
-- `g`: グリッド表示
+- `Space` / `→`: Next slide
+- `←`: Previous slide
+- `f`: Fullscreen
+- `o`: Slides overview
+- `d`: Toggle dark mode
+- `g`: Grid view
 
 ## Features
 
-- **Mermaid図**: システム構成図やシーケンス図を含む
-- **コードハイライト**: Shikiによるシンタックスハイライト
-- **アニメーション**: v-clicksでステップバイステップ表示
-- **数式表示**: KaTeXによる数式レンダリング
+- **Mermaid Diagrams**: System architecture and sequence diagrams
+- **Code Highlighting**: Syntax highlighting with Shiki
+- **Animations**: Step-by-step display with v-clicks
+- **Math Rendering**: Formula rendering with KaTeX
 - **レスポンシブ**: 様々な画面サイズに対応
 
 ## スライド構成

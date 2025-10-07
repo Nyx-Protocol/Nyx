@@ -1,18 +1,4 @@
 #![forbid(unsafe_code)]
-#![doc = include_str!(".//! ## Quick Start
-//!
-//! ```no_run
-//! # use nyx_sdk::{DaemonClient, SdkConfig, Result};
-//! # #[tokio::main]
-//! # async fn main() -> Result<()> {
-//! let config = SdkConfig::default();
-//! let client = DaemonClient::new_with_auto_token(config).await;
-//!
-//! let info = client.get_info().await?;
-//! println!("Daemon info: {:?}", info);
-//! # Ok(())
-//! # }
-//! ```
 
 //! # Nyx SDK
 //!
@@ -54,7 +40,7 @@
 //!
 //! // Check statistics
 //! let stats = sender.stats();
-//! println!("Sent {} bytes", stats.bytes_sent);
+//! println!("Sent bytes: {}", stats.bytes_sent);
 //! # Ok(())
 //! # }
 //! ```

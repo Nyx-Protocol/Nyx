@@ -1,0 +1,33 @@
+# This file defines code ownership for the NyxNet project
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @SeleniaProject
+
+# Core cryptography
+/nyx-crypto/ @SeleniaProject
+/nyx-core/src/crypto/ @SeleniaProject
+
+# Formal verification
+/formal/ @SeleniaProject
+/spec/ @SeleniaProject
+
+# Security-critical components
+/nyx-mix/ @SeleniaProject
+/nyx-transport/src/sphinx.rs @SeleniaProject
+
+# CI/CD and infrastructure
+/.github/ @SeleniaProject
+/docker-compose*.yml @SeleniaProject
+/Dockerfile* @SeleniaProject
+/k8s-*.yaml @SeleniaProject
+/charts/ @SeleniaProject
+
+# Documentation
+/docs/ @SeleniaProject
+/*.md @SeleniaProject
+
+# Build and release configuration
+/Cargo.toml @SeleniaProject
+/rust-toolchain.toml @SeleniaProject
+/.release.toml @SeleniaProject

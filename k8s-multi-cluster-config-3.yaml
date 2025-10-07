@@ -1,0 +1,38 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: nyx-cluster-3
+networking:
+  # cluster3のpodSubnet (他と重複しないように)
+  podSubnet: "10.242.0.0/16"
+  serviceSubnet: "10.98.0.0/16"
+  # APIサーバーのポート (他のクラスターと異なるポート)
+  apiServerPort: 6445
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+    - |
+      kind: InitConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          node-labels: "cluster=nyx-cluster-3"
+    extraPortMappings:
+    - containerPort: 30080
+      hostPort: 30082
+      protocol: TCP
+    - containerPort: 30443
+      hostPort: 30445
+      protocol: TCP
+  - role: worker
+    kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          node-labels: "cluster=nyx-cluster-3"
+  - role: worker
+    kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          node-labels: "cluster=nyx-cluster-3"

@@ -183,11 +183,13 @@ async fn multiple_paths_concurrent_validation_succeeds() -> Result<(), Box<dyn s
             let mut buf = [0u8; 64];
             // Handle up to 3 requests to ensure reliability
             for _ in 0..3 {
-                if let Ok((n, _)) = tokio::time::timeout(
+                // timeout returns Result<Result<(usize, SocketAddr), io::Error>, Elapsed>
+                // First Ok checks timeout didn't expire, second Ok checks recv_from succeeded
+                if let Ok(recv_result) = tokio::time::timeout(
                     Duration::from_millis(2000),
                     sock.recv_from(&mut buf)
                 ).await {
-                    if let Ok((n, _)) = n {
+                    if let Ok((n, _)) = recv_result {
                         if n >= 1 && buf[0] == PATH_CHALLENGE_FRAME_TYPE {
                             let mut frame_local = Vec::with_capacity(17);
                             frame_local.push(PATH_RESPONSE_FRAME_TYPE);

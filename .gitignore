@@ -1,10 +1,17 @@
+# Rust / Cargo
 target/
-formal/*.jar
-formal/states/
-temp_integration.rs
+**/*.rs.bk
+*.pdb
 *.rlib
 *.redb
-nyx-daemon/reputation_store.json
+
+# Build artifacts
+Cargo.lock
+
+# Formal verification
+formal/*.jar
+formal/states/
+formal/counterexamples/
 FINAL_VALIDATION_REPORT.json
 verification_report.json
 build_verification_report.json
@@ -12,11 +19,27 @@ comprehensive_verification_report.json
 tla_verification_report.json
 tla_coverage_report.json
 tla_report.html
-u22-submission/
 
-# Binary tools (should be installed via package manager)
+# Runtime data
+nyx-daemon/reputation_store.json
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Testing artifacts
+temp_integration.rs
+
+# Binary tools
 helm.exe
 kubectl.exe
+*.exe
+*.dll
+*.so
+*.dylib
 
 # Backups and editor artifacts
 *.backup
@@ -26,23 +49,69 @@ kubectl.exe
 *.swp
 *.swo
 *~
+.#*
 
-# Logs
-*.log
-logs/
+# Local development
+.env
+.env.local
+.env.*.local
 
-# Local charts backups
+# Charts backups
 charts/**/values*.backup
 
-# Python cache
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+ENV/
 
-# IDE files
+# Node.js (for presentation and tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+dist/
+
+# IDE and editors
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+*.iml
 
 # OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
+
+# Coverage reports
+*.profraw
+*.profdata
+coverage/
+*.lcov
+tarpaulin-report.html
+
+# Benchmark results
+benchmarks/results/*.json
+benchmarks/results/*.csv
+
+# Documentation builds
+site/
+book/
+
+# Personal development files
+TODO.personal.md
+NOTES.personal.md
+scratch/

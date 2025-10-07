@@ -1,7 +1,8 @@
 {
   "name": "nyxnet-presentation",
   "version": "1.0.0",
-  "description": "NyxNet U-22 Programming Contest Presentation",
+  "description": "NyxNet Presentation Slides",
+  "private": true,
   "scripts": {
     "dev": "slidev",
     "build": "slidev build",

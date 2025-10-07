@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nyx-test
+  labels:
+    name: nyx-test
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-config
+  namespace: nyx-test
+data:
+  test-script.sh: |
+    #!/bin/bash
+    echo "Starting inter-cluster communication test..."
+    
+    # 各クラスターのコントロールプレーンノードを取得
+    CLUSTERS=("nyx-cluster-1" "nyx-cluster-2" "nyx-cluster-3")
+    
+    for cluster in "${CLUSTERS[@]}"; do
+      echo "Testing connection to ${cluster}..."
+      CONTAINER="${cluster}-control-plane"
+      IP=$(getent hosts ${CONTAINER} | awk '{ print $1 }' || echo "")
+      
+      if [ -n "$IP" ]; then
+        echo "Found ${cluster} at ${IP}"
+        ping -c 3 ${IP} && echo "✅ Success" || echo "❌ Failed"
+      else
+        echo "⚠️  Could not resolve ${cluster}"
+      fi
+    done
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nyx-test-deployment
+  namespace: nyx-test
+  labels:
+    app: nyx-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nyx-test
+  template:
+    metadata:
+      labels:
+        app: nyx-test
+    spec:
+      containers:
+      - name: test-container
+        image: nicolaka/netshoot:latest
+        command: ["sleep"]
+        args: ["infinity"]
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: test-scripts
+          mountPath: /scripts
+      volumes:
+      - name: test-scripts
+        configMap:
+          name: test-config
+          defaultMode: 0755
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nyx-test-service
+  namespace: nyx-test
+spec:
+  type: NodePort
+  selector:
+    app: nyx-test
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 8080
+    nodePort: 30080
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: 8443
+    nodePort: 30443
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-client
+  namespace: nyx-test
+  labels:
+    app: nyx-test-client
+spec:
+  containers:
+  - name: curl
+    image: curlimages/curl:latest
+    command: ["sleep"]
+    args: ["infinity"]
+    env:
+    - name: TEST_MODE
+      value: "client"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: connectivity-test-job
+  namespace: nyx-test
+spec:
+  template:
+    metadata:
+      labels:
+        app: connectivity-test
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: test-runner
+        image: nicolaka/netshoot:latest
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          echo "🚀 Starting connectivity tests..."
+          
+          # 基本的なネットワークテスト
+          echo "Testing DNS resolution..."
+          nslookup kubernetes.default
+          
+          echo "Testing internet connectivity..."
+          ping -c 3 8.8.8.8 || echo "No external connectivity (expected in isolated env)"
+          
+          echo "Testing service discovery..."
+          nslookup nyx-test-service.nyx-test.svc.cluster.local
+          
+          echo "✅ Connectivity tests completed"
+  backoffLimit: 3
