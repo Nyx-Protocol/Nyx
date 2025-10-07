@@ -359,7 +359,7 @@ deploy_test_pods() {
         local pod_start=$(date +%s)
         kubectl config use-context "kind-${cluster}" > /dev/null
         
-        # テストPod作成
+        # テストPod作成（iperf3用のHostPortを公開）
         cat <<EOF | kubectl apply -f - > /dev/null
 apiVersion: v1
 kind: Pod
@@ -370,6 +370,7 @@ metadata:
     app: nyx-test
     cluster: ${cluster}
 spec:
+  hostNetwork: false
   containers:
   - name: test-container
     image: nicolaka/netshoot:latest
@@ -377,6 +378,11 @@ spec:
     env:
     - name: CLUSTER_NAME
       value: "${cluster}"
+    ports:
+    - name: iperf3
+      containerPort: 5201
+      hostPort: $((5201 + i))
+      protocol: TCP
     resources:
       requests:
         memory: "128Mi"
@@ -591,35 +597,35 @@ test_throughput() {
             
             local dst_cluster="${CLUSTERS[$j]}"
             local dst_pod="test-pod-$((j + 1))"
+            local dst_hostport=$((5201 + j))
             
-            # 宛先PodのIPアドレスを取得
-            kubectl config use-context "kind-${dst_cluster}" > /dev/null
-            local dst_ip=$(kubectl get pod "${dst_pod}" -n "${TEST_NAMESPACE}" -o jsonpath='{.status.podIP}' 2>/dev/null || echo "")
-            kubectl config use-context "kind-${src_cluster}" > /dev/null
+            # 宛先クラスターのWorkerノードIPを取得（hostPortを使用）
+            local dst_worker=$(docker ps --filter "name=${dst_cluster}-worker" --format "{{.Names}}" | head -n 1)
+            local dst_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${dst_worker}" 2>/dev/null || echo "")
             
             if [ -z "$dst_ip" ]; then
-                log_warning "Could not resolve Pod IP for ${dst_pod} in ${dst_cluster}"
+                log_warning "Could not resolve Worker IP for ${dst_cluster}"
                 FAILED_TESTS=$((FAILED_TESTS + 1))
                 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-                TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|Pod IP resolution failed")
+                TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|Worker IP resolution failed")
                 continue
             fi
             
             test_count=$((test_count + 1))
             TOTAL_TESTS=$((TOTAL_TESTS + 1))
             
-            log_info "Measuring throughput: ${src_cluster} → ${dst_cluster} (Pod IP: ${dst_ip})"
+            log_info "Measuring throughput: ${src_cluster} → ${dst_cluster} (${dst_ip}:${dst_hostport})"
             
-            # まず接続テスト（DockerネットワークでPodIPに到達可能か確認）
-            if ! kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- nc -zv -w 2 "${dst_ip}" 5201 > /dev/null 2>&1; then
-                log_warning "iperf3 port 5201 not reachable on Pod ${dst_ip}"
+            # まず接続テスト（hostPort経由で到達可能か確認）
+            if ! kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- nc -zv -w 2 "${dst_ip}" "${dst_hostport}" > /dev/null 2>&1; then
+                log_warning "iperf3 port ${dst_hostport} not reachable on ${dst_ip}"
                 FAILED_TESTS=$((FAILED_TESTS + 1))
                 TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|iperf3 server not reachable")
                 continue
             fi
             
-            # iperf3で5秒間測定（シンプルなテキスト出力）
-            local iperf_output=$(kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- iperf3 -c "${dst_ip}" -t 5 2>&1 || echo "")
+            # iperf3で5秒間測定（hostPort経由）
+            local iperf_output=$(kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- iperf3 -c "${dst_ip}" -p "${dst_hostport}" -t 5 2>&1 || echo "")
             
             if echo "$iperf_output" | grep -q "sender"; then
                 # テキスト出力から速度を抽出
