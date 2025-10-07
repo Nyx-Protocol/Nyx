@@ -174,16 +174,114 @@ The TLA+ model includes TLAPS proofs for:
 
 ## Integration with CI/CD
 
+### GitHub Actions Workflow
+
+NyxNet includes comprehensive TLA+ verification in GitHub Actions. The workflow automatically:
+
+1. **Quick Check (PR/Push)**: Runs on every PR and push to main branches
+   - Executes `quick_verify.sh` for fast feedback
+   - Tests core modules: BasicVerification, Cryptography, NetworkLayer
+   - Completes in ~5-10 minutes
+
+2. **Full Verification (Weekly)**: Scheduled comprehensive verification
+   - Executes `final_verification.sh` for all modules
+   - Tests all 11+ TLA+ modules with full property checking
+   - Runs every Monday at 02:00 UTC
+   - Completes in ~60-90 minutes
+
+3. **Manual Dispatch**: On-demand verification with options
+   - Choose verification type: full/tla-only/rust-only/quick
+   - Configurable timeout settings
+   - Useful for debugging specific modules
+
+### Verification Scripts
+
+#### Quick Verification (`quick_verify.sh`)
+```bash
+cd formal
+chmod +x quick_verify.sh
+./quick_verify.sh
+```
+- Fast syntax and basic model checking
+- Ideal for PR validation
+- Exit code 0 on success, 1 on failure
+
+#### Full Verification (`final_verification.sh`)
+```bash
+cd formal
+chmod +x final_verification.sh
+./final_verification.sh
+```
+- Comprehensive verification of all modules
+- Generates detailed logs in `verification_logs/`
+- Exit code reflects overall success/failure
+
+### CI/CD Exit Codes
+
 The automation script returns appropriate exit codes:
 - Exit 0: All configurations passed
 - Exit 1: One or more configurations failed
+- Exit 2: Script error (missing dependencies, etc.)
 
-Example CI integration:
+### Example CI Integration
+
+#### Basic Integration
 ```yaml
 - name: Run formal verification
   run: |
     cd formal
     python run_model_checking.py --timeout 600
+```
+
+#### With Caching
+```yaml
+- name: Cache TLA+ tools
+  uses: actions/cache@v4
+  with:
+    path: formal/tla2tools.jar
+    key: tla-tools-v1.8.0
+
+- name: Download TLA+ tools
+  run: |
+    cd formal
+    if [ ! -f tla2tools.jar ]; then
+      curl -L -o tla2tools.jar \
+        https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+    fi
+
+- name: Run TLA+ verification
+  run: |
+    cd formal
+    ./quick_verify.sh
+```
+
+#### With Artifacts
+```yaml
+- name: Upload verification results
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: tla-verification-results
+    path: |
+      formal/verification_logs/
+      formal/*_verify.log
+      formal/VERIFICATION_*.md
+```
+
+### Viewing Results
+
+Verification results are available in multiple formats:
+
+1. **GitHub Actions Summary**: View in the Actions tab
+2. **Artifacts**: Download detailed logs and reports
+3. **PR Comments**: Automatic comments on pull requests with results
+4. **Logs**: Real-time logs during CI execution
+
+### Badge Status
+
+Add this badge to your README to show verification status:
+```markdown
+[![Formal Verification](https://github.com/SeleniaProject/NyxNet/actions/workflows/formal-verification.yml/badge.svg)](https://github.com/SeleniaProject/NyxNet/actions/workflows/formal-verification.yml)
 ```
 
 ## Contributing

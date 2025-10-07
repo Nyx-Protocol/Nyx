@@ -81,13 +81,27 @@ jobs:
         uses: actions/cache@v4
         with:
           path: formal/tla2tools.jar
-          key: tla-tools-${{ hashFiles('formal/**/*.tla') }}
+          key: tla-tools-v1.8.0
           restore-keys: tla-tools-
       
       - name: Download TLA+ tools
         run: |
           cd formal
           if [ ! -f tla2tools.jar ]; then
+            echo "Downloading TLA+ tools..."
+            curl -L -o tla2tools.jar \
+              https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+            echo "TLA+ tools downloaded successfully"
+          else
+            echo "TLA+ tools already cached"
+          fi
+          
+          # Verify JAR file
+          if java -jar tla2tools.jar -h > /dev/null 2>&1; then
+            echo "✅ TLA+ tools verified"
+          else
+            echo "❌ TLA+ tools verification failed, re-downloading..."
+            rm -f tla2tools.jar
             curl -L -o tla2tools.jar \
               https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
           fi
@@ -99,19 +113,26 @@ jobs:
       
       - name: Run quick TLA+ verification
         run: |
-          if [ -f scripts/verify.py ]; then
-            python3 scripts/verify.py --tla-only --timeout ${{ env.VERIFICATION_TIMEOUT }} \
-              --output tla_verification_quick.json
-          else
-            echo "⚠️ verify.py not found, running manual TLA+ checks"
-            cd formal
-            for spec in NyxCore.tla NyxProtocol.tla NyxMixNetwork.tla; do
-              if [ -f "$spec" ]; then
-                echo "Checking $spec..."
-                java -Xmx4g -cp tla2tools.jar tlc2.TLC -workers auto -deadlock "$spec" || true
-              fi
-            done
-          fi
+          cd formal
+          chmod +x quick_verify.sh
+          
+          # Run quick verification with main modules
+          echo "Running quick TLA+ verification on core modules..."
+          ./quick_verify.sh 2>&1 | tee ../tla_verification_quick.log
+          
+          # Generate JSON summary
+          cat > ../tla_verification_quick.json << 'EOF'
+          {
+            "timestamp": "$(date -Iseconds)",
+            "type": "quick",
+            "modules_tested": [
+              "NyxBasicVerification",
+              "NyxCryptography",
+              "NyxNetworkLayer"
+            ],
+            "log_file": "tla_verification_quick.log"
+          }
+          EOF
         continue-on-error: true
       
       - name: Upload TLA+ quick results
@@ -121,7 +142,10 @@ jobs:
           name: tla-quick-results
           path: |
             tla_verification_quick.json
+            tla_verification_quick.log
             formal/states/
+            formal/verification_logs/
+            formal/*_verify.log
           retention-days: 30
           if-no-files-found: ignore
 
@@ -154,13 +178,27 @@ jobs:
         uses: actions/cache@v4
         with:
           path: formal/tla2tools.jar
-          key: tla-tools-${{ hashFiles('formal/**/*.tla') }}
+          key: tla-tools-v1.8.0
           restore-keys: tla-tools-
       
       - name: Download TLA+ tools
         run: |
           cd formal
           if [ ! -f tla2tools.jar ]; then
+            echo "Downloading TLA+ tools..."
+            curl -L -o tla2tools.jar \
+              https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+            echo "TLA+ tools downloaded successfully"
+          else
+            echo "TLA+ tools already cached"
+          fi
+          
+          # Verify JAR file
+          if java -jar tla2tools.jar -h > /dev/null 2>&1; then
+            echo "✅ TLA+ tools verified"
+          else
+            echo "❌ TLA+ tools verification failed, re-downloading..."
+            rm -f tla2tools.jar
             curl -L -o tla2tools.jar \
               https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
           fi
@@ -172,20 +210,26 @@ jobs:
       
       - name: Run comprehensive TLA+ verification
         run: |
-          if [ -f scripts/verify.py ]; then
-            python3 scripts/verify.py --tla-only --timeout 3600 \
-              --output tla_verification_full.json
-          else
-            echo "⚠️ verify.py not found, running manual comprehensive checks"
-            cd formal
-            for spec in *.tla; do
-              if [ -f "$spec" ]; then
-                echo "Verifying $spec..."
-                java -Xmx4g -cp tla2tools.jar tlc2.TLC -workers auto \
-                  -coverage 60 -deadlock "$spec" || true
-              fi
-            done
-          fi
+          cd formal
+          chmod +x final_verification.sh
+          
+          # Run full verification with all modules
+          echo "Running comprehensive TLA+ verification on all modules..."
+          ./final_verification.sh 2>&1 | tee ../tla_verification_full.log
+          
+          # Generate JSON summary
+          PASSED=$(grep -c "✓" ../tla_verification_full.log || echo "0")
+          FAILED=$(grep -c "✗" ../tla_verification_full.log || echo "0")
+          
+          cat > ../tla_verification_full.json << EOF
+          {
+            "timestamp": "$(date -Iseconds)",
+            "type": "comprehensive",
+            "modules_passed": $PASSED,
+            "modules_failed": $FAILED,
+            "log_file": "tla_verification_full.log"
+          }
+          EOF
         continue-on-error: true
       
       - name: Generate TLA+ coverage report
@@ -205,9 +249,13 @@ jobs:
           name: tla-full-results
           path: |
             tla_verification_full.json
+            tla_verification_full.log
             tla_coverage_report.json
             tla_report.html
             formal/states/
+            formal/verification_logs/
+            formal/*_verify.log
+            formal/VERIFICATION_*.md
           retention-days: 90
           if-no-files-found: ignore
 
@@ -381,10 +429,21 @@ jobs:
       - rust-conformance
       - spec-validation
     if: always()
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
+      - name: Download verification artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: tla-quick-results
+          path: tla-results/
+        continue-on-error: true
+      
       - name: Generate verification summary
+        id: summary
         run: |
-          echo "## Formal Verification Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 Formal Verification Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
@@ -392,14 +451,60 @@ jobs:
           echo "| Rust Conformance | ${{ needs.rust-conformance.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Spec Validation | ${{ needs.spec-validation.result }} |" >> $GITHUB_STEP_SUMMARY
           
+          # Parse TLA+ results if available
+          if [ -f tla-results/tla_verification_quick.log ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### TLA+ Verification Details" >> $GITHUB_STEP_SUMMARY
+            PASSED=$(grep -c "✓" tla-results/tla_verification_quick.log 2>/dev/null || echo "0")
+            FAILED=$(grep -c "✗" tla-results/tla_verification_quick.log 2>/dev/null || echo "0")
+            echo "- Passed: $PASSED" >> $GITHUB_STEP_SUMMARY
+            echo "- Failed: $FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
           # Determine overall status
           if [[ "${{ needs.tla-quick-check.result }}" == "success" ]] && \
              [[ "${{ needs.rust-conformance.result }}" == "success" ]] && \
              [[ "${{ needs.spec-validation.result }}" == "success" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "✅ **All formal verification checks passed**" >> $GITHUB_STEP_SUMMARY
+            echo "status=success" >> $GITHUB_OUTPUT
           else
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "⚠️ **Some verification checks require attention**" >> $GITHUB_STEP_SUMMARY
+            echo "status=warning" >> $GITHUB_OUTPUT
           fi
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let comment = '## 🔍 Formal Verification Results\n\n';
+            comment += '| Component | Status |\n';
+            comment += '|-----------|--------|\n';
+            comment += '| TLA+ Quick Check | ${{ needs.tla-quick-check.result }} |\n';
+            comment += '| Rust Conformance | ${{ needs.rust-conformance.result }} |\n';
+            comment += '| Spec Validation | ${{ needs.spec-validation.result }} |\n\n';
+            
+            if (fs.existsSync('tla-results/tla_verification_quick.log')) {
+              const log = fs.readFileSync('tla-results/tla_verification_quick.log', 'utf8');
+              const passed = (log.match(/✓/g) || []).length;
+              const failed = (log.match(/✗/g) || []).length;
+              comment += `### TLA+ Verification\n- ✅ Passed: ${passed}\n- ❌ Failed: ${failed}\n\n`;
+            }
+            
+            if ('${{ steps.summary.outputs.status }}' === 'success') {
+              comment += '✅ **All formal verification checks passed!**';
+            } else {
+              comment += '⚠️ **Some verification checks require attention. Please review the artifacts.**';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
 
