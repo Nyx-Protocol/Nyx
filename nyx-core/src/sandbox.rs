@@ -126,8 +126,7 @@ mod platform {
             policy: SandboxPolicy,
         ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             use std::env;
-            use std::f_s;
-            use std::path::Path;
+            use std::fs;
 
             // Set resource limit_s to prevent fork bomb_s and excessive resource consumption
             match set_process_limit_s(policy) {
@@ -149,8 +148,8 @@ mod platform {
                     env::set_var("NO_SUBPROCESS", "1");
 
                     // Create a marker file to indicate sandbox i_s active
-                    let _tmpdir = env::tempdir();
-                    let _marker_path = tmpdir.join(format!("nyx_sandbox_{}", std::proces_s::id()));
+                    let tmpdir = env::temp_dir();
+                    let marker_path = tmpdir.join(format!("nyx_sandbox_{}", std::process::id()));
                     if let Err(e) = fs::write(&marker_path, "minimal") {
                         warn!(error = %e, "Failed to create sandbox marker file");
                     }
@@ -161,9 +160,9 @@ mod platform {
                     env::set_var("NO_NETWORK", "1");
 
                     // Create a marker file to indicate strict sandbox i_s active
-                    let _tmpdir = env::tempdir();
-                    let _marker_path =
-                        tmpdir.join(format!("nyx_sandbox_strict_{}", std::proces_s::id()));
+                    let tmpdir = env::temp_dir();
+                    let marker_path =
+                        tmpdir.join(format!("nyx_sandbox_strict_{}", std::process::id()));
                     if let Err(e) = fs::write(&marker_path, "strict") {
                         warn!(error = %e, "Failed to create sandbox marker file");
                     }

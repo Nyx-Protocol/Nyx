@@ -462,13 +462,14 @@ pub fn detect_teredo_adapters() -> Vec<TeredoAdapter> {
                                 // Remove % suffix if present (e.g., 2001:0:...%utun0)
                                 let addr_str = parts[1].split('%').next().unwrap_or(parts[1]);
                                 if let Ok(ipv6_addr) = addr_str.parse::<Ipv6Addr>() {
-                                    if is_teredo_address(&ipv6_addr) {
+                                    if is_teredo_address(ipv6_addr) {
                                         if let Some(ref iface) = current_interface {
+                                            let teredo_info = TeredoAddress::from_ipv6(ipv6_addr)?;
                                             let adapter = TeredoAdapter {
                                                 name: iface.clone(),
-                                                teredo_address: ipv6_addr,
-                                                server: None,
-                                                public_ipv4: None,
+                                                ipv6_addr,
+                                                teredo_info,
+                                                last_seen: Instant::now(),
                                             };
                                             adapters.push(adapter);
                                         }

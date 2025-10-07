@@ -2035,50 +2035,46 @@ layout: default
 # <span class="text-gradient">競合比較</span>
 ## 📊 NyxNet vs 他の匿名化技術
 
-<div class="comparison-wrapper">
-
-  <div class="comparison-table-modern">
-    <div class="table-header-row">
-      <div class="header-cell">機能</div>
-      <div class="header-cell">Tor</div>
-      <div class="header-cell">VPN</div>
-      <div class="header-cell">I2P</div>
-      <div class="header-cell nyx-header">NyxNet</div>
-    </div>
-    
-    <div class="table-data-row">
-      <div class="feature-cell"><carbon:locked class="inline mr-1"/>量子耐性</div>
-      <div class="value-cell bad">❌</div>
-      <div class="value-cell bad">❌</div>
-      <div class="value-cell bad">❌</div>
-      <div class="value-cell good"><strong>✅</strong></div>
-    </div>
-    
-    <div class="table-data-row highlight">
-      <div class="feature-cell"><carbon:time class="inline mr-1"/>レイテンシ</div>
-      <div class="value-cell bad">1224ms</div>
-      <div class="value-cell medium">10ms</div>
-      <div class="value-cell medium">500ms</div>
-      <div class="value-cell excellent"><strong>20ms</strong></div>
-    </div>
-    
-    <div class="table-data-row">
-      <div class="feature-cell"><carbon:cloud-upload class="inline mr-1"/>速度</div>
-      <div class="value-cell medium">39 MB/s</div>
-      <div class="value-cell good">100+ MB/s</div>
-      <div class="value-cell bad">20 MB/s</div>
-      <div class="value-cell good"><strong>80 MB/s</strong></div>
-    </div>
-    
-    <div class="table-data-row">
-      <div class="feature-cell"><carbon:network-3 class="inline mr-1"/>マルチパス</div>
-      <div class="value-cell bad">❌</div>
-      <div class="value-cell bad">❌</div>
-      <div class="value-cell bad">❌</div>
-      <div class="value-cell good"><strong>✅</strong></div>
-    </div>
+<div class="comparison-table-modern mt-4">
+  <div class="table-header-row">
+    <div class="header-cell">機能</div>
+    <div class="header-cell">Tor</div>
+    <div class="header-cell">VPN</div>
+    <div class="header-cell">I2P</div>
+    <div class="header-cell nyx-header">NyxNet</div>
   </div>
-
+  
+  <div class="table-data-row">
+    <div class="feature-cell"><carbon:locked class="inline mr-1"/>量子耐性</div>
+    <div class="value-cell bad">❌</div>
+    <div class="value-cell bad">❌</div>
+    <div class="value-cell bad">❌</div>
+    <div class="value-cell good"><strong>✅</strong></div>
+  </div>
+  
+  <div class="table-data-row highlight">
+    <div class="feature-cell"><carbon:time class="inline mr-1"/>レイテンシ</div>
+    <div class="value-cell bad">1224ms</div>
+    <div class="value-cell medium">10ms</div>
+    <div class="value-cell medium">500ms</div>
+    <div class="value-cell excellent"><strong>20ms</strong></div>
+  </div>
+  
+  <div class="table-data-row">
+    <div class="feature-cell"><carbon:cloud-upload class="inline mr-1"/>速度</div>
+    <div class="value-cell medium">39 MB/s</div>
+    <div class="value-cell good">100+ MB/s</div>
+    <div class="value-cell bad">20 MB/s</div>
+    <div class="value-cell good"><strong>80 MB/s</strong></div>
+  </div>
+  
+  <div class="table-data-row">
+    <div class="feature-cell"><carbon:network-3 class="inline mr-1"/>マルチパス</div>
+    <div class="value-cell bad">❌</div>
+    <div class="value-cell bad">❌</div>
+    <div class="value-cell bad">❌</div>
+    <div class="value-cell good"><strong>✅</strong></div>
+  </div>
 </div>
 
 <style>
