@@ -43,6 +43,9 @@ sha2 = "0.10"
 hkdf = "0.12"
 getrandom = "0.2"
 rand = "0.8"
+# Note: serde_cbor is unmaintained (RUSTSEC-2021-0127) but kept for plugin_framework compatibility
+# Consider migrating to ciborium in future major version
+serde_cbor = "0.11"
 async-trait = "0.1"
 num-bigint = "0.4"
 zeroize = { version = "1.8", features = ["zeroize_derive"] }

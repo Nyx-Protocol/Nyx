@@ -11,7 +11,6 @@
 //! - Backward compatibility with v0.1 implementations
 
 use serde::{Deserialize, Serialize};
-use serde_cbor;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};

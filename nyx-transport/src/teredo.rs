@@ -11,6 +11,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use std::collections::HashMap;
 use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+use std::process::Command;
 use std::sync::Arc;
 use std::time::Instant;
 use thiserror::Error;
@@ -355,7 +356,6 @@ pub struct TeredoAdapter {
 /// interface enumeration. Alternative approach: spawn platform command and parse.
 pub fn detect_teredo_adapters() -> Vec<TeredoAdapter> {
     use std::net::Ipv6Addr;
-    // Note: std::process::Command import removed - not used in pure Rust implementation
 
     let mut adapters = Vec::new();
 

@@ -252,15 +252,26 @@ cargo clean
 cargo build --release
 ```
 
-**依存関係エラー:**
+**依存関係エラー (`unresolved import` など):**
 ```bash
 # Rust更新
 rustup update stable
 
+# キャッシュをクリア
+cargo clean
+rm -rf ~/.cargo/registry/index/*
+rm -rf ~/.cargo/.package-cache
+
 # Cargo.lockを再生成
 rm Cargo.lock
 cargo generate-lockfile
-cargo build --release
+
+# 再ビルド
+cargo build --release --workspace
+
+# それでも失敗する場合
+cargo update
+cargo build --release --workspace
 ```
 
 ### Docker ビルドエラー
