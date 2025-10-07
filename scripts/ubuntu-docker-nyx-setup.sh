@@ -160,15 +160,15 @@ for i in $(seq 1 $NUM_NODES); do
     ports:
       - "${PORT}:${PORT}/udp"
       - "${GRPC_PORT}:${GRPC_PORT}/tcp"
-    # Nyxデーモンを直接起動 (設定は環境変数で制御)
-    command: ["/usr/local/bin/nyx-daemon"]
+    # Nyxデーモンを起動 (ENTRYPOINTは既にDockerfileで設定済み)
+    # commandは指定しない（ENTRYPOINTをそのまま使用）
     working_dir: /app
     volumes:
       - ./nyx.toml:/app/nyx.toml:ro
     restart: unless-stopped
-    # 単純なヘルスチェック
+    # 単純なヘルスチェック (正しいパスを使用)
     healthcheck:
-      test: ["CMD", "/usr/local/bin/nyx-daemon", "--version"]
+      test: ["CMD", "/usr/bin/nyx-daemon", "--version"]
       interval: 30s
       timeout: 10s
       retries: 3
