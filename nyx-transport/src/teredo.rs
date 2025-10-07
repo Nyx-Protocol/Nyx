@@ -354,8 +354,9 @@ pub struct TeredoAdapter {
 /// We avoid C/C++ dependencies, so relying on std::net which doesn't expose
 /// interface enumeration. Alternative approach: spawn platform command and parse.
 pub fn detect_teredo_adapters() -> Vec<TeredoAdapter> {
-    // Mutable vector for platform-specific adapter detection that pushes discovered adapters
-    let mut adapters = Vec::new();
+    // Immutable vector for platform-specific adapter detection - no runtime modifications needed
+    // as external command execution has been removed to avoid dependencies
+    let adapters = Vec::new();
 
     // Platform-specific adapter detection
     // NOTE: External command execution removed to avoid std::process::Command dependency

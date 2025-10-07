@@ -859,8 +859,18 @@ mod tests {
 
     #[test]
     fn test_signed_config_creation() {
+        use rand::rngs::OsRng;
+        // Use Ed25519 signing key for cryptographically secure signatures
+        let signing_key = SigningKey::generate(&mut OsRng);
+        
         let content = b"test_config".to_vec();
-        let config = SignedConfig::new(content.clone(), 1, VectorClock::new(), "node1".to_string());
+        let config = SignedConfig::new_with_key(
+            content.clone(),
+            1,
+            VectorClock::new(),
+            "node1".to_string(),
+            &signing_key,
+        );
 
         assert_eq!(config.content, content);
         assert_eq!(config.version, 1);
@@ -870,22 +880,44 @@ mod tests {
 
     #[test]
     fn test_signed_config_verify() {
+        use rand::rngs::OsRng;
+        // Use Ed25519 key pair for cryptographically secure signature verification
+        let signing_key = SigningKey::generate(&mut OsRng);
+        let verifying_key = signing_key.verifying_key();
+        
         let content = b"test_config".to_vec();
-        let config = SignedConfig::new(content, 1, VectorClock::new(), "node1".to_string());
+        let config = SignedConfig::new_with_key(
+            content,
+            1,
+            VectorClock::new(),
+            "node1".to_string(),
+            &signing_key,
+        );
 
-        assert!(config.verify().is_ok());
+        assert!(config.verify_with_key(&verifying_key).is_ok());
     }
 
     #[test]
     fn test_signed_config_verify_invalid() {
+        use rand::rngs::OsRng;
+        // Use Ed25519 key pair for cryptographically secure tamper detection
+        let signing_key = SigningKey::generate(&mut OsRng);
+        let verifying_key = signing_key.verifying_key();
+        
         let content = b"test_config".to_vec();
-        let mut config = SignedConfig::new(content, 1, VectorClock::new(), "node1".to_string());
+        let mut config = SignedConfig::new_with_key(
+            content,
+            1,
+            VectorClock::new(),
+            "node1".to_string(),
+            &signing_key,
+        );
 
-        // Tamper with signature
+        // Tamper with signature to simulate malicious modification
         config.signature[0] ^= 0xFF;
 
         assert!(matches!(
-            config.verify(),
+            config.verify_with_key(&verifying_key),
             Err(ConfigGossipError::InvalidSignature { .. })
         ));
     }
@@ -893,7 +925,8 @@ mod tests {
     #[test]
     #[ignore = "LEGACY: Requires migration to new Ed25519 API - see test_ed25519_* tests"]
     fn test_gossip_manager_creation() {
-        let dht = Arc::new(RwLock::new(DhtStorage::new()));
+        // DhtStorage intentionally unused - kept for legacy test compatibility
+        let _dht = Arc::new(RwLock::new(DhtStorage::new()));
         // OLD API: ConfigGossipManager::new now requires SigningKey parameter
         // let manager = ConfigGossipManager::new("node1".to_string(), dht);
 
