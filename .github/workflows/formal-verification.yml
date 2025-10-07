@@ -4,17 +4,10 @@ name: Formal Verification (TLA+)
 on:
   push:
     branches: [main, master, develop]
-    paths:
-      - 'formal/**'
-      - 'nyx-conformance/**'
-      - 'scripts/verify.py'
-      - '.github/workflows/formal-verification.yml'
+    # Run on every push (no path filters)
   pull_request:
     branches: [main, master]
-    paths:
-      - 'formal/**'
-      - 'nyx-conformance/**'
-      - 'scripts/verify.py'
+    # Run on every PR (no path filters)
   schedule:
     # Full formal verification weekly on Mondays at 02:00 UTC
     - cron: '0 2 * * 1'
