@@ -49,11 +49,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo -e "${CYAN}${INFO}  Detected script directory: ${SCRIPT_DIR}${NC}\n"
 
-# rootチェック（sudoは使うがrootでは実行しない）
+# rootチェック（rootでも実行可能に）
 if [ "$EUID" -eq 0 ]; then
-    echo -e "${RED}${CROSS}  Please do not run this script as root!${NC}"
-    echo -e "${YELLOW}${WARNING}  Run as a regular user. The script will use sudo when needed.${NC}"
-    exit 1
+    echo -e "${YELLOW}${WARNING}  Running as root user detected.${NC}"
+    echo -e "${INFO}  Will skip sudo commands and run directly as root.${NC}"
+    IS_ROOT=true
+else
+    IS_ROOT=false
 fi
 
 # OSチェック
@@ -76,13 +78,17 @@ fi
 
 echo ""
 
-# sudoパスワードを先に取得
-echo -e "${CYAN}${WRENCH}  This script requires sudo privileges for installation.${NC}"
-echo -e "${DIM}You may be prompted for your password...${NC}\n"
-sudo -v
+# sudoパスワードを先に取得（rootでない場合のみ）
+if [ "$IS_ROOT" = false ]; then
+    echo -e "${CYAN}${WRENCH}  This script requires sudo privileges for installation.${NC}"
+    echo -e "${DIM}You may be prompted for your password...${NC}\n"
+    sudo -v
 
-# バックグラウンドでsudoを維持
-while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+    # バックグラウンドでsudoを維持
+    while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+else
+    echo -e "${INFO}  Running with root privileges - no sudo needed.${NC}\n"
+fi
 
 # 必要なディレクトリ作成
 mkdir -p "${SCRIPT_DIR}/scripts"

@@ -41,6 +41,15 @@ cleanup() {
 # シグナルハンドラー
 trap cleanup EXIT INT TERM
 
+# rootチェック
+if [ "$EUID" -eq 0 ]; then
+    IS_ROOT=true
+    SUDO_CMD=""
+else
+    IS_ROOT=false
+    SUDO_CMD="sudo"
+fi
+
 # 依存関係チェック関数
 check_command() {
     command -v "$1" >/dev/null 2>&1
@@ -56,14 +65,14 @@ install_docker() {
         # Dockerが起動しているか確認
         if ! docker info >/dev/null 2>&1; then
             log_warning "Docker daemon is not running. Starting..."
-            sudo systemctl start docker 2>/dev/null || sudo service docker start 2>/dev/null || true
+            $SUDO_CMD systemctl start docker 2>/dev/null || $SUDO_CMD service docker start 2>/dev/null || true
             sleep 5
         fi
         
-        # ユーザーがdockerグループに所属しているか確認
-        if ! groups | grep -q docker; then
+        # ユーザーがdockerグループに所属しているか確認（rootでない場合のみ）
+        if [ "$IS_ROOT" = false ] && ! groups | grep -q docker; then
             log_warning "Adding current user to docker group..."
-            sudo usermod -aG docker "$USER"
+            $SUDO_CMD usermod -aG docker "$USER"
             log_warning "You may need to log out and back in for this to take effect"
             log_info "Attempting to use sudo for docker commands in this session..."
         fi
@@ -74,39 +83,41 @@ install_docker() {
     log_info "Docker not found. Installing..."
     
     # 古いバージョンを削除
-    sudo apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
+    $SUDO_CMD apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
     
     # 依存関係インストール
-    sudo apt-get update
-    sudo apt-get install -y \
+    $SUDO_CMD apt-get update
+    $SUDO_CMD apt-get install -y \
         ca-certificates \
         curl \
         gnupg \
         lsb-release
     
     # Docker GPGキー追加
-    sudo install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    $SUDO_CMD install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | $SUDO_CMD gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    $SUDO_CMD chmod a+r /etc/apt/keyrings/docker.gpg
     
     # Dockerリポジトリ追加
     echo \
       "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+      $(lsb_release -cs) stable" | $SUDO_CMD tee /etc/apt/sources.list.d/docker.list > /dev/null
     
     # Dockerインストール
-    sudo apt-get update
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    $SUDO_CMD apt-get update
+    $SUDO_CMD apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     
     # Docker起動
-    sudo systemctl start docker
-    sudo systemctl enable docker
+    $SUDO_CMD systemctl start docker
+    $SUDO_CMD systemctl enable docker
     
-    # 現在のユーザーをdockerグループに追加
-    sudo usermod -aG docker "$USER"
+    # 現在のユーザーをdockerグループに追加（rootでない場合のみ）
+    if [ "$IS_ROOT" = false ]; then
+        $SUDO_CMD usermod -aG docker "$USER"
+        log_warning "You may need to log out and back in for docker group changes to take effect"
+    fi
     
     log_success "Docker installed successfully: $(docker --version)"
-    log_warning "You may need to log out and back in for docker group changes to take effect"
 }
 
 # kubectlインストール
@@ -125,7 +136,7 @@ install_kubectl() {
     
     echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
     
-    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    $SUDO_CMD install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
     rm kubectl kubectl.sha256
     
     log_success "kubectl installed successfully: $(kubectl version --client --short 2>/dev/null || kubectl version --client)"
@@ -144,7 +155,7 @@ install_kind() {
     
     curl -Lo ./kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
     chmod +x ./kind
-    sudo mv ./kind /usr/local/bin/kind
+    $SUDO_CMD mv ./kind /usr/local/bin/kind
     
     log_success "kind installed successfully: $(kind version)"
 }
@@ -155,8 +166,8 @@ install_dependencies() {
     
     # 基本ツールのインストール
     log_section "Installing basic tools"
-    sudo apt-get update -qq
-    sudo apt-get install -y curl wget git jq bc >/dev/null 2>&1
+    $SUDO_CMD apt-get update -qq
+    $SUDO_CMD apt-get install -y curl wget git jq bc >/dev/null 2>&1
     log_success "Basic tools installed"
     
     # Docker
