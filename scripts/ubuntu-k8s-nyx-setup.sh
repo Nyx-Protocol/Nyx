@@ -119,27 +119,53 @@ log_success "Docker image built"
 # 既存のKindクラスタをクリーンアップ
 log_info "Cleaning up any existing Kind clusters..."
 kind get clusters 2>/dev/null | grep "nyx-cluster" | xargs -r -I {} kind delete cluster --name {} 2>/dev/null || true
+# Docker containerも完全にクリーンアップ
+docker ps -a | grep "nyx-cluster" | awk '{print $1}' | xargs -r docker rm -f 2>/dev/null || true
 
-# Kindクラスタの作成（ポート競合を避けるためシンプルな設定）
+# Kindクラスタの作成（シンプルで堅牢な設定）
 NUM_CLUSTERS=2
 log_info "Creating $NUM_CLUSTERS Kind clusters..."
 for i in $(seq 1 $NUM_CLUSTERS); do
     CLUSTER_NAME="nyx-cluster-$i"
     log_info "Creating cluster: $CLUSTER_NAME"
     
-    # ポート競合を避けるため、デフォルトのkind設定を使用（ポートマッピングなし）
+    # シンプルな設定（ワーカー数を減らして安定性向上）
     cat > /tmp/kind-config-${i}.yaml <<EOF
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: ${CLUSTER_NAME}
 nodes:
   - role: control-plane
-  - role: worker
+    kubeadmConfigPatches:
+    - |
+      kind: InitConfiguration
+      nodeRegistration:
+        kubeletExtraArgs:
+          node-labels: "node.kubernetes.io/exclude-from-external-load-balancers=true"
   - role: worker
   - role: worker
 EOF
     
-    kind create cluster --config /tmp/kind-config-${i}.yaml --name "$CLUSTER_NAME" --wait 60s
+    # タイムアウトを長めに設定し、失敗時はリトライ
+    if ! kind create cluster --config /tmp/kind-config-${i}.yaml --name "$CLUSTER_NAME" --wait 120s; then
+        log_warn "First attempt failed, retrying with minimal config..."
+        kind delete cluster --name "$CLUSTER_NAME" 2>/dev/null || true
+        
+        # 最小限の設定でリトライ
+        cat > /tmp/kind-config-${i}.yaml <<EOF
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: ${CLUSTER_NAME}
+nodes:
+  - role: control-plane
+EOF
+        kind create cluster --config /tmp/kind-config-${i}.yaml --name "$CLUSTER_NAME" --wait 180s || {
+            log_error "Failed to create cluster $CLUSTER_NAME after retry"
+            rm -f /tmp/kind-config-${i}.yaml
+            continue
+        }
+    fi
+    
     rm -f /tmp/kind-config-${i}.yaml
     log_success "Cluster $CLUSTER_NAME created"
 done

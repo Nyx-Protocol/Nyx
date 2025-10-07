@@ -130,3 +130,144 @@ bash ubuntu-k8s-nyx-setup.sh
 # 結果確認
 ls -lh ~/NyxNet/test-results-*/
 ```
+
+## 🔧 トラブルシューティング
+
+### Kind クラスタ作成エラー
+
+**ポート競合エラー (`address already in use`):**
+```bash
+# 使用中のポートを確認
+sudo netstat -tlnp | grep -E ':(80|443|30000)'
+
+# Kindクラスタを全削除
+kind get clusters | xargs -r -I {} kind delete cluster --name {}
+
+# Dockerコンテナを全削除
+docker ps -a | grep kind | awk '{print $1}' | xargs -r docker rm -f
+
+# 再試行
+bash scripts/ubuntu-k8s-nyx-setup.sh
+```
+
+**cgroup エラー (`could not find a log line`):**
+```bash
+# Dockerの状態確認
+sudo systemctl status docker
+
+# cgroupバージョン確認
+cat /proc/cgroups
+
+# cgroup v2の場合、v1モードで起動
+sudo mkdir -p /etc/systemd/system/docker.service.d
+echo '[Service]
+Environment="DOCKER_OPTS=--exec-opt native.cgroupdriver=systemd"' | sudo tee /etc/systemd/system/docker.service.d/cgroup.conf
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+# シンプルなクラスタで再試行
+kind create cluster --name test-cluster
+```
+
+**メモリ不足エラー:**
+```bash
+# メモリ使用状況確認
+free -h
+
+# 不要なDockerイメージを削除
+docker system prune -af
+
+# スワップを有効化（一時的）
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+```
+
+### ビルドエラー
+
+**protobuf エラー:**
+```bash
+# protobufコンパイラのインストール確認
+protoc --version
+
+# 再インストール
+sudo apt-get update
+sudo apt-get install -y protobuf-compiler libprotobuf-dev
+
+# キャッシュクリアして再ビルド
+cd ~/NyxNet
+cargo clean
+cargo build --release
+```
+
+**依存関係エラー:**
+```bash
+# Rust更新
+rustup update stable
+
+# Cargo.lockを再生成
+rm Cargo.lock
+cargo generate-lockfile
+cargo build --release
+```
+
+### Docker ビルドエラー
+
+**イメージが見つからない:**
+```bash
+# Dockerログを確認
+docker logs $(docker ps -a | grep nyx | awk '{print $1}' | head -1)
+
+# BuildKitを無効化して再試行
+DOCKER_BUILDKIT=0 docker build -t nyx-daemon:latest .
+
+# キャッシュなしでビルド
+docker build --no-cache -t nyx-daemon:latest .
+```
+
+### クラスタ起動後のエラー
+
+**Podが起動しない:**
+```bash
+# Pod状態確認
+kubectl --context kind-nyx-cluster-1 get pods -n nyxnet-test -o wide
+
+# Pod詳細情報
+kubectl --context kind-nyx-cluster-1 describe pod -n nyxnet-test mix-node-1
+
+# イベント確認
+kubectl --context kind-nyx-cluster-1 get events -n nyxnet-test --sort-by='.lastTimestamp'
+
+# ログ確認
+kubectl --context kind-nyx-cluster-1 logs -n nyxnet-test mix-node-1 --previous
+```
+
+**ネットワーク接続エラー:**
+```bash
+# DNS確認
+kubectl --context kind-nyx-cluster-1 exec -n nyxnet-test mix-node-1 -- nslookup kubernetes.default
+
+# ネットワークプラグイン確認
+kubectl --context kind-nyx-cluster-1 get pods -n kube-system
+
+# ファイアウォール確認
+sudo iptables -L -n | grep -E '(DOCKER|KIND)'
+```
+
+## 💡 パフォーマンスチューニング
+
+### 高速化Tips:
+```bash
+# 並列ビルド（CPUコア数に応じて）
+MAKEFLAGS="-j$(nproc)" cargo build --release
+
+# Rust incrementalビルド無効化（リリースビルドの最適化）
+CARGO_INCREMENTAL=0 cargo build --release
+
+# リンク時間最適化
+RUSTFLAGS="-C link-arg=-fuse-ld=lld" cargo build --release
+
+# ディスクI/O最適化（tmpfsを使用）
+sudo mount -t tmpfs -o size=4G tmpfs ~/NyxNet/target
+```
