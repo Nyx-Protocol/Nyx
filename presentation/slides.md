@@ -880,18 +880,9 @@ layout: default
 
 <v-clicks>
 
-  <div class="feature-item">
-    <carbon:wifi class="inline-block mr-2 text-green-400"/>
-    <strong>複数経路同時利用</strong>
-  </div>
-  <div class="feature-item">
-    <carbon:restart class="inline-block mr-2 text-yellow-400"/>
-    <strong>自動フェイルオーバー</strong>
-  </div>
-  <div class="feature-item">
-    <carbon:chart-area class="inline-block mr-2 text-purple-400"/>
-    <strong>帯域幅集約</strong>
-  </div>
+- 📡 **複数経路同時利用**
+- 🔄 **自動フェイルオーバー**
+- 📊 **帯域幅集約**
 
 </v-clicks>
 </div>
@@ -975,7 +966,6 @@ graph LR
   <strong>パケットヘッダ拡張</strong>
 </div>
 
-<div class="code-box">
 ```rust
 pub struct ExtendedHeader {
     connection_id: ConnectionId, // 12 bytes
@@ -985,9 +975,8 @@ pub struct ExtendedHeader {
     length: u16,                  // 2 bytes
 }
 ```
-</div>
 
-<div class="code-meta">
+<div class="code-meta mt-2">
   <carbon:document class="inline-block mr-1"/>
   <code>nyx-transport/src/multipath.rs</code> · <strong>450行</strong>
 </div>
@@ -1185,7 +1174,7 @@ layout: default
       <strong>なぜNyxNetが速いか</strong>
     </div>
 
-<v-clicks>
+    <v-clicks>
 
     <div class="reason-item">
       <span class="reason-number">1</span>
@@ -1219,11 +1208,9 @@ layout: default
       </div>
     </div>
 
-</v-clicks>
+    </v-clicks>
 
   </div>
-
-</div>
 
 </div>
 

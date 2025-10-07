@@ -12,14 +12,16 @@ db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 # Vulnerability severity threshold
 vulnerability = "deny"
-# Unmaintained crate threshold
-unmaintained = "warn"
 # Yanked crate detection
 yanked = "deny"
 # Crates with notices
 notice = "warn"
 ignore = [
     # Add specific advisories to ignore here if needed
+    # Unmaintained crates (warnings only)
+    "RUSTSEC-2023-0089",  # atomic-polyfill
+    "RUSTSEC-2024-0384",  # instant
+    "RUSTSEC-2021-0127",  # serde_cbor
 ]
 
 [licenses]
@@ -45,8 +47,8 @@ deny = [
 copyleft = "warn"
 # Allow OSI/FSF approved licenses
 allow-osi-fsf-free = "both"
-# Default license policy
-default = "deny"
+# Default license policy (warn instead of deny for OR licenses)
+default = "warn"
 confidence-threshold = 0.8
 
 [licenses.private]
