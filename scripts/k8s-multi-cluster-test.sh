@@ -80,6 +80,7 @@ install_docker() {
         return 0
     fi
     
+    local install_start=$(date +%s)
     log_info "Docker not found. Installing..."
     
     # 古いバージョンを削除
@@ -117,7 +118,10 @@ install_docker() {
         log_warning "You may need to log out and back in for docker group changes to take effect"
     fi
     
-    log_success "Docker installed successfully: $(docker --version)"
+    local install_end=$(date +%s)
+    local install_duration=$((install_end - install_start))
+    
+    log_success "Docker installed successfully in ${install_duration}s: $(docker --version)"
 }
 
 # kubectlインストール
@@ -131,9 +135,16 @@ install_kubectl() {
     
     log_info "kubectl not found. Installing..."
     
-    curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-    curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl.sha256"
+    local start_time=$(date +%s)
+    log_info "Downloading kubectl ${KUBECTL_VERSION}..."
+    curl -# -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+    curl -sS -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl.sha256"
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
     
+    log_info "Downloaded in ${duration}s"
+    
+    log_info "Verifying checksum..."
     echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
     
     $SUDO_CMD install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
@@ -153,7 +164,15 @@ install_kind() {
     
     log_info "kind not found. Installing..."
     
-    curl -Lo ./kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+    local start_time=$(date +%s)
+    log_info "Downloading kind ${KIND_VERSION}..."
+    curl -# -Lo ./kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+    local end_time=$(date +%s)
+    local duration=$((end_time - start_time))
+    local file_size=$(ls -lh ./kind | awk '{print $5}')
+    
+    log_info "Downloaded ${file_size} in ${duration}s"
+    
     chmod +x ./kind
     $SUDO_CMD mv ./kind /usr/local/bin/kind
     
@@ -264,6 +283,7 @@ create_clusters() {
     
     local total=${#CLUSTERS[@]}
     local current=0
+    local cluster_start=$(date +%s)
     
     for i in "${!CLUSTERS[@]}"; do
         local cluster="${CLUSTERS[$i]}"
@@ -277,15 +297,23 @@ create_clusters() {
             kind delete cluster --name "${cluster}"
         fi
         
+        local single_start=$(date +%s)
         kind create cluster --config "${config_file}" --wait 5m > /dev/null 2>&1 &
         local pid=$!
         spinner $pid "Creating ${cluster}"
         wait $pid
+        local single_end=$(date +%s)
+        local single_duration=$((single_end - single_start))
         
-        log_success "Cluster ${cluster} created successfully"
+        log_success "Cluster ${cluster} created in ${single_duration}s"
         show_progress $current $total
     done
     
+    local cluster_end=$(date +%s)
+    local total_duration=$((cluster_end - cluster_start))
+    
+    echo ""
+    log_info "All clusters created in ${total_duration}s (average: $((total_duration / total))s per cluster)"
     echo ""
 }
 
@@ -319,6 +347,7 @@ deploy_test_pods() {
     
     local total=${#CLUSTERS[@]}
     local current=0
+    local deploy_start=$(date +%s)
     
     for i in "${!CLUSTERS[@]}"; do
         local cluster="${CLUSTERS[$i]}"
@@ -327,6 +356,7 @@ deploy_test_pods() {
         current=$((current + 1))
         log_step "$current" "$total" "Deploying to ${cluster}"
         
+        local pod_start=$(date +%s)
         kubectl config use-context "kind-${cluster}" > /dev/null
         
         # テストPod作成
@@ -368,10 +398,18 @@ EOF
         kubectl wait --for=condition=ready pod/test-pod-${cluster_num} \
             -n "${TEST_NAMESPACE}" --timeout=120s > /dev/null 2>&1 || true
         
-        log_success "Deployed to ${cluster}"
+        local pod_end=$(date +%s)
+        local pod_duration=$((pod_end - pod_start))
+        
+        log_success "Deployed to ${cluster} in ${pod_duration}s"
         show_progress $current $total
     done
     
+    local deploy_end=$(date +%s)
+    local total_deploy=$((deploy_end - deploy_start))
+    
+    echo ""
+    log_info "All pods deployed in ${total_deploy}s"
     echo ""
 }
 
@@ -401,6 +439,7 @@ test_network_connectivity() {
     
     local test_count=0
     local passed=0
+    local test_start=$(date +%s)
     
     for i in "${!CLUSTERS[@]}"; do
         local src_cluster="${CLUSTERS[$i]}"
@@ -444,8 +483,11 @@ test_network_connectivity() {
         done
     done
     
+    local test_end=$(date +%s)
+    local test_duration=$((test_end - test_start))
+    
     echo ""
-    log_info "Network tests completed: ${passed}/${test_count} passed"
+    log_info "Network tests completed in ${test_duration}s: ${passed}/${test_count} passed"
 }
 
 # Pod間通信テスト
