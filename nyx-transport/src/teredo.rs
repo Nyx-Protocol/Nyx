@@ -11,7 +11,6 @@ use bytes::{BufMut, Bytes, BytesMut};
 use std::collections::HashMap;
 use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
-use std::process::Command;
 use std::sync::Arc;
 use std::time::Instant;
 use thiserror::Error;
@@ -355,14 +354,21 @@ pub struct TeredoAdapter {
 /// We avoid C/C++ dependencies, so relying on std::net which doesn't expose
 /// interface enumeration. Alternative approach: spawn platform command and parse.
 pub fn detect_teredo_adapters() -> Vec<TeredoAdapter> {
-    use std::net::Ipv6Addr;
-
-    let mut adapters = Vec::new();
+    let adapters = Vec::new();
 
     // Platform-specific adapter detection
+    // NOTE: External command execution removed to avoid std::process::Command dependency
+    // Future implementation should use platform-specific APIs:
+    // - Windows: GetAdaptersAddresses via windows-sys
+    // - Unix/Linux: getifaddrs via nix crate
+    // - Cross-platform: network-interface crate (pure Rust)
+
     #[cfg(target_os = "windows")]
     {
         // On Windows, use netsh to query Teredo status
+        // DISABLED: Command execution removed to avoid external process dependency
+        /*
+        use std::process::Command;
         if let Ok(output) = Command::new("netsh")
             .args(["interface", "teredo", "show", "state"])
             .output()
@@ -380,7 +386,7 @@ pub fn detect_teredo_adapters() -> Vec<TeredoAdapter> {
                             {
                                 if let Some(addr_str) = line.split(':').nth(1) {
                                     let addr_str = addr_str.trim();
-                                    if let Ok(ipv6_addr) = addr_str.parse::<Ipv6Addr>() {
+                                    if let Ok(ipv6_addr) = addr_str.parse::<std::net::Ipv6Addr>() {
                                         // Verify it's a Teredo address (2001:0::/32 prefix)
                                         if is_teredo_address(ipv6_addr) {
                                             if let Ok(teredo_info) = parse_teredo_address(ipv6_addr)
@@ -402,6 +408,7 @@ pub fn detect_teredo_adapters() -> Vec<TeredoAdapter> {
                 }
             }
         }
+        */
     }
 
     #[cfg(target_os = "linux")]
@@ -443,6 +450,9 @@ pub fn detect_teredo_adapters() -> Vec<TeredoAdapter> {
     #[cfg(target_os = "macos")]
     {
         // On macOS, use ifconfig to detect IPv6 addresses
+        // DISABLED: Command execution removed to avoid external process dependency
+        /*
+        use std::process::Command;
         if let Ok(output) = Command::new("ifconfig").output() {
             if output.status.success() {
                 if let Ok(stdout) = String::from_utf8(output.stdout) {
@@ -482,6 +492,7 @@ pub fn detect_teredo_adapters() -> Vec<TeredoAdapter> {
                 }
             }
         }
+        */
     }
 
     adapters

@@ -84,8 +84,11 @@ mod unix_tests {
         if status == SandboxStatus::Applied {
             // Policy might be downgraded to "minimal" even when "strict" is requested
             let policy = env::var("SANDBOX_POLICY").unwrap_or_default();
-            assert!(policy == "minimal" || policy == "strict", 
-                    "Expected 'minimal' or 'strict', got '{}'", policy);
+            assert!(
+                policy == "minimal" || policy == "strict",
+                "Expected 'minimal' or 'strict', got '{}'",
+                policy
+            );
             assert_eq!(env::var("NO_SUBPROCESS").unwrap_or_default(), "1");
             // NO_NETWORK may or may not be set depending on platform capabilities
         }
@@ -95,14 +98,17 @@ mod unix_tests {
         if status == SandboxStatus::Applied {
             // Policy might be downgraded to "minimal" if strict is not supported
             let policy = env::var("SANDBOX_POLICY").unwrap_or_default();
-            assert!(policy == "minimal" || policy == "strict", 
-                    "Expected 'minimal' or 'strict', got '{}'", policy);
+            assert!(
+                policy == "minimal" || policy == "strict",
+                "Expected 'minimal' or 'strict', got '{}'",
+                policy
+            );
             assert_eq!(env::var("NO_SUBPROCESS").unwrap_or_default(), "1");
-            
+
             // These may be set depending on platform and policy level
             if policy == "strict" {
                 assert_eq!(env::var("NO_NETWORK").unwrap_or_default(), "1");
-                
+
                 // macOS should also set NO_FILESYSTEM_WRITE
                 #[cfg(target_os = "macos")]
                 assert_eq!(env::var("NO_FILESYSTEM_WRITE").unwrap_or_default(), "1");
@@ -125,7 +131,7 @@ mod unix_tests {
             // For now, we just verify that the sandbox was applied successfully
             // without checking for specific marker files, as the marker file
             // creation is an implementation detail that may vary
-            
+
             assert!(
                 minimal_status == SandboxStatus::Applied || strict_status == SandboxStatus::Applied,
                 "Expected sandbox to be applied"
@@ -208,7 +214,8 @@ mod windows_tests {
             // May be Applied or Unsupported depending on system capabilities
             assert!(
                 status == SandboxStatus::Applied || status == SandboxStatus::Unsupported,
-                "windows should return either Applied or Unsupported, got {:?}", status
+                "windows should return either Applied or Unsupported, got {:?}",
+                status
             );
         }
 
@@ -247,7 +254,8 @@ mod openbsd_tests {
             // May be Applied or Unsupported depending on system capabilities
             assert!(
                 status == SandboxStatus::Applied || status == SandboxStatus::Unsupported,
-                "OpenBSD should return either Applied or Unsupported, got {:?}", status
+                "OpenBSD should return either Applied or Unsupported, got {:?}",
+                status
             );
         }
 

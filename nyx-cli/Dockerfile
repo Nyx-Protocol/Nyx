@@ -1,9 +1,16 @@
 # syntax=docker/dockerfile:1.4
 
 FROM --platform=$BUILDPLATFORM rust:1.81-slim AS builder
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 ARG TARGET=x86_64-unknown-linux-musl
 ENV CARGO_TERM_COLOR=always
-RUN rustup update && rustup target add $TARGET
+
+# Update Rust toolchain and add musl target with proper verification
+RUN rustup update && \
+    rustup target add ${TARGET} && \
+    rustup target list --installed | grep -q ${TARGET}
+
 WORKDIR /workspace
 
 # Cache deps

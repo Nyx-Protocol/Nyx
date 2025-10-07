@@ -28,6 +28,7 @@
 - [Security](#security)
 - [Development](#development)
 - [Contributing](#contributing)
+- [Support](#support)
 - [License](#license)
 
 ---
@@ -696,6 +697,12 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 ### Code of Conduct
 
 This project adheres to the [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+
+---
+
+## Support
+
+Need help? See [SUPPORT.md](SUPPORT.md) for ways to get assistance.
 
 ---
 

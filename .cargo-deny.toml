@@ -10,12 +10,8 @@ version = 2
 # Database to use for advisory checking
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
-# Vulnerability severity threshold
-vulnerability = "deny"
 # Yanked crate detection
 yanked = "deny"
-# Crates with notices
-notice = "warn"
 ignore = [
     # Add specific advisories to ignore here if needed
     # Unmaintained crates (warnings only)
@@ -23,6 +19,8 @@ ignore = [
     "RUSTSEC-2024-0384",  # instant
     "RUSTSEC-2021-0127",  # serde_cbor
 ]
+# Severity levels are now configured via severity-threshold
+severity-threshold = "medium"
 
 [licenses]
 version = 2
@@ -43,13 +41,9 @@ deny = [
     "GPL-3.0",
     "AGPL-3.0",
 ]
-# Copyleft licenses require careful review
-copyleft = "warn"
-# Allow OSI/FSF approved licenses
-allow-osi-fsf-free = "both"
-# Default license policy (warn instead of deny for OR licenses)
-default = "warn"
 confidence-threshold = 0.8
+# Note: 'copyleft', 'allow-osi-fsf-free', and 'default' keys have been removed in newer cargo-deny versions
+# License policies are now enforced through explicit 'allow' and 'deny' lists
 
 [licenses.private]
 # Allow proprietary licenses for workspace members

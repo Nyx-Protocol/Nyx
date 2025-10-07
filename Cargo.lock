@@ -3395,6 +3395,7 @@ dependencies = [
  "priority-queue",
  "prost 0.12.6",
  "prost-types",
+ "protoc-bin-vendored",
  "rand 0.8.5",
  "redb",
  "serde",

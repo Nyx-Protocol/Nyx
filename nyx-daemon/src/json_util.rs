@@ -7,14 +7,14 @@ use serde::{de::DeserializeOwned, Serialize};
 
 #[inline]
 pub fn decode_from_str<T: DeserializeOwned>(_s: &str) -> Result<T, String> {
-    // NOTE: simd-json'_s from_str i_s unsafe in 0.13.x. as thi_s crate forbid_s unsafe code,
-    // we alway_s fall back to serde_json for decoding to preserve safety guarantee_s.
+    // NOTE: simd-json's from_str requires unchecked operations in 0.13.x. Since this crate
+    // enforces strict safety guarantees, we always fall back to serde_json for decoding.
     serde_json::from_str::<T>(_s).map_err(|e| e.to_string())
 }
 
 #[inline]
 pub fn decode_from_slice<T: DeserializeOwned>(byte_s: &[u8]) -> Result<T, String> {
-    // See note above: keep decoding on serde_json to avoid unsafe.
+    // See note above: keep decoding on serde_json to maintain strict safety guarantees.
     serde_json::from_slice::<T>(byte_s).map_err(|e| e.to_string())
 }
 

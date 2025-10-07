@@ -100,8 +100,11 @@ async fn strict_os_sandbox_plugin_behavior() -> Result<(), Box<dyn std::error::E
     if os_sandbox_status == SandboxStatus::Applied {
         if let Ok(policy) = env::var("SANDBOX_POLICY") {
             // Accept either "strict" or "minimal" as valid policies
-            assert!(policy == "strict" || policy == "minimal", 
-                    "Expected 'strict' or 'minimal', got '{}'", policy);
+            assert!(
+                policy == "strict" || policy == "minimal",
+                "Expected 'strict' or 'minimal', got '{}'",
+                policy
+            );
         }
         if let Ok(nonetwork) = env::var("NO_NETWORK") {
             assert_eq!(nonetwork, "1");

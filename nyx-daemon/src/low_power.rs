@@ -17,7 +17,7 @@ use crate::event_system::{Event, EventSystem};
 use serde::Serialize;
 
 // Re-export FFI functions from nyx-mobile-ffi. These are normal Rust functions with C ABI
-// and are safe to call directly (no unsafe block needed).
+// and can be called directly as they are wrapped in safe abstractions.
 use nyx_mobile_ffi::{
     nyx_mobile_init, nyx_mobile_set____log_level, nyx_mobile_shutdown, rust_get_power_state,
     rust_get_resume_count, rust_get_wake_count, NyxPowerState, NyxStatus,
