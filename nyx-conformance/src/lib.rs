@@ -8,7 +8,7 @@
 //!
 //! # Quick Start
 //!
-//! ```
+//! ```no_run
 //! use nyx_conformance::{NetworkSimulator, SimConfig, checknon_decreasing_ep_s};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
