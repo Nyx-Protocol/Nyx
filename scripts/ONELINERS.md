@@ -2,8 +2,15 @@
 # すべてをワンライナーで実行するコマンド集
 
 ## 🚀 超圧縮ワンライナー (フルセットアップ)
+
+### Kubernetes版 (Kind使用):
 ```bash
 curl -fsSL https://raw.githubusercontent.com/SeleniaProject/Nyx/main/scripts/ubuntu-k8s-nyx-setup.sh | bash
+```
+
+### Docker Compose版 (推奨 - cgroupエラー回避):
+```bash
+curl -fsSL https://raw.githubusercontent.com/SeleniaProject/Nyx/main/scripts/ubuntu-docker-nyx-setup.sh | bash
 ```
 
 ## 📝 完全版ワンライナー (ローカル実行用)
@@ -45,8 +52,52 @@ cd ~/NyxNet 2>/dev/null || (git clone https://github.com/SeleniaProject/Nyx.git 
 ```
 
 ## 🐳 Docker Composeベース (開発環境)
+
+### ベンチマーク環境:
 ```bash
 cd ~/NyxNet && docker-compose -f docker-compose.benchmark.yml up -d && sleep 10 && docker-compose -f docker-compose.benchmark.yml ps && docker-compose -f docker-compose.benchmark.yml logs --tail=50
+```
+
+### マルチノードテスト (cgroup問題回避):
+```bash
+cd ~/NyxNet && bash scripts/ubuntu-docker-nyx-setup.sh
+```
+
+### 手動でDocker Composeマルチノード起動:
+```bash
+cd ~/NyxNet && docker build -t nyx-daemon:latest . && \
+cat > /tmp/nyx-compose.yml <<'EOF'
+version: '3.8'
+services:
+  nyx-node-1:
+    image: nyx-daemon:latest
+    container_name: nyx-node-1
+    networks: [nyx-net]
+    environment: {NODE_ID: node-1, RUST_LOG: info}
+    ports: ["9999:9999/udp", "50051:50051"]
+  nyx-node-2:
+    image: nyx-daemon:latest
+    container_name: nyx-node-2
+    networks: [nyx-net]
+    environment: {NODE_ID: node-2, RUST_LOG: info}
+    ports: ["10000:9999/udp", "50052:50051"]
+  nyx-node-3:
+    image: nyx-daemon:latest
+    container_name: nyx-node-3
+    networks: [nyx-net]
+    environment: {NODE_ID: node-3, RUST_LOG: info}
+    ports: ["10001:9999/udp", "50053:50051"]
+  nyx-node-4:
+    image: nyx-daemon:latest
+    container_name: nyx-node-4
+    networks: [nyx-net]
+    environment: {NODE_ID: node-4, RUST_LOG: info}
+    ports: ["10002:9999/udp", "50054:50051"]
+networks:
+  nyx-net:
+    driver: bridge
+EOF
+docker-compose -f /tmp/nyx-compose.yml up -d && docker-compose -f /tmp/nyx-compose.yml ps
 ```
 
 ## 📊 ベンチマーク専用ワンライナー
