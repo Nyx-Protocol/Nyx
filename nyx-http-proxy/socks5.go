@@ -210,7 +210,9 @@ func (s *SOCKS5Server) relayBidirectional(clientConn net.Conn, streamID string, 
 			}
 
 			// Read from client with timeout
-			clientConn.SetReadDeadline(time.Now().Add(30 * time.Second))
+			if err := clientConn.SetReadDeadline(time.Now().Add(30 * time.Second)); err != nil {
+				log.Printf("Failed to set read deadline: %v", err)
+			}
 			n, err := clientConn.Read(buf)
 			if err != nil {
 				if err == io.EOF {
@@ -408,7 +410,9 @@ func (s *SOCKS5Server) handleUsernamePasswordAuth(conn net.Conn) error {
 	// In production, this should check against a secure credential store
 	// For now, we accept any non-empty username/password combination
 	if username == "" || password == "" {
-		s.sendAuthReply(conn, 0xFF) // Auth failed
+		if err := s.sendAuthReply(conn, 0xFF); err != nil { // Auth failed
+			log.Printf("Failed to send auth reply: %v", err)
+		}
 		return fmt.Errorf("empty username or password")
 	}
 
@@ -422,7 +426,10 @@ func (s *SOCKS5Server) handleUsernamePasswordAuth(conn net.Conn) error {
 	// }
 
 	// Authentication successful
-	s.sendAuthReply(conn, 0x00) // 0x00 = success
+	if err := s.sendAuthReply(conn, 0x00); err != nil { // 0x00 = success
+		log.Printf("Failed to send auth reply: %v", err)
+		return err
+	}
 	return nil
 }
 
@@ -497,7 +504,9 @@ func (s *SOCKS5Server) handleRequest(conn net.Conn) (string, error) {
 		host = net.IP(addr).String()
 
 	default:
-		s.sendReply(conn, socks5RepAddressNotSupported, nil)
+		if err := s.sendReply(conn, socks5RepAddressNotSupported, nil); err != nil {
+			log.Printf("Failed to send reply: %v", err)
+		}
 		return "", errSOCKS5AddressNotSupported
 	}
 

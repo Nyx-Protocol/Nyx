@@ -157,7 +157,9 @@ func (s *HTTPConnectServer) handleConnection(clientConn net.Conn) {
 	result, err := s.mixBridge.ProxyConnect(targetAddr, "http-connect")
 	if err != nil {
 		log.Printf("HTTP CONNECT Mix connect to %s failed: %v", targetAddr, err)
-		s.sendErrorResponse(clientConn, httpStatusBadGateway, "Target unreachable via Mix Network")
+		if err := s.sendErrorResponse(clientConn, httpStatusBadGateway, "Target unreachable via Mix Network"); err != nil {
+			log.Printf("Failed to send error response: %v", err)
+		}
 		s.stats.Errors.Add(1)
 		return
 	}

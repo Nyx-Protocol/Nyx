@@ -47,7 +47,7 @@ type ExitNode struct {
 	rateLimiter *rate.Limiter
 	blocklist   *Blocklist
 	config      ExitNodeConfig
-	_mu         sync.RWMutex // unused - kept for future synchronization needs
+	// mu sync.RWMutex // Reserved for future synchronization needs
 }
 
 // NewExitNode creates a new exit node with the given configuration
@@ -217,7 +217,7 @@ type DNSResolver struct {
 	dohEnabled bool
 	dohServers []string
 	httpClient *http.Client
-	_mu        sync.RWMutex // unused - kept for future synchronization needs
+	// mu sync.RWMutex // Reserved for future synchronization needs
 }
 
 // NewDNSResolver creates a new DNS resolver

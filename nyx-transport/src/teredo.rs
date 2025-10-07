@@ -11,6 +11,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use std::collections::HashMap;
 use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
+#[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
 use std::process::Command;
 use std::sync::Arc;
 use std::time::Instant;

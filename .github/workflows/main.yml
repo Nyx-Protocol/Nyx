@@ -110,7 +110,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcap-dev pkg-config protobuf-compiler
+          sudo apt-get install -y libcap-dev pkg-config protobuf-compiler libprotobuf-dev
       
       - name: Check workspace (default features)
         run: cargo check --workspace --locked

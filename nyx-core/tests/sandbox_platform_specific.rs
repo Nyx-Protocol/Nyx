@@ -8,7 +8,6 @@ mod unix_tests {
     use nyx_core::sandbox::{apply_policy, SandboxPolicy, SandboxStatus};
     use std::env;
     use std::fs;
-    use std::path::PathBuf;
     use std::process;
     use tempfile::tempdir;
 

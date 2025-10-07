@@ -228,8 +228,6 @@ layout: two-cols
 
 <div class="subtitle mb-4">Pure Rust製の次世代匿名通信ネットワークスタック</div>
 
-## 🔐 核心技術
-
 <v-clicks>
 
 <div class="feature-box mb-4">
@@ -525,7 +523,6 @@ layout: two-cols
 ---
 
 # <span class="text-gradient">工夫した点 ①</span>
-## 🔐 ハイブリッド量子耐性暗号
 
 <v-clicks>
 
@@ -709,7 +706,6 @@ layout: default
 ---
 
 # <span class="text-gradient">工夫した点 ②</span>
-## 🧅 Sphinxオニオンルーティング
 
 <div class="grid grid-cols-2 gap-3 mt-2">
 
@@ -805,25 +801,25 @@ sequenceDiagram
 <style>
 .protocol-section, .impl-section {
   background: rgba(96, 165, 250, 0.08);
-  padding: 1rem;
-  border-radius: 12px;
+  padding: 0.5rem;
+  border-radius: 10px;
   border: 1px solid rgba(96, 165, 250, 0.2);
 }
 
 .protocol-header, .impl-header, .flow-title, .packet-title {
-  font-size: 1rem;
-  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
   display: flex;
   align-items: center;
 }
 
 .protocol-item, .impl-item {
-  font-size: 0.85rem;
-  padding: 0.5rem;
-  margin: 0.4rem 0;
+  font-size: 0.7rem;
+  padding: 0.3rem;
+  margin: 0.25rem 0;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  line-height: 1.5;
+  border-radius: 5px;
+  line-height: 1.3;
 }
 
 .perf-box-sphinx {
@@ -869,7 +865,6 @@ layout: default
 ---
 
 # <span class="text-gradient">工夫した点 ③</span>
-## 🛰️ マルチパスQUICトランスポート
 
 <div class="grid grid-cols-2 gap-3 mt-2">
 
@@ -935,8 +930,8 @@ $$weight_i = \frac{1}{RTT_i}$$
   <strong>マルチパス動作</strong>
 </div>
 
-```mermaid {scale: 0.28}
-graph LR
+```mermaid {scale: 0.38, theme: 'dark'}
+graph TB
     subgraph "Client"
         APP[📱 Application]
         MPM[🔀 Multipath<br/>Manager]
@@ -1082,7 +1077,6 @@ layout: default
 ---
 
 # <span class="text-gradient">Performance Comparison</span>
-## 📊 NyxNet vs Tor
 
 <div class="grid grid-cols-2 gap-3 mt-2">
 
@@ -1230,8 +1224,8 @@ layout: default
 <style>
 .perf-section, .throughput-section {
   background: rgba(96, 165, 250, 0.08);
-  padding: 0.5rem;
-  border-radius: 10px;
+  padding: 0.4rem;
+  border-radius: 8px;
   border: 1px solid rgba(96, 165, 250, 0.25);
 }
 
@@ -1413,7 +1407,6 @@ layout: default
 ---
 
 # <span class="text-gradient">Technology Stack</span>
-## ☁️ 技術スタックと品質保証
 
 <div class="grid grid-cols-2 gap-3 mt-2">
 
@@ -1690,7 +1683,6 @@ layout: default
 ---
 
 # <span class="text-gradient">実装完成度</span>
-## ✅ Production Ready
 
 <div class="grid grid-cols-2 gap-3 mt-2">
 
@@ -1855,7 +1847,6 @@ image: https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800
 ---
 
 # <span class="text-gradient">Use Cases</span>
-## 🎯 誰がどう使うか
 
 <div class="mt-4">
 
@@ -1996,7 +1987,6 @@ layout: default
 ---
 
 # <span class="text-gradient">競合比較</span>
-## 📊 NyxNet vs 他の匿名化技術
 
 <div class="comparison-table-modern mt-4">
   <div class="table-header-row">
