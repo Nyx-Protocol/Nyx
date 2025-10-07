@@ -599,15 +599,27 @@ test_throughput() {
             local dst_pod="test-pod-$((j + 1))"
             local dst_hostport=$((5201 + j))
             
-            # 宛先クラスターのWorkerノードIPを取得（hostPortを使用）
-            local dst_worker=$(docker ps --filter "name=${dst_cluster}-worker" --format "{{.Names}}" | head -n 1)
-            local dst_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${dst_worker}" 2>/dev/null || echo "")
+            # 宛先Podがスケジュールされているノードを特定
+            kubectl config use-context "kind-${dst_cluster}" > /dev/null
+            local dst_node=$(kubectl get pod "${dst_pod}" -n "${TEST_NAMESPACE}" -o jsonpath='{.spec.nodeName}' 2>/dev/null || echo "")
+            kubectl config use-context "kind-${src_cluster}" > /dev/null
             
-            if [ -z "$dst_ip" ]; then
-                log_warning "Could not resolve Worker IP for ${dst_cluster}"
+            if [ -z "$dst_node" ]; then
+                log_warning "Could not determine node for Pod ${dst_pod} in ${dst_cluster}"
                 FAILED_TESTS=$((FAILED_TESTS + 1))
                 TOTAL_TESTS=$((TOTAL_TESTS + 1))
-                TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|Worker IP resolution failed")
+                TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|Node detection failed")
+                continue
+            fi
+            
+            # ノードのDocker IPアドレスを取得
+            local dst_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${dst_node}" 2>/dev/null || echo "")
+            
+            if [ -z "$dst_ip" ]; then
+                log_warning "Could not resolve IP for node ${dst_node} in ${dst_cluster}"
+                FAILED_TESTS=$((FAILED_TESTS + 1))
+                TOTAL_TESTS=$((TOTAL_TESTS + 1))
+                TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|Node IP resolution failed")
                 continue
             fi
             
