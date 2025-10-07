@@ -9,6 +9,11 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 # ログシステム読み込み
 source "${SCRIPT_DIR}/k8s-test-logger.sh"
 
+# バージョン情報
+KUBECTL_VERSION="v1.28.0"
+KIND_VERSION="v0.20.0"
+DOCKER_COMPOSE_VERSION="v2.23.0"
+
 # グローバル変数
 CLUSTERS=("nyx-cluster-1" "nyx-cluster-2" "nyx-cluster-3")
 TEST_NAMESPACE="nyx-test"
@@ -35,6 +40,164 @@ cleanup() {
 
 # シグナルハンドラー
 trap cleanup EXIT INT TERM
+
+# 依存関係チェック関数
+check_command() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Dockerインストール
+install_docker() {
+    log_section "Installing Docker"
+    
+    if check_command docker; then
+        log_info "Docker is already installed: $(docker --version)"
+        
+        # Dockerが起動しているか確認
+        if ! docker info >/dev/null 2>&1; then
+            log_warning "Docker daemon is not running. Starting..."
+            sudo systemctl start docker 2>/dev/null || sudo service docker start 2>/dev/null || true
+            sleep 5
+        fi
+        
+        # ユーザーがdockerグループに所属しているか確認
+        if ! groups | grep -q docker; then
+            log_warning "Adding current user to docker group..."
+            sudo usermod -aG docker "$USER"
+            log_warning "You may need to log out and back in for this to take effect"
+            log_info "Attempting to use sudo for docker commands in this session..."
+        fi
+        
+        return 0
+    fi
+    
+    log_info "Docker not found. Installing..."
+    
+    # 古いバージョンを削除
+    sudo apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
+    
+    # 依存関係インストール
+    sudo apt-get update
+    sudo apt-get install -y \
+        ca-certificates \
+        curl \
+        gnupg \
+        lsb-release
+    
+    # Docker GPGキー追加
+    sudo install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    
+    # Dockerリポジトリ追加
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    
+    # Dockerインストール
+    sudo apt-get update
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    
+    # Docker起動
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    
+    # 現在のユーザーをdockerグループに追加
+    sudo usermod -aG docker "$USER"
+    
+    log_success "Docker installed successfully: $(docker --version)"
+    log_warning "You may need to log out and back in for docker group changes to take effect"
+}
+
+# kubectlインストール
+install_kubectl() {
+    log_section "Installing kubectl"
+    
+    if check_command kubectl; then
+        log_info "kubectl is already installed: $(kubectl version --client --short 2>/dev/null || kubectl version --client)"
+        return 0
+    fi
+    
+    log_info "kubectl not found. Installing..."
+    
+    curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+    curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl.sha256"
+    
+    echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+    
+    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    rm kubectl kubectl.sha256
+    
+    log_success "kubectl installed successfully: $(kubectl version --client --short 2>/dev/null || kubectl version --client)"
+}
+
+# kindインストール
+install_kind() {
+    log_section "Installing kind"
+    
+    if check_command kind; then
+        log_info "kind is already installed: $(kind version)"
+        return 0
+    fi
+    
+    log_info "kind not found. Installing..."
+    
+    curl -Lo ./kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+    chmod +x ./kind
+    sudo mv ./kind /usr/local/bin/kind
+    
+    log_success "kind installed successfully: $(kind version)"
+}
+
+# 必要なツールをインストール
+install_dependencies() {
+    log_header "CHECKING AND INSTALLING DEPENDENCIES"
+    
+    # 基本ツールのインストール
+    log_section "Installing basic tools"
+    sudo apt-get update -qq
+    sudo apt-get install -y curl wget git jq bc >/dev/null 2>&1
+    log_success "Basic tools installed"
+    
+    # Docker
+    install_docker
+    
+    # kubectl
+    install_kubectl
+    
+    # kind
+    install_kind
+    
+    log_success "All dependencies are ready!"
+    echo ""
+}
+
+# システムチェック
+check_system() {
+    log_section "System Requirements Check"
+    
+    # メモリチェック
+    local total_mem=$(free -g | awk '/^Mem:/{print $2}')
+    if [ "$total_mem" -lt 4 ]; then
+        log_warning "Low memory detected: ${total_mem}GB (recommended: 8GB+)"
+    else
+        log_success "Memory: ${total_mem}GB"
+    fi
+    
+    # ディスクスペースチェック
+    local free_space=$(df -BG / | awk 'NR==2 {print $4}' | sed 's/G//')
+    if [ "$free_space" -lt 10 ]; then
+        log_warning "Low disk space: ${free_space}GB (recommended: 20GB+)"
+    else
+        log_success "Disk space: ${free_space}GB available"
+    fi
+    
+    # CPUコア数チェック
+    local cpu_cores=$(nproc)
+    log_success "CPU cores: ${cpu_cores}"
+    
+    echo ""
+}
 
 # Kindクラスター作成
 create_clusters() {
@@ -561,6 +724,12 @@ main() {
     show_banner
     
     log_header "NYX MULTI-CLUSTER KUBERNETES TEST"
+    
+    # システムチェック
+    check_system
+    
+    # 依存関係インストール
+    install_dependencies
     
     # クラスター作成
     create_clusters

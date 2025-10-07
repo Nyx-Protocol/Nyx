@@ -4,62 +4,100 @@
 
 このフレームワークは、1つのサーバー内で複数のKubernetesクラスター(Kind)を立ち上げ、クラスター間の相互通信をテストするための統合テストシステムです。
 
+**素のUbuntuで実行可能！** 必要な依存関係を全て自動インストールします。
+
 ## ✨ 特徴
 
-- 🎯 **複数クラスター自動セットアップ**: 3つの独立したKindクラスターを自動構築
-- 🌈 **かっこいいログ出力**: カラフルな絵文字とプログレスバー付きの視覚的なログ
+- 🎯 **完全自動セットアップ**: Docker、kubectl、kindを自動インストール
+- 🔧 **ゼロコンフィグ**: 素のUbuntuで即実行可能
 - ⚡ **高速テスト実行**: 並列処理による効率的なテスト実行
 - 📊 **詳細なレポート**: JSON/HTML形式での美麗なテスト結果出力
 - 🔗 **クラスター間通信テスト**: Pod間、DNS、ネットワーク接続の包括的なテスト
+- 🧹 **自動クリーンアップ**: テスト終了後に全リソースを自動削除
 
 ## 📋 前提条件
 
-以下のツールがインストールされている必要があります:
+**必要なのはUbuntu/Debianだけ！**
 
-- Docker
-- kubectl
-- kind (Kubernetes in Docker)
-- bash
+- Ubuntu 20.04 LTS以降 (または Debian系Linux)
+- 最低4GB RAM (推奨: 8GB以上)
+- 最低10GB空きディスク容量 (推奨: 20GB以上)
+- インターネット接続 (初回のみ)
 
-### インストール方法
-
-```bash
-# Docker (Windows)
-winget install Docker.DockerDesktop
-
-# kubectl
-curl.exe -LO "https://dl.k8s.io/release/v1.28.0/bin/windows/amd64/kubectl.exe"
-
-# kind
-curl.exe -Lo kind-windows-amd64.exe https://kind.sigs.k8s.io/dl/v0.20.0/kind-windows-amd64
-Move-Item .\kind-windows-amd64.exe c:\some-dir-in-your-PATH\kind.exe
-```
+その他の依存関係は**全て自動でインストール**されます！
 
 ## 🎯 クイックスタート
 
-### 1. テストの実行
+### 素のUbuntuでワンコマンド実行
 
 ```bash
-# WSL/Git Bash環境で実行
-cd /c/Users/Aqua/Programming/SeleniaProject/NyxNet
-bash scripts/k8s-multi-cluster-test.sh
+# リポジトリをクローン（まだの場合）
+git clone https://github.com/SeleniaProject/Nyx.git
+cd Nyx
+
+# これだけで全てOK！
+bash setup-and-test.sh
 ```
 
-### 2. 何が起きるか
+**たったこれだけです！** スクリプトが以下を全て自動で行います：
 
-1. **クラスター作成** - 3つのKindクラスターを並列に作成
-2. **環境準備** - 各クラスターにテスト用の名前空間とリソースを作成
-3. **Pod展開** - ネットワークテスト用のPodを各クラスターに展開
-4. **テスト実行**:
+1. ✅ システム要件チェック
+2. ✅ Docker自動インストール
+3. ✅ kubectl自動インストール  
+4. ✅ kind自動インストール
+5. ✅ クラスター作成
+6. ✅ テスト実行
+7. ✅ レポート生成
+8. ✅ クリーンアップ
+
+### 実行例
+
+```bash
+ubuntu@server:~$ cd Nyx
+ubuntu@server:~/Nyx$ bash setup-and-test.sh
+
+════════════════════════════════════════════════════════════════════
+    🚀 NYX MULTI-CLUSTER TEST - AUTO SETUP 🚀
+════════════════════════════════════════════════════════════════════
+
+✅  Detected OS: Ubuntu 22.04.3 LTS
+✅  Memory: 8GB
+✅  Disk space: 45GB available
+✅  CPU cores: 4
+
+📦  Installing Docker...
+📦  Installing kubectl...
+📦  Installing kind...
+🚀  Creating cluster: nyx-cluster-1...
+🚀  Creating cluster: nyx-cluster-2...
+🚀  Creating cluster: nyx-cluster-3...
+✅  All clusters ready!
+
+🧪  Running tests...
+✅  12/12 tests passed
+
+📊  Report saved to: test-results/test-results-20251007-120000.html
+```
+
+### 何が起きるか
+
+1. **システムチェック** - メモリ、ディスク、CPUを確認
+2. **依存関係インストール** - Docker、kubectl、kindを自動インストール
+3. **クラスター作成** - 3つのKindクラスターを並列に作成
+4. **環境準備** - 各クラスターにテスト用の名前空間とリソースを作成
+5. **Pod展開** - ネットワークテスト用のPodを各クラスターに展開
+6. **テスト実行**:
    - Pod健全性チェック
    - DNS解決テスト
    - クラスター間ネットワーク接続テスト
-5. **結果出力** - JSON/HTML形式でテスト結果を保存
+7. **結果出力** - JSON/HTML形式でテスト結果を保存
+8. **自動クリーンアップ** - 全クラスターを削除
 
 ## 📁 ファイル構成
 
 ```
-NyxNet/
+Nyx/
+├── setup-and-test.sh                 # 🚀 メインエントリーポイント（これを実行）
 ├── k8s-multi-cluster-config-1.yaml   # Cluster 1設定
 ├── k8s-multi-cluster-config-2.yaml   # Cluster 2設定
 ├── k8s-multi-cluster-config-3.yaml   # Cluster 3設定
@@ -180,25 +218,40 @@ kind delete clusters --all
 
 ## 📝 トラブルシューティング
 
-### エラー: "kind not found"
+### 依存関係のインストールに失敗
+
+スクリプトは自動でインストールしますが、失敗する場合：
 
 ```bash
-# kindをインストール
-curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
-chmod +x ./kind
-sudo mv ./kind /usr/local/bin/kind
+# システムパッケージを更新
+sudo apt-get update
+sudo apt-get upgrade
+
+# 再度実行
+bash setup-and-test.sh
 ```
 
-### エラー: "Docker daemon not running"
+### Docker権限エラー
 
 ```bash
-# Dockerを起動
-sudo systemctl start docker
+# dockerグループに追加後、ログアウト/ログインが必要な場合があります
+sudo usermod -aG docker $USER
+# ログアウトして再ログイン、または
+newgrp docker
 ```
 
 ### ポート競合
 
 他のサービスがポート6443-6445を使用している場合、設定ファイルのapiServerPortを変更してください。
+
+### メモリ不足
+
+最低4GB必要ですが、8GB以上推奨です。クラスター数を減らすことで対応可能：
+
+```bash
+# scripts/k8s-multi-cluster-test.sh を編集
+CLUSTERS=("nyx-cluster-1" "nyx-cluster-2")  # 3→2に減らす
+```
 
 ## 🚀 パフォーマンス
 
