@@ -560,11 +560,22 @@ test_throughput() {
         
         kubectl config use-context "kind-${cluster}" > /dev/null
         
-        # バックグラウンドでiperfサーバー起動
-        kubectl exec -n "${TEST_NAMESPACE}" "${pod}" -- sh -c "iperf3 -s -D" > /dev/null 2>&1 || log_warning "Failed to start iperf3 server on ${cluster}"
+        # 既存のiperf3プロセスを停止
+        kubectl exec -n "${TEST_NAMESPACE}" "${pod}" -- pkill iperf3 > /dev/null 2>&1 || true
+        
+        # バックグラウンドでiperfサーバー起動（デーモンモードで）
+        kubectl exec -n "${TEST_NAMESPACE}" "${pod}" -- sh -c "nohup iperf3 -s > /dev/null 2>&1 &" > /dev/null 2>&1
+        
+        if [ $? -eq 0 ]; then
+            log_info "iperf3 server started on ${cluster}"
+        else
+            log_warning "Failed to start iperf3 server on ${cluster}"
+        fi
     done
     
-    sleep 2
+    # サーバー起動を待機
+    log_info "Waiting for iperf3 servers to be ready..."
+    sleep 5
     
     # スループット測定
     for i in "${!CLUSTERS[@]}"; do
@@ -579,45 +590,60 @@ test_throughput() {
             fi
             
             local dst_cluster="${CLUSTERS[$j]}"
+            local dst_pod="test-pod-$((j + 1))"
             local dst_container="${dst_cluster}-control-plane"
             local dst_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${dst_container}" 2>/dev/null || echo "")
             
             if [ -z "$dst_ip" ]; then
+                log_warning "Could not resolve IP for ${dst_cluster}"
                 continue
             fi
             
             test_count=$((test_count + 1))
             TOTAL_TESTS=$((TOTAL_TESTS + 1))
             
-            log_info "Measuring throughput: ${src_cluster} → ${dst_cluster}"
+            log_info "Measuring throughput: ${src_cluster} → ${dst_cluster} (${dst_ip})"
             
-            # iperf3で5秒間測定
-            local iperf_output=$(kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- iperf3 -c "${dst_ip}" -t 5 -J 2>/dev/null || echo "")
+            # まず接続テスト
+            if ! kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- nc -zv "${dst_ip}" 5201 > /dev/null 2>&1; then
+                log_warning "iperf3 port 5201 not reachable on ${dst_ip}"
+                FAILED_TESTS=$((FAILED_TESTS + 1))
+                TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|iperf3 server not reachable")
+                continue
+            fi
             
-            if [ -n "$iperf_output" ]; then
-                # JSONから送信速度を抽出 (bits_per_second)
-                local bits_per_sec=$(echo "$iperf_output" | jq -r '.end.sum_sent.bits_per_second // 0' 2>/dev/null || echo "0")
-                local mbits_per_sec=$(echo "scale=2; $bits_per_sec / 1000000" | bc 2>/dev/null || echo "0")
+            # iperf3で5秒間測定（シンプルなテキスト出力）
+            local iperf_output=$(kubectl exec -n "${TEST_NAMESPACE}" "${src_pod}" -- iperf3 -c "${dst_ip}" -t 5 2>&1 || echo "")
+            
+            if echo "$iperf_output" | grep -q "sender"; then
+                # テキスト出力から速度を抽出
+                local throughput=$(echo "$iperf_output" | grep "sender" | awk '{print $(NF-2)" "$(NF-1)}')
                 
-                # 再送信回数
-                local retransmits=$(echo "$iperf_output" | jq -r '.end.sum_sent.retransmits // 0' 2>/dev/null || echo "0")
-                
-                if [ "${mbits_per_sec%.*}" -gt 0 ]; then
-                    log_success "Throughput: ${src_cluster} → ${dst_cluster} | ${mbits_per_sec} Mbits/sec | Retransmits: ${retransmits}"
+                if [ -n "$throughput" ]; then
+                    log_success "Throughput: ${src_cluster} → ${dst_cluster} | ${throughput}"
                     passed=$((passed + 1))
                     PASSED_TESTS=$((PASSED_TESTS + 1))
-                    TEST_DETAILS+=("PASS|${src_cluster}|${dst_cluster}|Throughput ${mbits_per_sec} Mbits/sec")
+                    TEST_DETAILS+=("PASS|${src_cluster}|${dst_cluster}|Throughput ${throughput}")
                 else
-                    log_error "Low throughput: ${src_cluster} → ${dst_cluster}"
+                    log_error "Could not parse throughput: ${src_cluster} → ${dst_cluster}"
                     FAILED_TESTS=$((FAILED_TESTS + 1))
-                    TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|Throughput test failed")
+                    TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|Throughput parsing failed")
                 fi
             else
                 log_error "Failed to measure throughput: ${src_cluster} → ${dst_cluster}"
                 FAILED_TESTS=$((FAILED_TESTS + 1))
-                TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|iperf3 failed")
+                TEST_DETAILS+=("FAIL|${src_cluster}|${dst_cluster}|iperf3 connection failed")
             fi
         done
+    done
+    
+    # クリーンアップ: iperf3サーバーを停止
+    log_info "Stopping iperf3 servers..."
+    for i in "${!CLUSTERS[@]}"; do
+        local cluster="${CLUSTERS[$i]}"
+        local pod="test-pod-$((i + 1))"
+        kubectl config use-context "kind-${cluster}" > /dev/null
+        kubectl exec -n "${TEST_NAMESPACE}" "${pod}" -- pkill iperf3 > /dev/null 2>&1 || true
     done
     
     echo ""

@@ -28,8 +28,8 @@
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/SeleniaProject/Nyx.git
-cd Nyx
+git clone https://github.com/Aqua-218/NyxNet.git
+cd NyxNet
 
 # テスト実行
 bash setup-and-test.sh
@@ -197,11 +197,11 @@ kind delete clusters --all
 ```bash
 # 1. プロジェクトディレクトリを完全に削除
 cd ~
-rm -rf Nyx
+rm -rf NyxNet
 
 # 2. 再度クローンしてやり直す
-git clone https://github.com/SeleniaProject/Nyx.git
-cd Nyx
+git clone https://github.com/Aqua-218/NyxNet.git
+cd NyxNet
 bash setup-and-test.sh
 ```
 
@@ -219,11 +219,11 @@ sudo reboot
 
 # 2. 再起動後、プロジェクトディレクトリを削除
 cd ~
-rm -rf Nyx
+rm -rf NyxNet
 
 # 3. 再度クローンして実行
-git clone https://github.com/SeleniaProject/Nyx.git
-cd Nyx
+git clone https://github.com/Aqua-218/NyxNet.git
+cd NyxNet
 bash setup-and-test.sh
 ```
 
@@ -240,9 +240,9 @@ sudo apt-get upgrade
 
 # プロジェクトを削除して再クローン
 cd ~
-rm -rf Nyx
-git clone https://github.com/SeleniaProject/Nyx.git
-cd Nyx
+rm -rf NyxNet
+git clone https://github.com/Aqua-218/NyxNet.git
+cd NyxNet
 bash setup-and-test.sh
 ```
 
