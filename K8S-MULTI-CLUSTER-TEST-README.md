@@ -19,8 +19,17 @@
 - 最低4GB RAM (推奨: 8GB以上)
 - 最低10GB空きディスク容量 (推奨: 20GB以上)
 - インターネット接続 (初回のみ)
+- **ネストされた仮想化のサポート** (仮想マシン上で実行する場合)
 
 その他の依存関係(Docker、kubectl、kind等)は全て自動でインストールされます。
+
+### 動作確認済み環境
+
+- ✅ **Contabo VPS** (KVM, ネスト仮想化有効)
+- ✅ **物理サーバー** (直接実行)
+- ✅ **AWS EC2** (metal/bare metalインスタンス)
+- ⚠️ **Proxmox VM** (デフォルト設定では動作しない - 下記参照)
+- ⚠️ **VirtualBox/VMware** (追加設定が必要)
 
 ## クイックスタート
 
@@ -282,6 +291,74 @@ echo "fs.inotify.max_user_watches=524288" | sudo tee -a /etc/sysctl.conf
 echo "fs.inotify.max_user_instances=512" | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
 ```
+
+#### "Invalid ELF header magic" エラー (Proxmox/仮想化環境)
+
+**症状:** クラスター作成時に「Invalid ELF header magic: != JELF」エラーが発生
+
+**原因:** ネストされた仮想化が無効になっているため、Kind(Kubernetes in Docker)が正常に動作しません。
+
+**確認方法:**
+
+```bash
+# 仮想化サポートを確認
+egrep -c '(vmx|svm)' /proc/cpuinfo
+# 結果が 0 の場合、仮想化機能が利用できません
+
+# CPUフラグを確認
+lscpu | grep Virtualization
+```
+
+**Proxmox環境での解決方法:**
+
+1. **Proxmox Web UIでVMの設定を変更:**
+   - VM → Hardware → Processors
+   - **CPU type**: `kvm64` または `x86-64-v2-AES` から `host` に変更
+   - これによりホストのCPU機能がゲストに渡されます
+
+2. **Proxmoxホスト側でネストされた仮想化を有効化:**
+
+   ```bash
+   # Proxmoxホストにログイン (VMではなくホスト側)
+   
+   # AMD CPUの場合
+   cat /sys/module/kvm_amd/parameters/nested
+   # Intel CPUの場合
+   cat /sys/module/kvm_intel/parameters/nested
+   
+   # Y なら既に有効、N なら以下を実行
+   
+   # AMD CPUの場合
+   echo "options kvm_amd nested=1" > /etc/modprobe.d/kvm-amd.conf
+   modprobe -r kvm_amd
+   modprobe kvm_amd
+   
+   # Intel CPUの場合
+   echo "options kvm_intel nested=1" > /etc/modprobe.d/kvm-intel.conf
+   modprobe -r kvm_intel
+   modprobe kvm_intel
+   ```
+
+3. **VMを再起動:**
+   ```bash
+   # VM内で
+   sudo reboot
+   ```
+
+4. **再度テスト実行:**
+   ```bash
+   cd ~/NyxNet
+   bash setup-and-test.sh
+   ```
+
+**VirtualBox/VMware環境での解決方法:**
+
+- **VirtualBox**: Settings → System → Processor → Enable "Enable Nested VT-x/AMD-V"
+- **VMware**: VM Settings → Processors → Virtualization Engine → "Virtualize Intel VT-x/EPT or AMD-V/RVI"
+
+**それでも解決しない場合:**
+
+物理サーバーまたはContabo/AWS等のネスト仮想化対応VPSでの実行を推奨します。
 
 ## パフォーマンス目安
 
