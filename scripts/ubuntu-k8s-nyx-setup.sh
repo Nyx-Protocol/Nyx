@@ -116,17 +116,31 @@ log_info "Building Nyx Docker image..."
 sudo docker build -t nyx-daemon:latest .
 log_success "Docker image built"
 
-# Kindクラスタの作成
+# 既存のKindクラスタをクリーンアップ
+log_info "Cleaning up any existing Kind clusters..."
+kind get clusters 2>/dev/null | grep "nyx-cluster" | xargs -r -I {} kind delete cluster --name {} 2>/dev/null || true
+
+# Kindクラスタの作成（ポート競合を避けるためシンプルな設定）
 NUM_CLUSTERS=2
 log_info "Creating $NUM_CLUSTERS Kind clusters..."
 for i in $(seq 1 $NUM_CLUSTERS); do
     CLUSTER_NAME="nyx-cluster-$i"
-    if kind get clusters | grep -q "^${CLUSTER_NAME}$"; then
-        log_warn "Cluster $CLUSTER_NAME already exists, deleting..."
-        kind delete cluster --name "$CLUSTER_NAME"
-    fi
     log_info "Creating cluster: $CLUSTER_NAME"
-    kind create cluster --config kind-config.yaml --name "$CLUSTER_NAME" --wait 60s
+    
+    # ポート競合を避けるため、デフォルトのkind設定を使用（ポートマッピングなし）
+    cat > /tmp/kind-config-${i}.yaml <<EOF
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: ${CLUSTER_NAME}
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker
+  - role: worker
+EOF
+    
+    kind create cluster --config /tmp/kind-config-${i}.yaml --name "$CLUSTER_NAME" --wait 60s
+    rm -f /tmp/kind-config-${i}.yaml
     log_success "Cluster $CLUSTER_NAME created"
 done
 
