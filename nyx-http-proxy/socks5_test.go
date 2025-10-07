@@ -313,7 +313,7 @@ func BenchmarkSOCKS5Auth(b *testing.B) {
 		conn := &mockConn{
 			readBuf: []byte{0x05, 0x01, 0x00},
 		}
-		server.handleAuth(conn)
+		_ = server.handleAuth(conn)
 	}
 }
 
@@ -333,6 +333,6 @@ func BenchmarkSOCKS5Request_IPv4(b *testing.B) {
 		conn := &mockConn{
 			readBuf: requestBuf,
 		}
-		server.handleRequest(conn)
+		_, _ = server.handleRequest(conn)
 	}
 }

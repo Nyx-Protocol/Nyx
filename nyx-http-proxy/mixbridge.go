@@ -354,7 +354,9 @@ func (mbc *MixBridgeClient) sendRequest(request JsonRpcRequest) (*JsonRpcRespons
 	}
 
 	// Read response (newline-delimited) with timeout
-	mbc.conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+	if err := mbc.conn.SetReadDeadline(time.Now().Add(30 * time.Second)); err != nil {
+		log.Printf("Failed to set read deadline: %v", err)
+	}
 	responseJSON, err := mbc.reader.ReadBytes('\n')
 	if err != nil {
 		// Connection error - mark as disconnected

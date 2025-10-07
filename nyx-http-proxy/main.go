@@ -48,10 +48,10 @@ const (
 	ipcSocketUnix    = "/tmp/nyx-mix.sock"
 	ipcSocketWindows = `\\.\pipe\nyx-mix`
 
-	// Timeouts
-	readTimeout  = 30 * time.Second
-	writeTimeout = 30 * time.Second
-	idleTimeout  = 60 * time.Second
+	// Timeouts (unused - kept for documentation)
+	// readTimeout  = 30 * time.Second
+	// writeTimeout = 30 * time.Second
+	// idleTimeout  = 60 * time.Second
 )
 
 // ProxyServer handles both SOCKS5 and HTTP CONNECT
@@ -219,7 +219,9 @@ func (ps *ProxyServer) startHealthServer(ctx context.Context) {
 			metrics["mix_bridge_enabled"] = true
 		}
 
-		json.NewEncoder(w).Encode(metrics)
+		if err := json.NewEncoder(w).Encode(metrics); err != nil {
+			log.Printf("Failed to encode metrics: %v", err)
+		}
 	})
 
 	// Create HTTP server

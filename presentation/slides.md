@@ -1226,8 +1226,8 @@ layout: default
 <style>
 .perf-section, .throughput-section {
   background: rgba(96, 165, 250, 0.08);
-  padding: 1.25rem;
-  border-radius: 14px;
+  padding: 0.8rem;
+  border-radius: 12px;
   border: 1px solid rgba(96, 165, 250, 0.25);
 }
 
@@ -1252,9 +1252,9 @@ layout: default
 .table-row {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr 0.8fr;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.85rem;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.75rem;
 }
 
 .throughput-table .table-row {
@@ -1294,8 +1294,8 @@ layout: default
 
 .visual-comparison {
   background: rgba(0, 0, 0, 0.2);
-  padding: 1rem;
-  border-radius: 10px;
+  padding: 0.6rem;
+  border-radius: 8px;
 }
 
 .compare-bar {
@@ -1328,9 +1328,9 @@ layout: default
 .method-box {
   background: rgba(251, 191, 36, 0.1);
   border: 1px solid rgba(251, 191, 36, 0.3);
-  padding: 0.75rem;
+  padding: 0.5rem;
   border-radius: 8px;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
 }
 
 .method-list {
@@ -1342,42 +1342,42 @@ layout: default
 
 .reason-box {
   background: rgba(0, 0, 0, 0.2);
-  padding: 1rem;
-  border-radius: 10px;
+  padding: 0.6rem;
+  border-radius: 8px;
 }
 
 .reason-title {
-  font-size: 0.95rem;
-  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
   display: flex;
   align-items: center;
 }
 
 .reason-item {
   display: flex;
-  gap: 0.75rem;
-  margin: 0.5rem 0;
-  padding: 0.5rem;
+  gap: 0.5rem;
+  margin: 0.3rem 0;
+  padding: 0.35rem;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .reason-number {
   flex-shrink: 0;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.5rem;
+  height: 1.5rem;
   background: linear-gradient(135deg, #60a5fa, #a78bfa);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
 }
 
 .reason-content {
   flex: 1;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
 }
 
 .reason-content strong {
@@ -1387,8 +1387,9 @@ layout: default
 }
 
 .reason-detail {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   opacity: 0.85;
+  line-height: 1.3;
 }
 
 .disclaimer {

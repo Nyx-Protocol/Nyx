@@ -115,13 +115,17 @@ func (s *HTTPConnectServer) handleConnection(clientConn net.Conn) {
 	defer s.stats.ActiveConnections.Add(-1)
 
 	// Set read timeout for header parsing
-	clientConn.SetReadDeadline(time.Now().Add(connectTimeout))
+	if err := clientConn.SetReadDeadline(time.Now().Add(connectTimeout)); err != nil {
+		log.Printf("HTTP CONNECT set read deadline error: %v", err)
+	}
 
 	// Parse CONNECT request
 	targetAddr, authHeader, err := s.parseConnectRequest(clientConn)
 	if err != nil {
 		log.Printf("HTTP CONNECT parse error: %v", err)
-		s.sendErrorResponse(clientConn, httpStatusBadRequest, err.Error())
+		if err := s.sendErrorResponse(clientConn, httpStatusBadRequest, err.Error()); err != nil {
+			log.Printf("HTTP CONNECT send error response failed: %v", err)
+		}
 		s.stats.Errors.Add(1)
 		return
 	}
@@ -130,7 +134,9 @@ func (s *HTTPConnectServer) handleConnection(clientConn net.Conn) {
 	if s.authUser != "" {
 		if err := s.authenticate(authHeader); err != nil {
 			log.Printf("HTTP CONNECT auth failed: %v", err)
-			s.sendErrorResponse(clientConn, httpStatusProxyAuthRequired, "Proxy authentication required")
+			if err := s.sendErrorResponse(clientConn, httpStatusProxyAuthRequired, "Proxy authentication required"); err != nil {
+				log.Printf("HTTP CONNECT send error response failed: %v", err)
+			}
 			s.stats.Errors.Add(1)
 			return
 		}
@@ -139,7 +145,9 @@ func (s *HTTPConnectServer) handleConnection(clientConn net.Conn) {
 	// Validate target host
 	if err := validateHost(targetAddr); err != nil {
 		log.Printf("HTTP CONNECT invalid host %s: %v", targetAddr, err)
-		s.sendErrorResponse(clientConn, httpStatusBadRequest, "Invalid host")
+		if err := s.sendErrorResponse(clientConn, httpStatusBadRequest, "Invalid host"); err != nil {
+			log.Printf("HTTP CONNECT send error response failed: %v", err)
+		}
 		s.stats.Errors.Add(1)
 		return
 	}
@@ -166,7 +174,9 @@ func (s *HTTPConnectServer) handleConnection(clientConn net.Conn) {
 	log.Printf("HTTP CONNECT Mix tunnel established to %s (StreamID: %s)", targetAddr, result.StreamID)
 
 	// Remove read deadline for tunneling phase
-	clientConn.SetReadDeadline(time.Time{})
+	if err := clientConn.SetReadDeadline(time.Time{}); err != nil {
+		log.Printf("HTTP CONNECT clear read deadline error: %v", err)
+	}
 
 	// Phase 3: Full bidirectional relay implementation
 	// Relay data between client and Mix Network using ProxySend/ProxyReceive
@@ -319,7 +329,9 @@ func (s *HTTPConnectServer) relayBidirectional(clientConn net.Conn, streamID str
 			}
 
 			// Read from client with timeout
-			clientConn.SetReadDeadline(time.Now().Add(30 * time.Second))
+			if err := clientConn.SetReadDeadline(time.Now().Add(30 * time.Second)); err != nil {
+				log.Printf("HTTP CONNECT set read deadline error: %v", err)
+			}
 			n, err := clientConn.Read(buf)
 			if err != nil {
 				if err == io.EOF {
@@ -376,7 +388,9 @@ func (s *HTTPConnectServer) relayBidirectional(clientConn net.Conn, streamID str
 
 			if len(data) > 0 {
 				// Write to client
-				clientConn.SetWriteDeadline(time.Now().Add(30 * time.Second))
+				if err := clientConn.SetWriteDeadline(time.Now().Add(30 * time.Second)); err != nil {
+					log.Printf("HTTP CONNECT set write deadline error: %v", err)
+				}
 				if _, err := clientConn.Write(data); err != nil {
 					log.Printf("HTTP CONNECT client write error for %s (StreamID: %s): %v", targetAddr, streamID, err)
 					errChan <- err
@@ -467,6 +481,8 @@ func getHTTPStatusText(code int) string {
 }
 
 // relay copies data bidirectionally between client and target
+// Unused: replaced by relayBidirectional for Mix Network integration
+// nolint:unused
 func (s *HTTPConnectServer) relay(client, target net.Conn) {
 	// Use buffered channels to signal completion
 	done := make(chan error, 2)

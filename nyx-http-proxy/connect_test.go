@@ -352,7 +352,9 @@ func TestHTTPConnectServerLifecycle(t *testing.T) {
 
 	// Start server in background
 	go func() {
-		server.Serve()
+		if err := server.Serve(); err != nil {
+			t.Logf("Server stopped: %v", err)
+		}
 	}()
 
 	// Give server time to start
@@ -417,7 +419,7 @@ func BenchmarkHTTPConnectParse(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		conn := newMockConn([]byte(request))
-		server.parseConnectRequest(conn)
+		_, _, _ = server.parseConnectRequest(conn)
 	}
 }
 
@@ -431,6 +433,6 @@ func BenchmarkHTTPConnectAuth(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		server.authenticate(authHeader)
+		_ = server.authenticate(authHeader)
 	}
 }

@@ -281,7 +281,9 @@ func TestExitNodeHandleHTTPRequest(t *testing.T) {
 	// Create a test HTTP server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello from test server"))
+		if _, err := w.Write([]byte("Hello from test server")); err != nil {
+			t.Logf("Write error: %v", err)
+		}
 	}))
 	defer server.Close()
 
@@ -333,7 +335,9 @@ func TestExitNodeHandleTCPConnection(t *testing.T) {
 		if err != nil {
 			return
 		}
-		conn.Write(buf[:n])
+		if _, err := conn.Write(buf[:n]); err != nil {
+			t.Logf("Write error: %v", err)
+		}
 	}()
 
 	config := DefaultExitNodeConfig()

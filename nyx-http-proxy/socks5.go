@@ -137,7 +137,9 @@ func (s *SOCKS5Server) handleConnection(clientConn net.Conn) {
 	result, err := s.mixBridge.ProxyConnect(targetAddr, "socks5")
 	if err != nil {
 		log.Printf("SOCKS5 Mix connect to %s failed: %v", targetAddr, err)
-		s.sendReply(clientConn, socks5RepHostUnreachable, nil)
+		if err := s.sendReply(clientConn, socks5RepHostUnreachable, nil); err != nil {
+			log.Printf("SOCKS5 send reply error: %v", err)
+		}
 		s.stats.Errors.Add(1)
 		return
 	}
@@ -265,7 +267,9 @@ func (s *SOCKS5Server) relayBidirectional(clientConn net.Conn, streamID string, 
 
 			if len(data) > 0 {
 				// Write to client
-				clientConn.SetWriteDeadline(time.Now().Add(30 * time.Second))
+				if err := clientConn.SetWriteDeadline(time.Now().Add(30 * time.Second)); err != nil {
+					log.Printf("SOCKS5 set write deadline error: %v", err)
+				}
 				if _, err := clientConn.Write(data); err != nil {
 					log.Printf("SOCKS5 client write error for %s (StreamID: %s): %v", targetAddr, streamID, err)
 					errChan <- err
@@ -362,13 +366,17 @@ func (s *SOCKS5Server) handleUsernamePasswordAuth(conn net.Conn) error {
 
 	// Verify username/password auth version (must be 1)
 	if buf[0] != 0x01 {
-		s.sendAuthReply(conn, 0xFF) // 0xFF = auth failed
+		if err := s.sendAuthReply(conn, 0xFF); err != nil { // 0xFF = auth failed
+			log.Printf("SOCKS5 send auth reply error: %v", err)
+		}
 		return fmt.Errorf("invalid auth version: %d", buf[0])
 	}
 
 	ulen := int(buf[1])
 	if ulen == 0 || ulen > 255 {
-		s.sendAuthReply(conn, 0xFF)
+		if err := s.sendAuthReply(conn, 0xFF); err != nil {
+			log.Printf("SOCKS5 send auth reply error: %v", err)
+		}
 		return fmt.Errorf("invalid username length: %d", ulen)
 	}
 
@@ -384,7 +392,9 @@ func (s *SOCKS5Server) handleUsernamePasswordAuth(conn net.Conn) error {
 	}
 	plen := int(buf[0])
 	if plen == 0 || plen > 255 {
-		s.sendAuthReply(conn, 0xFF)
+		if err := s.sendAuthReply(conn, 0xFF); err != nil {
+			log.Printf("SOCKS5 send auth reply error: %v", err)
+		}
 		return fmt.Errorf("invalid password length: %d", plen)
 	}
 
@@ -436,14 +446,18 @@ func (s *SOCKS5Server) handleRequest(conn net.Conn) (string, error) {
 
 	// Verify protocol version
 	if buf[0] != socks5Version {
-		s.sendReply(conn, socks5RepGeneralFailure, nil)
+		if err := s.sendReply(conn, socks5RepGeneralFailure, nil); err != nil {
+			log.Printf("SOCKS5 send reply error: %v", err)
+		}
 		return "", errSOCKS5InvalidVersion
 	}
 
 	// Check command (only CONNECT supported)
 	cmd := buf[1]
 	if cmd != socks5CmdConnect {
-		s.sendReply(conn, socks5RepCommandNotSupported, nil)
+		if err := s.sendReply(conn, socks5RepCommandNotSupported, nil); err != nil {
+			log.Printf("SOCKS5 send reply error: %v", err)
+		}
 		return "", errSOCKS5CommandNotSupported
 	}
 
@@ -545,6 +559,8 @@ func (s *SOCKS5Server) sendReply(conn net.Conn, rep byte, bindAddr net.Addr) err
 }
 
 // relay copies data bidirectionally between client and target
+// Unused: replaced by relayBidirectional for Mix Network integration
+// nolint:unused
 func (s *SOCKS5Server) relay(client, target net.Conn) {
 	// Use buffered channels to signal completion
 	done := make(chan error, 2)

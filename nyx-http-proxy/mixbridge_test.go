@@ -202,7 +202,7 @@ func BenchmarkJsonRpcRequestMarshal(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		json.Marshal(request)
+		_, _ = json.Marshal(request)
 	}
 }
 
@@ -220,6 +220,6 @@ func BenchmarkJsonRpcResponseUnmarshal(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var response JsonRpcResponse
-		json.Unmarshal(responseJSON, &response)
+		_ = json.Unmarshal(responseJSON, &response)
 	}
 }
