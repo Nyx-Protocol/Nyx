@@ -186,11 +186,11 @@ jobs:
       
       - name: Run integration test suite
         run: |
-          cargo test --package tests --all-features --no-fail-fast -- --nocapture
+          cargo test --workspace --manifest-path tests/Cargo.toml --all-features --no-fail-fast -- --nocapture
       
       - name: Run benchmarks (compilation check)
         run: |
-          cargo test --package tests --manifest-path tests/benchmarks/Cargo.toml \
+          cargo test --manifest-path tests/benchmarks/Cargo.toml \
             --benches --no-fail-fast
       
       - name: Run control integration tests

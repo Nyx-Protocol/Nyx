@@ -63,7 +63,8 @@ jobs:
         run: |
           cargo llvm-cov clean --workspace
           cargo llvm-cov --workspace --all-features --no-fail-fast \
-            --lcov --output-path lcov-workspace.info \
+            --lcov --output-path lcov-workspace.info
+          cargo llvm-cov --workspace --all-features --no-fail-fast \
             --html --output-dir coverage-html-workspace
       
       - name: Generate coverage per package
@@ -75,7 +76,8 @@ jobs:
             echo "Generating coverage for $pkg..."
             cargo llvm-cov clean -p $pkg
             cargo llvm-cov -p $pkg --all-features --no-fail-fast \
-              --lcov --output-path coverage-per-package/$pkg.lcov \
+              --lcov --output-path coverage-per-package/$pkg.lcov || true
+            cargo llvm-cov -p $pkg --all-features --no-fail-fast \
               --html --output-dir coverage-per-package/$pkg-html || true
           done
       

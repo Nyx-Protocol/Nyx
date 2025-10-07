@@ -889,7 +889,7 @@ layout: default
 
 <div class="algo-section mt-4">
   <div class="section-header">
-    <carbon:result class="inline-block mr-2 text-purple-400"/>
+    <carbon:chart-network class="inline-block mr-2 text-purple-400"/>
     <span class="font-bold">スケジューリング</span>
   </div>
 
@@ -1174,47 +1174,45 @@ layout: default
       <strong>なぜNyxNetが速いか</strong>
     </div>
 
-    <v-clicks>
+<v-clicks>
 
-    <div class="reason-item">
-      <span class="reason-number">1</span>
-      <div class="reason-content">
-        <strong>UDP vs TCP</strong>
-        <div class="reason-detail">Torは3-way handshake必要 → NyxNetは即座に送信開始</div>
-      </div>
-    </div>
+<div class="reason-item">
+  <span class="reason-number">1</span>
+  <div class="reason-content">
+    <strong>UDP vs TCP</strong>
+    <div class="reason-detail">Torは3-way handshake必要 → NyxNetは即座に送信開始</div>
+  </div>
+</div>
 
-    <div class="reason-item">
-      <span class="reason-number">2</span>
-      <div class="reason-content">
-        <strong>暗号化方式</strong>
-        <div class="reason-detail">最適化されたChaCha20Poly1305</div>
-      </div>
-    </div>
+<div class="reason-item">
+  <span class="reason-number">2</span>
+  <div class="reason-content">
+    <strong>暗号化方式</strong>
+    <div class="reason-detail">最適化されたChaCha20Poly1305</div>
+  </div>
+</div>
 
-    <div class="reason-item">
-      <span class="reason-number">3</span>
-      <div class="reason-content">
-        <strong>トランスポート最適化</strong>
-        <div class="reason-detail">マルチパス + 適応的FEC</div>
-      </div>
-    </div>
+<div class="reason-item">
+  <span class="reason-number">3</span>
+  <div class="reason-content">
+    <strong>トランスポート最適化</strong>
+    <div class="reason-detail">マルチパス + 適応的FEC</div>
+  </div>
+</div>
 
-    <div class="reason-item">
-      <span class="reason-number">4</span>
-      <div class="reason-content">
-        <strong>実装言語</strong>
-        <div class="reason-detail">Rust（ゼロコスト抽象化）</div>
-      </div>
-    </div>
+<div class="reason-item">
+  <span class="reason-number">4</span>
+  <div class="reason-content">
+    <strong>実装言語</strong>
+    <div class="reason-detail">Rust（ゼロコスト抽象化）</div>
+  </div>
+</div>
 
-    </v-clicks>
+</v-clicks>
 
   </div>
 
-</div>
-
-</div>
+  </div>
 
 </div>
 
@@ -2204,7 +2202,7 @@ layout: default
 
 <div class="learning-card protocol-card">
   <div class="card-header">
-    <carbon:network-3 class="card-icon"/>
+    <carbon:network-overlay class="card-icon"/>
     <h3>プロトコル設計</h3>
   </div>
   <div class="card-content">
@@ -2386,7 +2384,7 @@ layout: default
 
 <div class="future-card network-future">
   <div class="card-header">
-    <carbon:network-3 class="card-icon"/>
+    <carbon:network-overlay class="card-icon"/>
     <h3>ネットワーク</h3>
   </div>
   <div class="card-content">
