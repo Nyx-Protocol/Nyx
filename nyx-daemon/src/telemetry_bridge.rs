@@ -6,9 +6,9 @@
 //! nyx-daemon → nyx-telemetry (export)
 //!
 //! Architecture:
-//! ```
-//! nyx-stream::TelemetrySpan → TelemetryBridge → nyx-telemetry::OtlpExporter
-//!                                             → Prometheus metrics
+//! ```text
+//! nyx-stream::TelemetrySpan -> TelemetryBridge -> nyx-telemetry::OtlpExporter
+//!                                              -> Prometheus metrics
 //! ```
 
 use anyhow::Result;

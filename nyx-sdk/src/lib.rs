@@ -1,5 +1,18 @@
 #![forbid(unsafe_code)]
-#![doc = include_str!("../README.md")]
+#![doc = include_str!(".//! ## Quick Start
+//!
+//! ```no_run
+//! # use nyx_sdk::{DaemonClient, SdkConfig, Result};
+//! # #[tokio::main]
+//! # async fn main() -> Result<()> {
+//! let config = SdkConfig::default();
+//! let client = DaemonClient::new_with_auto_token(config).await;
+//!
+//! let info = client.get_info().await?;
+//! println!("Daemon info: {:?}", info);
+//! # Ok(())
+//! # }
+//! ```
 
 //! # Nyx SDK
 //!
@@ -64,10 +77,10 @@
 //! ## Error Handling
 //!
 //! ```no_run
-//! use nyx_sdk::{Error, Result};
-//!
+//! # use nyx_sdk::{Error, Result};
 //! # async fn operation() -> Result<String> { Ok("result".into()) }
-//! # async fn example() -> Result<()> {
+//! # #[tokio::main]
+//! # async fn main() -> Result<()> {
 //! match operation().await {
 //!     Ok(result) => println!("Success: {}", result),
 //!     Err(e) if e.is_retryable() => {
