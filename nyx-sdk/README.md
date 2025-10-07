@@ -154,7 +154,10 @@ cargo run --example daemon_client
 
 ### Builder Pattern (Recommended)
 
-```rust
+```rust,no_run
+use nyx_sdk::{SdkConfig, Result};
+
+# async fn example() -> Result<()> {
 let config = SdkConfig::builder()
     .daemon_endpoint("/var/run/nyx.sock")
     .request_timeout_ms(15000)
@@ -162,12 +165,19 @@ let config = SdkConfig::builder()
     .max_reconnect_attempts(3)
     .enable_logging(true)
     .build()?;
+# Ok(())
+# }
 ```
 
 ### From TOML File
 
-```rust
+```rust,no_run
+use nyx_sdk::{SdkConfig, Result};
+
+# async fn example() -> Result<()> {
 let config = SdkConfig::from_file("config.toml").await?;
+# Ok(())
+# }
 ```
 
 ### Configuration Options
@@ -187,9 +197,11 @@ let config = SdkConfig::from_file("config.toml").await?;
 
 The SDK provides rich error types with context:
 
-```rust
-use nyx_sdk::Error;
+```rust,no_run
+use nyx_sdk::{Error, Result};
 
+# async fn operation() -> Result<String> { Ok("test".into()) }
+# async fn example() -> Result<()> {
 match operation().await {
     Ok(result) => println!("Success: {:?}", result),
     Err(Error::Timeout { duration_ms }) => {
@@ -204,6 +216,8 @@ match operation().await {
     }
     Err(e) => println!("Fatal error: {}", e),
 }
+# Ok(())
+# }
 ```
 
 ## 🎯 Best Practices
@@ -223,35 +237,12 @@ See the [complete guide](GUIDE.md) for detailed best practices.
 - `metrics` - Integrate with `nyx-core/telemetry`
 - `grpc-backup` - Legacy gRPC compatibility (intentionally disabled in favor of pure Rust JSON-RPC)
 
-## 🏗️ Architecture
+## Architecture
 
-```
-┌─────────────────────────────────────┐
-│        Application Code             │
-└──────────────┬──────────────────────┘
-               │
-       ┌───────▼───────┐
-       │   Nyx SDK     │
-       │               │
-       │  ┌─────────┐  │
-       │  │ Config  │  │
-       │  └─────────┘  │
-       │  ┌─────────┐  │
-       │  │ Stream  │  │
-       │  └─────────┘  │
-       │  ┌─────────┐  │
-       │  │ Client  │  │
-       │  └─────────┘  │
-       │  ┌─────────┐  │
-       │  │ Error   │  │
-       │  └─────────┘  │
-       └───────┬───────┘
-               │
-       ┌───────▼───────────┐
-       │   Nyx Daemon      │
-       │  (JSON-RPC API)   │
-       └───────────────────┘
-```
+The SDK provides a layered architecture:
+- Application Code uses the Nyx SDK
+- Nyx SDK contains Config, Stream, Client, and Error modules
+- Nyx SDK communicates with Nyx Daemon via JSON-RPC API
 
 ## 🤝 Contributing
 
