@@ -160,10 +160,11 @@ for i in $(seq 1 $NUM_NODES); do
     ports:
       - "${PORT}:${PORT}/udp"
       - "${GRPC_PORT}:${GRPC_PORT}/tcp"
-    # Nyxデーモンを直接起動
-    command: ["/usr/local/bin/nyx-daemon", "--config", "/etc/nyx/nyx.toml"]
+    # Nyxデーモンを直接起動 (設定は環境変数で制御)
+    command: ["/usr/local/bin/nyx-daemon"]
+    working_dir: /app
     volumes:
-      - ./nyx.toml:/etc/nyx/nyx.toml:ro
+      - ./nyx.toml:/app/nyx.toml:ro
     restart: unless-stopped
     # 単純なヘルスチェック
     healthcheck:
@@ -210,6 +211,18 @@ echo ""
 log_info "Node Status:"
 echo "================"
 docker-compose -f docker-compose.multinode.yml ps
+
+# 再起動しているノードのログを即座に確認
+echo ""
+log_warn "Checking logs for restarting nodes..."
+for i in $(seq 1 $NUM_NODES); do
+    STATUS=$(docker inspect nyx-node-${i} --format '{{.State.Status}}' 2>/dev/null || echo "unknown")
+    if [ "$STATUS" = "restarting" ] || [ "$STATUS" = "exited" ]; then
+        echo ""
+        log_error "Node ${i} is $STATUS - Last 20 lines of log:"
+        docker logs --tail 20 nyx-node-${i} 2>&1
+    fi
+done
 
 # ネットワーク接続確認
 echo ""
