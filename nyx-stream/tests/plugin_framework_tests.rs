@@ -20,6 +20,7 @@ use nyx_stream::plugin_framework::{
     Plugin, PluginCapability, PluginError, PluginFrameType, PluginHeader, PluginManager,
     PluginManagerConfig, PluginMetadata, PluginState,
 };
+use ciborium::Value as CborValue;
 use std::collections::HashMap;
 use tokio::test;
 use tracing_test::traced_test;
@@ -65,7 +66,7 @@ impl Plugin for TestCompressionPlugin {
         &self.metadata
     }
 
-    async fn initialize(&mut self, _config: serde_cbor::Value) -> Result<(), PluginError> {
+    async fn initialize(&mut self, _config: CborValue) -> Result<(), PluginError> {
         self.state = PluginState::Ready;
         Ok(())
     }
@@ -85,9 +86,9 @@ impl Plugin for TestCompressionPlugin {
 
     async fn handle_control(
         &mut self,
-        _message: serde_cbor::Value,
-    ) -> Result<serde_cbor::Value, PluginError> {
-        Ok(serde_cbor::Value::Text("OK".to_string()))
+        _message: CborValue,
+    ) -> Result<CborValue, PluginError> {
+        Ok(CborValue::Text("OK".to_string()))
     }
 
     async fn heartbeat(&mut self) -> Result<(), PluginError> {

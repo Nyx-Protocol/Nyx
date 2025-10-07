@@ -12,10 +12,16 @@
 // - Automated quality verification
 // - Comprehensive error handling
 
+#[allow(unused_imports)]
 use crate::test_harness::{ClientHandle, DaemonConfig, NetworkConfig, TestHarness, TestResult};
+#[allow(unused_imports)]
 use std::sync::Arc;
-use std::time::Duration;
+#[allow(unused_imports)]
+use std::time::{Duration, Instant};
+#[allow(unused_imports)]
 use tokio::sync::RwLock;
+#[allow(unused_imports)]
+use tracing::{info, warn};
 
 /// Test payload size for throughput measurement (1 MB)
 #[allow(dead_code)]

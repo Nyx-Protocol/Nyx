@@ -12,12 +12,18 @@
 // - Statistical validation of traffic patterns
 // - Power state transition testing
 
+#[allow(unused_imports)]
 use crate::test_harness::{DaemonConfig, TestHarness, TestResult};
+#[allow(unused_imports)]
 use std::sync::atomic::{AtomicU64, Ordering};
+#[allow(unused_imports)]
 use std::sync::Arc;
+#[allow(unused_imports)]
 use std::time::{Duration, Instant};
+#[allow(unused_imports)]
 use tokio::sync::RwLock;
-use tracing::info;
+#[allow(unused_imports)]
+use tracing::{info, warn};
 
 /// Minimum observation duration for cover traffic measurement (10 seconds)
 #[allow(dead_code)]
