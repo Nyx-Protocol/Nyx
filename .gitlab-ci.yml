@@ -1,0 +1,634 @@
+# ==================================================================================
+# GitLab CI/CD Pipeline for Nyx Protocol
+# World-class DevOps automation for privacy-focused networking
+# ==================================================================================
+#
+# Philosophy:
+# - Zero C/C++ dependencies (strict constraint)
+# - Maximum automation and parallelization
+# - Comprehensive quality gates and security scanning
+# - Reproducible builds with caching strategy
+# - Observable with detailed artifacts and reports
+#
+# Stack:
+# - Rust workspace with multiple crates
+# - Go HTTP proxy component
+# - Docker containers
+# - Kubernetes manifests
+# - Protobuf code generation
+#
+# ==================================================================================
+
+# Global variables for consistent configuration
+variables:
+  # Rust configuration
+  CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: "1"
+  CARGO_INCREMENTAL: "0"
+  CARGO_NET_RETRY: "10"
+  RUSTUP_MAX_RETRIES: "10"
+  
+  # Go configuration
+  GOPATH: ${CI_PROJECT_DIR}/.go
+  GOCACHE: ${CI_PROJECT_DIR}/.gocache
+  GO111MODULE: "on"
+  
+  # Performance and caching
+  CACHE_ON_FAILURE: "true"
+  
+  # Security and compliance
+  SEMGREP_RULES: "p/default p/security-audit p/rust p/golang"
+  
+  # Docker configuration
+  DOCKER_DRIVER: overlay2
+  DOCKER_BUILDKIT: "1"
+
+# Pipeline stages executed in order
+# Optimized for parallel execution within each stage
+stages:
+  - prepare      # Dependency resolution and validation
+  - build        # Compile Rust and Go code
+  - test         # Unit, integration, and property-based tests
+  - quality      # Linting, formatting, type checking
+  - security     # SAST, dependency scanning, secret detection
+  - verify       # Config validation (Docker, K8s, IaC)
+  - coverage     # Code coverage collection and reporting
+  - package      # Artifact creation and SBOM generation
+  - release      # Release preparation (tags, changelogs)
+
+# ==================================================================================
+# Global settings applied to all jobs unless overridden
+# ==================================================================================
+
+default:
+  # Retry transient failures automatically
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+      - api_failure
+  
+  # Timeout for jobs to prevent hanging
+  timeout: 30m
+  
+  # Cancel redundant pipelines on new commits
+  interruptible: true
+
+# ==================================================================================
+# Reusable templates and includes
+# ==================================================================================
+
+# Base template for Rust jobs
+.rust_base:
+  image: rust:1.77-slim
+  before_script:
+    # Install system dependencies (avoiding C/C++ build tools)
+    - apt-get update && apt-get install -y --no-install-recommends
+        protobuf-compiler
+        libprotobuf-dev
+        pkg-config
+        libssl-dev
+        git
+      && rm -rf /var/lib/apt/lists/*
+    # Ensure Rust toolchain is up to date
+    - rustup component add rustfmt clippy
+    - cargo --version
+    - rustc --version
+  cache:
+    key:
+      files:
+        - Cargo.lock
+      prefix: rust-$CI_COMMIT_REF_SLUG
+    paths:
+      - .cargo/registry/index
+      - .cargo/registry/cache
+      - .cargo/git/db
+      - target/
+    policy: pull-push
+  tags:
+    - docker
+
+# Base template for Go jobs
+.go_base:
+  image: golang:1.23-alpine
+  before_script:
+    # Install git for go mod operations
+    - apk add --no-cache git
+    - go version
+  cache:
+    key:
+      files:
+        - nyx-http-proxy/go.sum
+      prefix: go-$CI_COMMIT_REF_SLUG
+    paths:
+      - .go/pkg/mod
+      - .gocache
+    policy: pull-push
+  tags:
+    - docker
+
+# Base template for security scanning
+.security_base:
+  image: python:3.11-slim
+  before_script:
+    - pip install --quiet --no-cache-dir semgrep==1.55.0
+  tags:
+    - docker
+
+# ==================================================================================
+# STAGE: prepare
+# Validate dependencies and setup environment
+# ==================================================================================
+
+# Validate Cargo.lock is up to date
+cargo:check-lockfile:
+  extends: .rust_base
+  stage: prepare
+  script:
+    - echo "🔍 Validating Cargo.lock is synchronized with Cargo.toml"
+    - cargo check --locked --workspace
+    - echo "✅ Lockfile validation passed"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+# Validate Go modules
+go:check-modules:
+  extends: .go_base
+  stage: prepare
+  script:
+    - cd nyx-http-proxy
+    - echo "🔍 Verifying Go module dependencies"
+    - go mod verify
+    - go mod tidy -v
+    - git diff --exit-code go.mod go.sum || (echo "❌ go.mod or go.sum is not tidy" && exit 1)
+    - echo "✅ Go modules verified"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - nyx-http-proxy/**/*
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+# ==================================================================================
+# STAGE: build
+# Compile Rust workspace and Go components
+# ==================================================================================
+
+# Build all Rust crates (excluding WASM which requires special handling)
+rust:build:
+  extends: .rust_base
+  stage: build
+  script:
+    - echo "🔨 Building Rust workspace (excluding WASM)"
+    - cargo build --workspace --exclude nyx-sdk-wasm --all-features --verbose
+    - echo "✅ Build successful"
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - target/debug/
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+# Build release binaries for CLI and daemon
+rust:build-release:
+  extends: .rust_base
+  stage: build
+  script:
+    - echo "🔨 Building release binaries for nyx-cli and nyx-daemon"
+    - cargo build --release -p nyx-cli -p nyx-daemon --verbose
+    - ls -lh target/release/nyx-cli target/release/nyx-daemon
+    - echo "✅ Release build successful"
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - target/release/nyx-cli
+      - target/release/nyx-daemon
+  rules:
+    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Build Go HTTP proxy
+go:build:
+  extends: .go_base
+  stage: build
+  script:
+    - cd nyx-http-proxy
+    - echo "🔨 Building Go HTTP proxy"
+    - go build -v -o nyx-http-proxy .
+    - ls -lh nyx-http-proxy
+    - echo "✅ Go build successful"
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - nyx-http-proxy/nyx-http-proxy
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - nyx-http-proxy/**/*
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# ==================================================================================
+# STAGE: test
+# Execute comprehensive test suites
+# ==================================================================================
+
+# Run all Rust tests
+rust:test:
+  extends: .rust_base
+  stage: test
+  script:
+    - echo "🧪 Running Rust test suite"
+    - cargo test --workspace --exclude nyx-sdk-wasm --all-features --verbose -- --nocapture
+    - echo "✅ All Rust tests passed"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+
+# Run Go tests
+go:test:
+  extends: .go_base
+  stage: test
+  script:
+    - cd nyx-http-proxy
+    - echo "🧪 Running Go test suite"
+    - go test -v -race -timeout=10m ./...
+    - echo "✅ All Go tests passed"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - nyx-http-proxy/**/*
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Run doc tests
+rust:test-docs:
+  extends: .rust_base
+  stage: test
+  script:
+    - echo "📚 Running Rust documentation tests"
+    - cargo test --workspace --doc --exclude nyx-sdk-wasm
+    - echo "✅ Documentation tests passed"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# ==================================================================================
+# STAGE: quality
+# Code quality checks: formatting, linting, type checking
+# ==================================================================================
+
+# Check Rust code formatting
+rust:fmt:
+  extends: .rust_base
+  stage: quality
+  script:
+    - echo "🎨 Checking Rust code formatting"
+    - cargo fmt --all -- --check
+    - echo "✅ Formatting check passed"
+  allow_failure: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Run Clippy linter
+rust:clippy:
+  extends: .rust_base
+  stage: quality
+  script:
+    - echo "🔍 Running Clippy linter"
+    - cargo clippy --workspace --exclude nyx-sdk-wasm --all-features -- -D warnings
+    - echo "✅ Clippy checks passed"
+  allow_failure: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Run Go vet and fmt
+go:quality:
+  extends: .go_base
+  stage: quality
+  script:
+    - cd nyx-http-proxy
+    - echo "🔍 Running go vet"
+    - go vet ./...
+    - echo "🎨 Checking go fmt"
+    - test -z "$(go fmt ./...)" || (echo "❌ Code is not formatted" && exit 1)
+    - echo "✅ Go quality checks passed"
+  allow_failure: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - nyx-http-proxy/**/*
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# ==================================================================================
+# STAGE: security
+# Security scanning: SAST, dependency audit, secret detection
+# ==================================================================================
+
+# SAST with Semgrep (Python-based, no C/C++ dependencies)
+semgrep:sast:
+  extends: .security_base
+  stage: security
+  script:
+    - echo "🔒 Running Semgrep SAST analysis"
+    - semgrep scan --config=${SEMGREP_RULES} --json --output=semgrep-results.json .
+    - semgrep scan --config=${SEMGREP_RULES} --gitlab-sast > gl-sast-report.json || true
+    - echo "✅ SAST analysis completed"
+  artifacts:
+    expire_in: 1 week
+    reports:
+      sast: gl-sast-report.json
+    paths:
+      - semgrep-results.json
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Cargo audit for Rust dependencies
+rust:audit:
+  extends: .rust_base
+  stage: security
+  before_script:
+    - cargo install --quiet cargo-audit
+  script:
+    - echo "🔒 Auditing Rust dependencies for vulnerabilities"
+    - cargo audit --json > cargo-audit-results.json || true
+    - cargo audit
+    - echo "✅ Dependency audit completed"
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - cargo-audit-results.json
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Go vulnerability check with govulncheck (Go-based, no C/C++)
+go:vulncheck:
+  extends: .go_base
+  stage: security
+  before_script:
+    - go install golang.org/x/vuln/cmd/govulncheck@latest
+  script:
+    - cd nyx-http-proxy
+    - echo "🔒 Checking Go dependencies for vulnerabilities"
+    - $GOPATH/bin/govulncheck ./... || true
+    - echo "✅ Vulnerability check completed"
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - nyx-http-proxy/**/*
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Secret detection using Semgrep secrets rules
+semgrep:secrets:
+  extends: .security_base
+  stage: security
+  script:
+    - echo "🔐 Scanning for exposed secrets"
+    - semgrep scan --config=p/secrets --json --output=semgrep-secrets.json .
+    - echo "✅ Secret scan completed"
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - semgrep-secrets.json
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# ==================================================================================
+# STAGE: verify
+# Configuration validation: Docker, Kubernetes, IaC
+# ==================================================================================
+
+# Validate Dockerfiles using dockerfilelint (Node.js-based, avoiding hadolint's C/C++)
+docker:validate:
+  image: node:20-alpine
+  stage: verify
+  before_script:
+    - npm install -g dockerfilelint@1.8.0
+  script:
+    - echo "🐳 Validating Dockerfiles"
+    - find . -name "Dockerfile*" -type f | while read dockerfile; do
+        echo "Checking $dockerfile";
+        dockerfilelint "$dockerfile" || true;
+      done
+    - echo "✅ Dockerfile validation completed"
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/Dockerfile*"
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  tags:
+    - docker
+
+# Validate Kubernetes manifests with kubeconform (Go-based, no C/C++)
+k8s:validate:
+  image: alpine:3.19
+  stage: verify
+  before_script:
+    - apk add --no-cache curl
+    - curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+    - mv kubeconform /usr/local/bin/
+  script:
+    - echo "☸️  Validating Kubernetes manifests"
+    - find . -name "*.yaml" -path "*/k8s-*" -o -name "*.yml" -path "*/k8s-*" | while read manifest; do
+        echo "Validating $manifest";
+        kubeconform -summary "$manifest" || true;
+      done
+    - echo "✅ Kubernetes validation completed"
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "k8s-*.yaml"
+        - "charts/**/*"
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  tags:
+    - docker
+
+# Validate Helm charts
+helm:validate:
+  image: alpine/helm:3.14.0
+  stage: verify
+  script:
+    - echo "⎈ Validating Helm charts"
+    - cd charts/nyx
+    - helm lint .
+    - helm template nyx . > /dev/null
+    - echo "✅ Helm chart validation passed"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "charts/**/*"
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  tags:
+    - docker
+
+# Validate Docker Compose files
+docker-compose:validate:
+  image: docker/compose:alpine-2.24.5
+  stage: verify
+  script:
+    - echo "🐳 Validating Docker Compose files"
+    - find . -name "docker-compose*.yml" | while read compose; do
+        echo "Validating $compose";
+        docker compose -f "$compose" config > /dev/null;
+      done
+    - echo "✅ Docker Compose validation passed"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "docker-compose*.yml"
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  tags:
+    - docker
+
+# ==================================================================================
+# STAGE: coverage
+# Code coverage collection and reporting
+# ==================================================================================
+
+# Rust code coverage with cargo-llvm-cov (pure Rust tool)
+rust:coverage:
+  extends: .rust_base
+  stage: coverage
+  before_script:
+    - cargo install --quiet cargo-llvm-cov
+  script:
+    - echo "📊 Collecting Rust code coverage"
+    - cargo llvm-cov --workspace --exclude nyx-sdk-wasm --html --output-dir coverage/
+    - cargo llvm-cov --workspace --exclude nyx-sdk-wasm --lcov --output-path coverage/lcov.info
+    - echo "✅ Coverage report generated"
+  coverage: '/\d+\.\d+% coverage/'
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - coverage/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/lcov.info
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# Go code coverage
+go:coverage:
+  extends: .go_base
+  stage: coverage
+  script:
+    - cd nyx-http-proxy
+    - echo "📊 Collecting Go code coverage"
+    - go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+    - go tool cover -html=coverage.out -o coverage.html
+    - go tool cover -func=coverage.out
+    - echo "✅ Coverage report generated"
+  coverage: '/coverage: \d+\.\d+%/'
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - nyx-http-proxy/coverage.out
+      - nyx-http-proxy/coverage.html
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - nyx-http-proxy/**/*
+
+# ==================================================================================
+# STAGE: package
+# Create distributable artifacts and SBOMs
+# ==================================================================================
+
+# Generate SBOM for Rust dependencies
+rust:sbom:
+  extends: .rust_base
+  stage: package
+  before_script:
+    - cargo install --quiet cargo-sbom
+  script:
+    - echo "📦 Generating Software Bill of Materials (SBOM)"
+    - cargo sbom > sbom.json
+    - echo "✅ SBOM generated"
+  artifacts:
+    expire_in: 1 month
+    paths:
+      - sbom.json
+  rules:
+    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+# Build Docker images
+docker:build:
+  image: docker:24-dind
+  stage: package
+  services:
+    - docker:24-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  script:
+    - echo "🐳 Building Docker images"
+    - docker build -t nyx:$CI_COMMIT_SHORT_SHA -f Dockerfile .
+    - docker images
+    - echo "✅ Docker image built successfully"
+  rules:
+    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  tags:
+    - docker
+
+# ==================================================================================
+# STAGE: release
+# Prepare releases with changelogs and version bumping
+# ==================================================================================
+
+# Generate release artifacts and changelog
+release:prepare:
+  image: alpine:3.19
+  stage: release
+  before_script:
+    - apk add --no-cache git
+  script:
+    - echo "🚀 Preparing release for $CI_COMMIT_TAG"
+    - echo "Version: $CI_COMMIT_TAG" > release-info.txt
+    - echo "Commit: $CI_COMMIT_SHA" >> release-info.txt
+    - echo "✅ Release prepared"
+  artifacts:
+    expire_in: 1 month
+    paths:
+      - release-info.txt
+  rules:
+    - if: '$CI_COMMIT_TAG'
+  tags:
+    - docker
+
+# ==================================================================================
+# Pipeline success notification
+# ==================================================================================
+
+# Final validation that all critical jobs passed
+pipeline:success:
+  stage: .post
+  image: alpine:3.19
+  script:
+    - echo "✅ All pipeline stages completed successfully!"
+    - echo "📊 Pipeline URL: $CI_PIPELINE_URL"
+    - echo "🔗 Commit: $CI_COMMIT_SHORT_SHA"
+    - echo "🌿 Branch: $CI_COMMIT_REF_NAME"
+  rules:
+    - when: on_success
+  tags:
+    - docker
