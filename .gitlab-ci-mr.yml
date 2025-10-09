@@ -1,0 +1,157 @@
+# ==================================================================================
+# GitLab CI/CD - Merge Request Optimizations
+# Accelerated pipeline for PR validation with smart path filtering
+# ==================================================================================
+#
+# This configuration extends the main pipeline with MR-specific optimizations:
+# - Runs only affected components based on changed files
+# - Faster feedback loop for developers
+# - Preserves comprehensive testing on main branch
+#
+# ==================================================================================
+
+# Override variables for faster MR feedback
+variables:
+  # Reduce build verbosity for speed
+  CARGO_TERM_COLOR: auto
+  # Enable incremental compilation for MR (disabled in main for reproducibility)
+  CARGO_INCREMENTAL: "1"
+
+# ==================================================================================
+# Smart path-based job execution for Merge Requests
+# ==================================================================================
+
+# Quick Rust check for MR (syntax and basic errors only)
+rust:quick-check:
+  extends: .rust_base
+  stage: prepare
+  script:
+    - echo "⚡ Quick Rust syntax check"
+    - cargo check --workspace --exclude nyx-sdk-wasm
+    - echo "✅ Syntax check passed"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/*.rs"
+        - "Cargo.toml"
+        - "Cargo.lock"
+
+# Rust component-specific tests (run only if component changed)
+rust:test-core:
+  extends: .rust_base
+  stage: test
+  script:
+    - echo "🧪 Testing nyx-core"
+    - cargo test -p nyx-core --verbose
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "nyx-core/**/*"
+
+rust:test-crypto:
+  extends: .rust_base
+  stage: test
+  script:
+    - echo "🧪 Testing nyx-crypto"
+    - cargo test -p nyx-crypto --verbose
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "nyx-crypto/**/*"
+
+rust:test-transport:
+  extends: .rust_base
+  stage: test
+  script:
+    - echo "🧪 Testing nyx-transport"
+    - cargo test -p nyx-transport --verbose
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "nyx-transport/**/*"
+
+# Run only Go tests if only Go files changed
+go:test-quick:
+  extends: .go_base
+  stage: test
+  script:
+    - cd nyx-http-proxy
+    - echo "⚡ Quick Go test run"
+    - go test -v -short ./...
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "nyx-http-proxy/**/*.go"
+
+# Skip expensive jobs for documentation-only changes
+.skip-for-docs-only:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/*.md"
+        - "docs/**/*"
+      when: never
+    - when: on_success
+
+# ==================================================================================
+# MR-specific quality gates
+# ==================================================================================
+
+# Enforce no new warnings in MR
+rust:clippy-strict:
+  extends: .rust_base
+  stage: quality
+  script:
+    - echo "🔍 Strict Clippy check (no new warnings)"
+    - cargo clippy --workspace --exclude nyx-sdk-wasm --all-features -- -D warnings -D clippy::all
+    - echo "✅ No warnings found"
+  allow_failure: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/*.rs"
+
+# Validate commit messages follow Conventional Commits
+commit:validate:
+  image: alpine:3.19
+  stage: prepare
+  before_script:
+    - apk add --no-cache git
+  script:
+    - echo "📝 Validating commit messages"
+    - |
+      git log --format=%B -n 1 $CI_COMMIT_SHA | grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .+' || {
+        echo "❌ Commit message does not follow Conventional Commits format"
+        echo "Expected: <type>(<scope>): <subject>"
+        echo "Example: feat(core): add new feature"
+        exit 1
+      }
+    - echo "✅ Commit message is valid"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  tags:
+    - docker
+
+# ==================================================================================
+# MR diff reporting
+# ==================================================================================
+
+# Generate human-readable diff summary for reviewers
+mr:diff-summary:
+  image: alpine:3.19
+  stage: .pre
+  before_script:
+    - apk add --no-cache git
+  script:
+    - echo "📊 Generating MR diff summary"
+    - git diff --stat origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...$CI_COMMIT_SHA > diff-summary.txt
+    - cat diff-summary.txt
+    - echo "✅ Diff summary generated"
+  artifacts:
+    expire_in: 1 week
+    paths:
+      - diff-summary.txt
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  tags:
+    - docker
