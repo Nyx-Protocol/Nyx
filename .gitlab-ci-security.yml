@@ -148,10 +148,10 @@ rust:license-check:
 # ==================================================================================
 
 # Scan Docker images for vulnerabilities using Trivy (Go-based, no C/C++)
-# Note: Uses 'needs' to wait for docker:build from package stage
+# Note: Runs in package stage after docker:build completes
 container:scan:
   image: aquasec/trivy:latest
-  stage: verify
+  stage: package
   needs:
     - job: docker:build
       artifacts: false
