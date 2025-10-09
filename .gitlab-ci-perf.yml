@@ -31,7 +31,7 @@ rust:bench:
     - |
       echo "📊 Benchmark Summary:"
       grep "test result:" bench-results.txt || true
-    - echo "✅ Benchmarks completed"
+    - echo "✁EBenchmarks completed"
   artifacts:
     expire_in: 1 month
     paths:
@@ -40,8 +40,6 @@ rust:bench:
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-  tags:
-    - docker
   timeout: 1h
 
 # Benchmark specific critical components
@@ -51,7 +49,7 @@ rust:bench-crypto:
   script:
     - echo "🔐 Benchmarking cryptographic operations"
     - cargo bench -p nyx-crypto -- --output-format bencher | tee crypto-bench.txt
-    - echo "✅ Crypto benchmarks completed"
+    - echo "✁ECrypto benchmarks completed"
   artifacts:
     expire_in: 1 month
     paths:
@@ -61,8 +59,6 @@ rust:bench-crypto:
       changes:
         - "nyx-crypto/**/*"
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-  tags:
-    - docker
 
 rust:bench-transport:
   extends: .rust_base
@@ -70,7 +66,7 @@ rust:bench-transport:
   script:
     - echo "🌐 Benchmarking network transport"
     - cargo bench -p nyx-transport -- --output-format bencher | tee transport-bench.txt
-    - echo "✅ Transport benchmarks completed"
+    - echo "✁ETransport benchmarks completed"
   artifacts:
     expire_in: 1 month
     paths:
@@ -80,8 +76,6 @@ rust:bench-transport:
       changes:
         - "nyx-transport/**/*"
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-  tags:
-    - docker
 
 # ==================================================================================
 # Go performance benchmarks
@@ -97,7 +91,7 @@ go:bench:
     - |
       echo "📊 Benchmark Summary:"
       grep "Benchmark" ../go-bench-results.txt || true
-    - echo "✅ Go benchmarks completed"
+    - echo "✁EGo benchmarks completed"
   artifacts:
     expire_in: 1 month
     paths:
@@ -107,8 +101,6 @@ go:bench:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
         - "nyx-http-proxy/**/*"
-  tags:
-    - docker
 
 # ==================================================================================
 # Performance regression detection
@@ -127,15 +119,15 @@ perf:regression-check:
         echo "Analyzing Rust benchmarks..."
         # Simple regression detection (compare with previous run)
         # In production, this should compare with historical baseline
-        echo "⚠️  Manual review recommended for performance changes"
+        echo "⚠�E�E Manual review recommended for performance changes"
       fi
       
       if [ -f go-bench-results.txt ]; then
         echo "Analyzing Go benchmarks..."
         # Check for significant performance changes
-        echo "⚠️  Manual review recommended for performance changes"
+        echo "⚠�E�E Manual review recommended for performance changes"
       fi
-    - echo "✅ Regression check completed"
+    - echo "✁ERegression check completed"
   artifacts:
     expire_in: 1 week
     paths:
@@ -147,8 +139,6 @@ perf:regression-check:
   dependencies:
     - rust:bench
     - go:bench
-  tags:
-    - docker
 
 # ==================================================================================
 # Load and stress testing
@@ -166,7 +156,7 @@ perf:integration:
   script:
     - echo "🔄 Running integration performance tests"
     - cargo test --release --test integration_perf -- --nocapture --test-threads=1
-    - echo "✅ Integration performance tests completed"
+    - echo "✁EIntegration performance tests completed"
   artifacts:
     expire_in: 1 week
     paths:
@@ -174,8 +164,6 @@ perf:integration:
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-  tags:
-    - docker
   timeout: 45m
 
 # ==================================================================================
@@ -195,7 +183,7 @@ rust:profile-memory:
     - |
       echo "📊 Binary Size Summary:"
       ls -lh target/release/nyx-daemon target/release/nyx-cli || true
-    - echo "✅ Memory profiling completed"
+    - echo "✁EMemory profiling completed"
   artifacts:
     expire_in: 1 month
     paths:
@@ -203,8 +191,6 @@ rust:profile-memory:
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
-  tags:
-    - docker
 
 # ==================================================================================
 # Benchmark reporting and visualization
@@ -230,13 +216,13 @@ perf:report:
       ## Benchmark Results
       
       ### Rust Benchmarks
-      $(test -f bench-results.txt && echo "\`\`\`" && tail -20 bench-results.txt && echo "\`\`\`" || echo "⏭️  Not run in this pipeline")
+      $(test -f bench-results.txt && echo "\`\`\`" && tail -20 bench-results.txt && echo "\`\`\`" || echo "⏭�E�E Not run in this pipeline")
       
       ### Go Benchmarks  
-      $(test -f go-bench-results.txt && echo "\`\`\`" && tail -20 go-bench-results.txt && echo "\`\`\`" || echo "⏭️  Not run in this pipeline")
+      $(test -f go-bench-results.txt && echo "\`\`\`" && tail -20 go-bench-results.txt && echo "\`\`\`" || echo "⏭�E�E Not run in this pipeline")
       
       ### Binary Sizes
-      $(test -f bloat-report.txt && echo "\`\`\`" && head -30 bloat-report.txt && echo "\`\`\`" || echo "⏭️  Not run in this pipeline")
+      $(test -f bloat-report.txt && echo "\`\`\`" && head -30 bloat-report.txt && echo "\`\`\`" || echo "⏭�E�E Not run in this pipeline")
       
       ## Performance Trends
       
@@ -255,7 +241,7 @@ perf:report:
       *Generated by GitLab CI/CD Performance Pipeline*
       EOF
     - cat performance-report.md
-    - echo "✅ Performance report generated"
+    - echo "✁EPerformance report generated"
   artifacts:
     expire_in: 1 month
     paths:
@@ -264,5 +250,3 @@ perf:report:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - when: on_success
-  tags:
-    - docker

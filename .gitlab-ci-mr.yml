@@ -28,7 +28,7 @@ rust:quick-check:
   script:
     - echo "⚡ Quick Rust syntax check"
     - cargo check --workspace --exclude nyx-sdk-wasm
-    - echo "✅ Syntax check passed"
+    - echo "✁ESyntax check passed"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
@@ -104,7 +104,7 @@ rust:clippy-strict:
   script:
     - echo "🔍 Strict Clippy check (no new warnings)"
     - cargo clippy --workspace --exclude nyx-sdk-wasm --all-features -- -D warnings -D clippy::all
-    - echo "✅ No warnings found"
+    - echo "✁ENo warnings found"
   allow_failure: false
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -121,16 +121,14 @@ commit:validate:
     - echo "📝 Validating commit messages"
     - |
       git log --format=%B -n 1 $CI_COMMIT_SHA | grep -qE '^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .+' || {
-        echo "❌ Commit message does not follow Conventional Commits format"
+        echo "❁ECommit message does not follow Conventional Commits format"
         echo "Expected: <type>(<scope>): <subject>"
         echo "Example: feat(core): add new feature"
         exit 1
       }
-    - echo "✅ Commit message is valid"
+    - echo "✁ECommit message is valid"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-  tags:
-    - docker
 
 # ==================================================================================
 # MR diff reporting
@@ -146,12 +144,10 @@ mr:diff-summary:
     - echo "📊 Generating MR diff summary"
     - git diff --stat origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME...$CI_COMMIT_SHA > diff-summary.txt
     - cat diff-summary.txt
-    - echo "✅ Diff summary generated"
+    - echo "✁EDiff summary generated"
   artifacts:
     expire_in: 1 week
     paths:
       - diff-summary.txt
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-  tags:
-    - docker

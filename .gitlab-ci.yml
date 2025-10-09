@@ -114,8 +114,6 @@ default:
       - .cargo/git/db
       - target/
     policy: pull-push
-  tags:
-    - docker
 
 # Base template for Go jobs
 .go_base:
@@ -133,16 +131,12 @@ default:
       - .go/pkg/mod
       - .gocache
     policy: pull-push
-  tags:
-    - docker
 
 # Base template for security scanning
 .security_base:
   image: python:3.11-slim
   before_script:
     - pip install --quiet --no-cache-dir semgrep==1.55.0
-  tags:
-    - docker
 
 # ==================================================================================
 # STAGE: prepare
@@ -156,7 +150,7 @@ cargo:check-lockfile:
   script:
     - echo "🔍 Validating Cargo.lock is synchronized with Cargo.toml"
     - cargo check --locked --workspace
-    - echo "✅ Lockfile validation passed"
+    - echo "✁ELockfile validation passed"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
@@ -171,8 +165,8 @@ go:check-modules:
     - echo "🔍 Verifying Go module dependencies"
     - go mod verify
     - go mod tidy -v
-    - git diff --exit-code go.mod go.sum || (echo "❌ go.mod or go.sum is not tidy" && exit 1)
-    - echo "✅ Go modules verified"
+    - git diff --exit-code go.mod go.sum || (echo "❁Ego.mod or go.sum is not tidy" && exit 1)
+    - echo "✁EGo modules verified"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
@@ -192,7 +186,7 @@ rust:build:
   script:
     - echo "🔨 Building Rust workspace (excluding WASM)"
     - cargo build --workspace --exclude nyx-sdk-wasm --all-features --verbose
-    - echo "✅ Build successful"
+    - echo "✁EBuild successful"
   artifacts:
     expire_in: 1 hour
     paths:
@@ -210,7 +204,7 @@ rust:build-release:
     - echo "🔨 Building release binaries for nyx-cli and nyx-daemon"
     - cargo build --release -p nyx-cli -p nyx-daemon --verbose
     - ls -lh target/release/nyx-cli target/release/nyx-daemon
-    - echo "✅ Release build successful"
+    - echo "✁ERelease build successful"
   artifacts:
     expire_in: 1 week
     paths:
@@ -229,7 +223,7 @@ go:build:
     - echo "🔨 Building Go HTTP proxy"
     - go build -v -o nyx-http-proxy .
     - ls -lh nyx-http-proxy
-    - echo "✅ Go build successful"
+    - echo "✁EGo build successful"
   artifacts:
     expire_in: 1 hour
     paths:
@@ -252,7 +246,7 @@ rust:test:
   script:
     - echo "🧪 Running Rust test suite"
     - cargo test --workspace --exclude nyx-sdk-wasm --all-features --verbose -- --nocapture
-    - echo "✅ All Rust tests passed"
+    - echo "✁EAll Rust tests passed"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
@@ -266,7 +260,7 @@ go:test:
     - cd nyx-http-proxy
     - echo "🧪 Running Go test suite"
     - go test -v -race -timeout=10m ./...
-    - echo "✅ All Go tests passed"
+    - echo "✁EAll Go tests passed"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
@@ -280,7 +274,7 @@ rust:test-docs:
   script:
     - echo "📚 Running Rust documentation tests"
     - cargo test --workspace --doc --exclude nyx-sdk-wasm
-    - echo "✅ Documentation tests passed"
+    - echo "✁EDocumentation tests passed"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
@@ -297,7 +291,7 @@ rust:fmt:
   script:
     - echo "🎨 Checking Rust code formatting"
     - cargo fmt --all -- --check
-    - echo "✅ Formatting check passed"
+    - echo "✁EFormatting check passed"
   allow_failure: false
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -310,7 +304,7 @@ rust:clippy:
   script:
     - echo "🔍 Running Clippy linter"
     - cargo clippy --workspace --exclude nyx-sdk-wasm --all-features -- -D warnings
-    - echo "✅ Clippy checks passed"
+    - echo "✁EClippy checks passed"
   allow_failure: false
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -325,8 +319,8 @@ go:quality:
     - echo "🔍 Running go vet"
     - go vet ./...
     - echo "🎨 Checking go fmt"
-    - test -z "$(go fmt ./...)" || (echo "❌ Code is not formatted" && exit 1)
-    - echo "✅ Go quality checks passed"
+    - test -z "$(go fmt ./...)" || (echo "❁ECode is not formatted" && exit 1)
+    - echo "✁EGo quality checks passed"
   allow_failure: false
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -347,7 +341,7 @@ semgrep:sast:
     - echo "🔒 Running Semgrep SAST analysis"
     - semgrep scan --config=${SEMGREP_RULES} --json --output=semgrep-results.json .
     - semgrep scan --config=${SEMGREP_RULES} --gitlab-sast > gl-sast-report.json || true
-    - echo "✅ SAST analysis completed"
+    - echo "✁ESAST analysis completed"
   artifacts:
     expire_in: 1 week
     reports:
@@ -369,7 +363,7 @@ rust:audit:
     - echo "🔒 Auditing Rust dependencies for vulnerabilities"
     - cargo audit --json > cargo-audit-results.json || true
     - cargo audit
-    - echo "✅ Dependency audit completed"
+    - echo "✁EDependency audit completed"
   artifacts:
     expire_in: 1 week
     paths:
@@ -389,7 +383,7 @@ go:vulncheck:
     - cd nyx-http-proxy
     - echo "🔒 Checking Go dependencies for vulnerabilities"
     - $GOPATH/bin/govulncheck ./... || true
-    - echo "✅ Vulnerability check completed"
+    - echo "✁EVulnerability check completed"
   allow_failure: true
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -404,7 +398,7 @@ semgrep:secrets:
   script:
     - echo "🔐 Scanning for exposed secrets"
     - semgrep scan --config=p/secrets --json --output=semgrep-secrets.json .
-    - echo "✅ Secret scan completed"
+    - echo "✁ESecret scan completed"
   artifacts:
     expire_in: 1 week
     paths:
@@ -431,15 +425,13 @@ docker:validate:
         echo "Checking $dockerfile";
         dockerfilelint "$dockerfile" || true;
       done
-    - echo "✅ Dockerfile validation completed"
+    - echo "✁EDockerfile validation completed"
   allow_failure: true
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
         - "**/Dockerfile*"
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-  tags:
-    - docker
 
 # Validate Kubernetes manifests with kubeconform (Go-based, no C/C++)
 k8s:validate:
@@ -450,12 +442,12 @@ k8s:validate:
     - curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
     - mv kubeconform /usr/local/bin/
   script:
-    - echo "☸️  Validating Kubernetes manifests"
+    - echo "☸�E�E Validating Kubernetes manifests"
     - find . -name "*.yaml" -path "*/k8s-*" -o -name "*.yml" -path "*/k8s-*" | while read manifest; do
         echo "Validating $manifest";
         kubeconform -summary "$manifest" || true;
       done
-    - echo "✅ Kubernetes validation completed"
+    - echo "✁EKubernetes validation completed"
   allow_failure: true
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -463,26 +455,22 @@ k8s:validate:
         - "k8s-*.yaml"
         - "charts/**/*"
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-  tags:
-    - docker
 
 # Validate Helm charts
 helm:validate:
   image: alpine/helm:3.14.0
   stage: verify
   script:
-    - echo "⎈ Validating Helm charts"
+    - echo "⎁EValidating Helm charts"
     - cd charts/nyx
     - helm lint .
     - helm template nyx . > /dev/null
-    - echo "✅ Helm chart validation passed"
+    - echo "✁EHelm chart validation passed"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
         - "charts/**/*"
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-  tags:
-    - docker
 
 # Validate Docker Compose files
 docker-compose:validate:
@@ -494,14 +482,12 @@ docker-compose:validate:
         echo "Validating $compose";
         docker compose -f "$compose" config > /dev/null;
       done
-    - echo "✅ Docker Compose validation passed"
+    - echo "✁EDocker Compose validation passed"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
         - "docker-compose*.yml"
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-  tags:
-    - docker
 
 # ==================================================================================
 # STAGE: coverage
@@ -518,7 +504,7 @@ rust:coverage:
     - echo "📊 Collecting Rust code coverage"
     - cargo llvm-cov --workspace --exclude nyx-sdk-wasm --html --output-dir coverage/
     - cargo llvm-cov --workspace --exclude nyx-sdk-wasm --lcov --output-path coverage/lcov.info
-    - echo "✅ Coverage report generated"
+    - echo "✁ECoverage report generated"
   coverage: '/\d+\.\d+% coverage/'
   artifacts:
     expire_in: 1 week
@@ -542,7 +528,7 @@ go:coverage:
     - go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
     - go tool cover -html=coverage.out -o coverage.html
     - go tool cover -func=coverage.out
-    - echo "✅ Coverage report generated"
+    - echo "✁ECoverage report generated"
   coverage: '/coverage: \d+\.\d+%/'
   artifacts:
     expire_in: 1 week
@@ -569,7 +555,7 @@ rust:sbom:
   script:
     - echo "📦 Generating Software Bill of Materials (SBOM)"
     - cargo sbom > sbom.json
-    - echo "✅ SBOM generated"
+    - echo "✁ESBOM generated"
   artifacts:
     expire_in: 1 month
     paths:
@@ -590,12 +576,10 @@ docker:build:
     - echo "🐳 Building Docker images"
     - docker build -t nyx:$CI_COMMIT_SHORT_SHA -f Dockerfile .
     - docker images
-    - echo "✅ Docker image built successfully"
+    - echo "✁EDocker image built successfully"
   rules:
     - if: '$CI_COMMIT_TAG'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-  tags:
-    - docker
 
 # ==================================================================================
 # STAGE: release
@@ -619,8 +603,6 @@ release:info:
       - release-info.txt
   rules:
     - if: '$CI_COMMIT_TAG'
-  tags:
-    - docker
 
 # ==================================================================================
 # Pipeline success notification
@@ -637,5 +619,3 @@ pipeline:success:
     - echo "Branch - ${CI_COMMIT_REF_NAME}"
   rules:
     - when: on_success
-  tags:
-    - docker

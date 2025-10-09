@@ -50,12 +50,10 @@ docker:build-daemon:
         .
     - docker push ${DOCKER_REGISTRY}/nyx-daemon:${CI_COMMIT_SHORT_SHA}
     - docker push ${DOCKER_REGISTRY}/nyx-daemon:latest
-    - echo "✅ Daemon image published"
+    - echo "✁EDaemon image published"
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_COMMIT_TAG'
-  tags:
-    - docker
 
 # Build and push CLI image
 docker:build-cli:
@@ -72,12 +70,10 @@ docker:build-cli:
         .
     - docker push ${DOCKER_REGISTRY}/nyx-cli:${CI_COMMIT_SHORT_SHA}
     - docker push ${DOCKER_REGISTRY}/nyx-cli:latest
-    - echo "✅ CLI image published"
+    - echo "✁ECLI image published"
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_COMMIT_TAG'
-  tags:
-    - docker
 
 # Build and push HTTP proxy image
 docker:build-http-proxy:
@@ -94,12 +90,10 @@ docker:build-http-proxy:
         .
     - docker push ${DOCKER_REGISTRY}/nyx-http-proxy:${CI_COMMIT_SHORT_SHA}
     - docker push ${DOCKER_REGISTRY}/nyx-http-proxy:latest
-    - echo "✅ HTTP proxy image published"
+    - echo "✁EHTTP proxy image published"
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_COMMIT_TAG'
-  tags:
-    - docker
 
 # ==================================================================================
 # Helm chart packaging
@@ -116,7 +110,7 @@ helm:package:
       if [ -n "$CI_COMMIT_TAG" ]; then
         helm package charts/nyx --version ${CI_COMMIT_TAG#v}
       fi
-    - echo "✅ Helm chart packaged"
+    - echo "✁EHelm chart packaged"
   artifacts:
     expire_in: 1 month
     paths:
@@ -124,8 +118,6 @@ helm:package:
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_COMMIT_TAG'
-  tags:
-    - docker
 
 # ==================================================================================
 # Staging deployment
@@ -157,7 +149,7 @@ deploy:staging:
         --set replicas=2 \
         --wait \
         --timeout 10m
-    - echo "✅ Staging deployment completed"
+    - echo "✁EStaging deployment completed"
     - kubectl get pods -n ${STAGING_NAMESPACE}
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
@@ -167,8 +159,6 @@ deploy:staging:
     - docker:build-daemon
     - docker:build-cli
     - docker:build-http-proxy
-  tags:
-    - kubernetes
 
 # Verify staging deployment
 verify:staging:
@@ -188,17 +178,15 @@ verify:staging:
       POD_COUNT=$(kubectl get pods -n ${STAGING_NAMESPACE} -l app=nyx-daemon --field-selector=status.phase=Running -o json | jq '.items | length')
       echo "Running pods: $POD_COUNT"
       if [ "$POD_COUNT" -lt 1 ]; then
-        echo "❌ Not enough healthy pods running"
+        echo "❁ENot enough healthy pods running"
         exit 1
       fi
-    - echo "✅ Staging verification passed"
+    - echo "✁EStaging verification passed"
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       when: on_success
   dependencies:
     - deploy:staging
-  tags:
-    - kubernetes
 
 # ==================================================================================
 # Production deployment
@@ -233,7 +221,7 @@ deploy:production:
         --set resources.limits.cpu=2000m \
         --wait \
         --timeout 15m
-    - echo "✅ Production deployment completed"
+    - echo "✁EProduction deployment completed"
     - kubectl get pods -n ${PRODUCTION_NAMESPACE}
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
@@ -243,8 +231,6 @@ deploy:production:
     - docker:build-daemon
     - docker:build-cli
     - docker:build-http-proxy
-  tags:
-    - kubernetes
 
 # Verify production deployment
 verify:production:
@@ -264,21 +250,19 @@ verify:production:
       POD_COUNT=$(kubectl get pods -n ${PRODUCTION_NAMESPACE} -l app=nyx-daemon --field-selector=status.phase=Running -o json | jq '.items | length')
       echo "Running pods: $POD_COUNT"
       if [ "$POD_COUNT" -lt 2 ]; then
-        echo "❌ Not enough healthy pods running"
+        echo "❁ENot enough healthy pods running"
         exit 1
       fi
     - |
       # Basic smoke test
       echo "Running smoke tests..."
       # Add your smoke test commands here
-    - echo "✅ Production verification passed"
+    - echo "✁EProduction verification passed"
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
       when: on_success
   dependencies:
     - deploy:production
-  tags:
-    - kubernetes
 
 # ==================================================================================
 # Rollback capabilities
@@ -295,12 +279,10 @@ rollback:staging:
     - echo "⏪ Rolling back staging deployment"
     - kubectl config use-context staging
     - helm rollback nyx --namespace ${STAGING_NAMESPACE}
-    - echo "✅ Staging rollback completed"
+    - echo "✁EStaging rollback completed"
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       when: manual
-  tags:
-    - kubernetes
 
 rollback:production:
   extends: .deploy_base
@@ -311,12 +293,10 @@ rollback:production:
     - echo "⏪ Rolling back production deployment"
     - kubectl config use-context production
     - helm rollback nyx --namespace ${PRODUCTION_NAMESPACE}
-    - echo "✅ Production rollback completed"
+    - echo "✁EProduction rollback completed"
   rules:
     - if: '$CI_COMMIT_TAG'
       when: manual
-  tags:
-    - kubernetes
 
 # ==================================================================================
 # Cleanup jobs
@@ -334,12 +314,10 @@ cleanup:staging:
     - kubectl config use-context staging
     - helm uninstall nyx --namespace ${STAGING_NAMESPACE} || true
     - kubectl delete namespace ${STAGING_NAMESPACE} || true
-    - echo "✅ Staging cleanup completed"
+    - echo "✁EStaging cleanup completed"
   rules:
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       when: manual
-  tags:
-    - kubernetes
 
 cleanup:production:
   extends: .deploy_base
@@ -351,12 +329,10 @@ cleanup:production:
     - echo "🧹 Cleaning up production environment"
     - kubectl config use-context production
     - helm uninstall nyx --namespace ${PRODUCTION_NAMESPACE} || true
-    - echo "✅ Production cleanup completed"
+    - echo "✁EProduction cleanup completed"
   rules:
     - if: '$CI_COMMIT_TAG'
       when: manual
-  tags:
-    - kubernetes
 
 # ==================================================================================
 # Release notes generation
@@ -403,5 +379,3 @@ release:notes:
       - RELEASE_NOTES.md
   rules:
     - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'
-  tags:
-    - docker
