@@ -148,9 +148,13 @@ rust:license-check:
 # ==================================================================================
 
 # Scan Docker images for vulnerabilities using Trivy (Go-based, no C/C++)
+# Note: Uses 'needs' to wait for docker:build from package stage
 container:scan:
   image: aquasec/trivy:latest
   stage: verify
+  needs:
+    - job: docker:build
+      artifacts: false
   script:
     - echo "Scanning Docker image for vulnerabilities"
     - trivy image --severity HIGH,CRITICAL --no-progress --format json --output trivy-report.json nyx:${CI_COMMIT_SHORT_SHA} || true
@@ -164,8 +168,6 @@ container:scan:
   rules:
     - if: '$CI_COMMIT_TAG'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-  dependencies:
-    - docker:build
   tags:
     - docker
 
