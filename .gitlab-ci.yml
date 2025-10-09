@@ -187,10 +187,8 @@ rust:build:
     - echo "🔨 Building Rust workspace (excluding WASM)"
     - cargo build --workspace --exclude nyx-sdk-wasm --all-features --verbose
     - echo "✁EBuild successful"
-  artifacts:
-    expire_in: 1 hour
-    paths:
-      - target/debug/
+  # Note: Artifacts removed to avoid 413 error (too large)
+  # Subsequent jobs will use the cache to access build artifacts
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
@@ -442,7 +440,7 @@ k8s:validate:
     - curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
     - mv kubeconform /usr/local/bin/
   script:
-    - echo "☸�E�E Validating Kubernetes manifests"
+    - echo "☸�E�E Validating Kubernetes manifests"
     - find . -name "*.yaml" -path "*/k8s-*" -o -name "*.yml" -path "*/k8s-*" | while read manifest; do
         echo "Validating $manifest";
         kubeconform -summary "$manifest" || true;
