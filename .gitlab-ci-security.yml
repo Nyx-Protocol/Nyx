@@ -150,12 +150,12 @@ rust:license-check:
 # Scan Docker images for vulnerabilities using Trivy (Go-based, no C/C++)
 container:scan:
   image: aquasec/trivy:latest
-  stage: security
+  stage: verify
   script:
-    - echo "🐳 Scanning Docker image for vulnerabilities"
-    - trivy image --severity HIGH,CRITICAL --no-progress --format json --output trivy-report.json nyx:latest || true
-    - trivy image --severity HIGH,CRITICAL --no-progress nyx:latest || true
-    - echo "✅ Container scan completed"
+    - echo "Scanning Docker image for vulnerabilities"
+    - trivy image --severity HIGH,CRITICAL --no-progress --format json --output trivy-report.json nyx:${CI_COMMIT_SHORT_SHA} || true
+    - trivy image --severity HIGH,CRITICAL --no-progress nyx:${CI_COMMIT_SHORT_SHA} || true
+    - echo "Container scan completed"
   artifacts:
     expire_in: 1 month
     paths:
