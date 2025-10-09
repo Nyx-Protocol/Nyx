@@ -19,6 +19,13 @@
 #
 # ==================================================================================
 
+# Include modular configuration files
+include:
+  - local: '.gitlab-ci-mr.yml'        # Merge request optimizations
+  - local: '.gitlab-ci-security.yml'  # Enhanced security scanning
+  - local: '.gitlab-ci-perf.yml'      # Performance testing
+  - local: '.gitlab-ci-deploy.yml'    # Deployment automation
+
 # Global variables for consistent configuration
 variables:
   # Rust configuration
