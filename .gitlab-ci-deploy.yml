@@ -144,7 +144,6 @@ deploy:staging:
   environment:
     name: staging
     url: https://staging.nyx-network.local
-    on_stop: cleanup:staging
   script:
     - echo "🚀 Deploying to staging environment"
     - kubectl config use-context staging
@@ -211,7 +210,6 @@ deploy:production:
   environment:
     name: production
     url: https://nyx-network.local
-    on_stop: cleanup:production
   script:
     - echo "🚀 Deploying to production environment"
     - kubectl config use-context production
@@ -284,6 +282,8 @@ verify:production:
 
 # ==================================================================================
 # Rollback capabilities
+# Note: Rollback jobs do not use environment.action as it's not supported
+# They are manual deployment jobs that execute helm rollback command
 # ==================================================================================
 
 rollback:staging:
@@ -291,7 +291,6 @@ rollback:staging:
   stage: release
   environment:
     name: staging
-    action: rollback
   script:
     - echo "⏪ Rolling back staging deployment"
     - kubectl config use-context staging
@@ -308,7 +307,6 @@ rollback:production:
   stage: release
   environment:
     name: production
-    action: rollback
   script:
     - echo "⏪ Rolling back production deployment"
     - kubectl config use-context production
@@ -322,6 +320,7 @@ rollback:production:
 
 # ==================================================================================
 # Cleanup jobs
+# These jobs use action: stop to properly close the environment
 # ==================================================================================
 
 cleanup:staging:
