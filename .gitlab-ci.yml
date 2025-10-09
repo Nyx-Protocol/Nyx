@@ -603,7 +603,7 @@ docker:build:
 # ==================================================================================
 
 # Generate release artifacts and changelog
-release:prepare:
+release:info:
   image: alpine:3.19
   stage: release
   before_script:
