@@ -1288,6 +1288,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // Performance test - unreliable in CI environments
     fn test_ed25519_performance_signature_generation() {
         use rand::rngs::OsRng;
         use std::time::Instant;
@@ -1322,6 +1323,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore] // Performance test - unreliable in CI environments
     fn test_ed25519_performance_signature_verification() {
         use rand::rngs::OsRng;
         use std::time::Instant;
