@@ -191,6 +191,11 @@ rust:build:
   # Subsequent jobs will use the cache to access build artifacts
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/*.rs"
+        - "**/Cargo.toml"
+        - "**/Cargo.lock"
+        - rust-toolchain.toml
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_PIPELINE_SOURCE == "push"'
 
@@ -241,12 +246,18 @@ go:build:
 rust:test:
   extends: .rust_base
   stage: test
+  needs: ["rust:build"]
   script:
     - echo "🧪 Running Rust test suite"
     - cargo test --workspace --exclude nyx-sdk-wasm --all-features --verbose -- --nocapture
     - echo "✁EAll Rust tests passed"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/*.rs"
+        - "**/Cargo.toml"
+        - "**/Cargo.lock"
+        - rust-toolchain.toml
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
     - if: '$CI_PIPELINE_SOURCE == "push"'
 
@@ -257,7 +268,8 @@ go:test:
   script:
     - cd nyx-http-proxy
     - echo "🧪 Running Go test suite"
-    - go test -v -race -timeout=10m ./...
+    # Note: -race flag removed because Alpine Linux uses CGO_ENABLED=0 by default
+    - go test -v -timeout=10m ./...
     - echo "✁EAll Go tests passed"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
@@ -269,12 +281,16 @@ go:test:
 rust:test-docs:
   extends: .rust_base
   stage: test
+  needs: ["rust:build"]
   script:
     - echo "📚 Running Rust documentation tests"
     - cargo test --workspace --doc --exclude nyx-sdk-wasm
     - echo "✁EDocumentation tests passed"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/*.rs"
+        - "**/Cargo.toml"
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
 # ==================================================================================
@@ -293,6 +309,8 @@ rust:fmt:
   allow_failure: false
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/*.rs"
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
 # Run Clippy linter
@@ -306,6 +324,9 @@ rust:clippy:
   allow_failure: false
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/*.rs"
+        - "**/Cargo.toml"
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
 # Run Go vet and fmt
