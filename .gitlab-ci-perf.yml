@@ -119,13 +119,13 @@ perf:regression-check:
         echo "Analyzing Rust benchmarks..."
         # Simple regression detection (compare with previous run)
         # In production, this should compare with historical baseline
-        echo "‚ö†ÅEÅE Manual review recommended for performance changes"
+        echo "‚ö†ÔøΩEÔøΩE Manual review recommended for performance changes"
       fi
       
       if [ -f go-bench-results.txt ]; then
         echo "Analyzing Go benchmarks..."
         # Check for significant performance changes
-        echo "‚ö†ÅEÅE Manual review recommended for performance changes"
+        echo "‚ö†ÔøΩEÔøΩE Manual review recommended for performance changes"
       fi
     - echo "‚úÅERegression check completed"
   artifacts:
@@ -155,7 +155,7 @@ perf:integration:
     REDIS_URL: "redis://redis:6379"
   script:
     - echo "üîÑ Running integration performance tests"
-    - cargo test --release --test integration_perf -- --nocapture --test-threads=1
+    - cargo test --release --test integration_test -- --nocapture --test-threads=1
     - echo "‚úÅEIntegration performance tests completed"
   artifacts:
     expire_in: 1 week
@@ -216,13 +216,13 @@ perf:report:
       ## Benchmark Results
       
       ### Rust Benchmarks
-      $(test -f bench-results.txt && echo "\`\`\`" && tail -20 bench-results.txt && echo "\`\`\`" || echo "‚è≠ÅEÅE Not run in this pipeline")
+      $(test -f bench-results.txt && echo "\`\`\`" && tail -20 bench-results.txt && echo "\`\`\`" || echo "‚è≠ÔøΩEÔøΩE Not run in this pipeline")
       
       ### Go Benchmarks  
-      $(test -f go-bench-results.txt && echo "\`\`\`" && tail -20 go-bench-results.txt && echo "\`\`\`" || echo "‚è≠ÅEÅE Not run in this pipeline")
+      $(test -f go-bench-results.txt && echo "\`\`\`" && tail -20 go-bench-results.txt && echo "\`\`\`" || echo "‚è≠ÔøΩEÔøΩE Not run in this pipeline")
       
       ### Binary Sizes
-      $(test -f bloat-report.txt && echo "\`\`\`" && head -30 bloat-report.txt && echo "\`\`\`" || echo "‚è≠ÅEÅE Not run in this pipeline")
+      $(test -f bloat-report.txt && echo "\`\`\`" && head -30 bloat-report.txt && echo "\`\`\`" || echo "‚è≠ÔøΩEÔøΩE Not run in this pipeline")
       
       ## Performance Trends
       
