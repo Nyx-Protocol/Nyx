@@ -356,7 +356,7 @@ pub struct TeredoAdapter {
 pub fn detect_teredo_adapters() -> Vec<TeredoAdapter> {
     // Immutable vector for platform-specific adapter detection - no runtime modifications needed
     // as external command execution has been removed to avoid dependencies
-    let adapters = Vec::new();
+    let mut adapters = Vec::new();
 
     // Platform-specific adapter detection
     // NOTE: External command execution removed to avoid std::process::Command dependency
