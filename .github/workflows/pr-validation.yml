@@ -12,8 +12,8 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
+  SCCACHE_GHA_ENABLED: "false"
+  # RUSTC_WRAPPER: "sccache"  # Disabled due to cache service issues
 
 permissions:
   contents: read
@@ -78,7 +78,7 @@ jobs:
           PR_TITLE="${{ github.event.pull_request.title }}"
           # Check if PR title follows conventional commits
           if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?:.+ ]]; then
-            echo "‚ö†ÅEΩEÅEΩEPR title should follow Conventional Commits format"
+            echo "‚ö†ÔøΩEÔøΩEÔøΩEÔøΩEPR title should follow Conventional Commits format"
             echo "Examples: 'feat: add new feature', 'fix(core): resolve bug'"
           else
             echo "‚úÅEPR title follows Conventional Commits format"
@@ -88,7 +88,7 @@ jobs:
         run: |
           echo "Checking for TODO/FIXME comments in changed files..."
           if git diff origin/main...HEAD | grep -E '^\+.*\b(TODO|FIXME|XXX|HACK)\b'; then
-            echo "‚ö†ÅEΩEÅEΩEFound TODO/FIXME comments in changes"
+            echo "‚ö†ÔøΩEÔøΩEÔøΩEÔøΩEFound TODO/FIXME comments in changes"
           else
             echo "‚úÅENo TODO/FIXME comments found"
           fi
@@ -98,7 +98,7 @@ jobs:
           echo "Checking for large files..."
           large_files=$(git diff --stat origin/main...HEAD | awk '{if ($3 > 1000) print $1}')
           if [ -n "$large_files" ]; then
-            echo "‚ö†ÅEΩEÅEΩELarge file changes detected:"
+            echo "‚ö†ÔøΩEÔøΩEÔøΩEÔøΩELarge file changes detected:"
             echo "$large_files"
           else
             echo "‚úÅENo unusually large file changes"
@@ -253,7 +253,7 @@ jobs:
           if git diff --name-only origin/main...HEAD | grep -q 'CHANGELOG.md'; then
             echo "‚úÅECHANGELOG.md was updated"
           else
-            echo "‚ÑπÅEΩEÅEΩEConsider updating CHANGELOG.md for user-facing changes"
+            echo "‚ÑπÔøΩEÔøΩEÔøΩEÔøΩEConsider updating CHANGELOG.md for user-facing changes"
           fi
 
   # ==================== Summary ====================
@@ -287,7 +287,7 @@ jobs:
              [[ "${{ needs.changelog-check.result }}" == "success" ]]; then
             echo "‚úÅEAll PR validation checks passed"
           else
-            echo "‚ö†ÅEΩEÅEΩESome PR validation checks had issues"
+            echo "‚ö†ÔøΩEÔøΩEÔøΩEÔøΩESome PR validation checks had issues"
             exit 1
           fi
 

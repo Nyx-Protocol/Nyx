@@ -120,7 +120,7 @@ mod unix_tests {
     /// Test that sandbox markers are created with correct process ID
     #[test]
     fn process_specific_markers() -> Result<(), Box<dyn std::error::Error>> {
-        let process_id = process::id();
+        let _process_id = process::id();
 
         // Apply both policies and check markers
         let minimal_status = apply_policy(SandboxPolicy::Minimal);

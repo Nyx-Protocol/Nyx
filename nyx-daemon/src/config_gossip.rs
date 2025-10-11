@@ -862,7 +862,7 @@ mod tests {
         use rand::rngs::OsRng;
         // Use Ed25519 signing key for cryptographically secure signatures
         let signing_key = SigningKey::generate(&mut OsRng);
-        
+
         let content = b"test_config".to_vec();
         let config = SignedConfig::new_with_key(
             content.clone(),
@@ -884,7 +884,7 @@ mod tests {
         // Use Ed25519 key pair for cryptographically secure signature verification
         let signing_key = SigningKey::generate(&mut OsRng);
         let verifying_key = signing_key.verifying_key();
-        
+
         let content = b"test_config".to_vec();
         let config = SignedConfig::new_with_key(
             content,
@@ -903,7 +903,7 @@ mod tests {
         // Use Ed25519 key pair for cryptographically secure tamper detection
         let signing_key = SigningKey::generate(&mut OsRng);
         let verifying_key = signing_key.verifying_key();
-        
+
         let content = b"test_config".to_vec();
         let mut config = SignedConfig::new_with_key(
             content,

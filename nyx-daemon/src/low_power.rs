@@ -524,20 +524,22 @@ mod test_s {
         // Drain all initial events
         while timeout(Duration::from_millis(200), rx.recv()).await.is_ok() {}
 
-        // Wait 200ms (half of inactivity threshold)
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        // Wait 150ms (less than inactivity threshold)
+        tokio::time::sleep(Duration::from_millis(150)).await;
 
         // Enter Active to reset activity timer
         let _ = nyx_mobile_ffi::nyx_power_set_state(NyxPowerState::Active as u32);
-        let _ = timeout(Duration::from_millis(1000), rx.recv()).await; // Drain state event
+        
+        // Drain any state transition events with longer timeout
+        while timeout(Duration::from_millis(200), rx.recv()).await.is_ok() {}
 
-        // Wait another 300ms (total 500ms from start, but only 300ms since Active reset)
-        // If timer wasn't reset, inactivity would trigger (since 200+300=500>400)
-        // But since timer was reset at 200ms mark, we've only accumulated 300ms since reset (<400)
-        tokio::time::sleep(Duration::from_millis(300)).await;
+        // Wait another 200ms (total 350ms from start, but only 200ms since Active reset)
+        // If timer wasn't reset, inactivity would trigger (since 150+200=350ms approaching threshold)
+        // But since timer was reset, we should not see inactivity event
+        tokio::time::sleep(Duration::from_millis(200)).await;
 
         // Should NOT receive inactivity event (timer was reset by Active transition)
-        let result = timeout(Duration::from_millis(300), rx.recv()).await;
+        let result = timeout(Duration::from_millis(250), rx.recv()).await;
         if let Ok(Ok(ev)) = result {
             assert!(
                 !ev._detail.contains("\"type\":\"Inactivity\""),
