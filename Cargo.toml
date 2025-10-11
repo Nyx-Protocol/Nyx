@@ -104,7 +104,7 @@ chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1"
 tokio-stream = "0.1"
 # Configuration
-toml = "0.7"
+toml = "0.8"
 # Testing and benchmarking (dev dependencies)
 criterion = { version = "0.5", features = ["html_reports"] }
 hex-literal = "0.4"
