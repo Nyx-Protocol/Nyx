@@ -32,7 +32,7 @@ permissions:
 jobs:
   # ==================== Docker Validation ====================
   
-  # Validate Dockerfiles with hadolint (pure Python alternative)
+  # Validate Dockerfiles with hadolint (pure Python alternative
   dockerfile-lint:
     name: Dockerfile Linting
     runs-on: ubuntu-latest
@@ -199,11 +199,11 @@ jobs:
           echo "Checking ${{ matrix.compose-file }} for best practices..."
           # Check for version specification
           if ! grep -q "^version:" ${{ matrix.compose-file }}; then
-            echo "‚ö†ÅEΩEÅEΩENo version specified in ${{ matrix.compose-file }}"
+            echo "‚ö†ÔøΩEÔøΩEÔøΩEÔøΩENo version specified in ${{ matrix.compose-file }}"
           fi
           # Check for health checks
           if ! grep -q "healthcheck:" ${{ matrix.compose-file }}; then
-            echo "‚ÑπÅEΩEÅEΩENo health checks defined in ${{ matrix.compose-file }}"
+            echo "‚ÑπÔøΩEÔøΩEÔøΩEÔøΩENo health checks defined in ${{ matrix.compose-file }}"
           fi
           echo "‚úÅEValidation complete"
 
