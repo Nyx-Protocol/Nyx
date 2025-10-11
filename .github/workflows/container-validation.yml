@@ -35,7 +35,7 @@ jobs:
   # Validate Dockerfiles with hadolint (pure Python alternative)
   dockerfile-lint:
     name: Dockerfile Linting
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -71,7 +71,7 @@ jobs:
   # Build Docker images to ensure they compile correctly
   docker-build-test:
     name: Docker Build Test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 60
     permissions:
       contents: read
@@ -114,7 +114,7 @@ jobs:
   # Container image security scanning with Trivy
   container-security-scan:
     name: Container Security Scan (Trivy)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 30
     needs: [docker-build-test]
     permissions:
@@ -174,7 +174,7 @@ jobs:
   # Validate docker-compose configurations
   docker-compose-validation:
     name: Docker Compose Validation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -192,27 +192,27 @@ jobs:
       - name: Validate compose file syntax
         run: |
           docker compose -f ${{ matrix.compose-file }} config > /dev/null
-          echo "✅ ${{ matrix.compose-file }} is valid"
+          echo "✁E${{ matrix.compose-file }} is valid"
       
       - name: Check for common issues
         run: |
           echo "Checking ${{ matrix.compose-file }} for best practices..."
           # Check for version specification
           if ! grep -q "^version:" ${{ matrix.compose-file }}; then
-            echo "⚠️ No version specified in ${{ matrix.compose-file }}"
+            echo "⚠�E�ENo version specified in ${{ matrix.compose-file }}"
           fi
           # Check for health checks
           if ! grep -q "healthcheck:" ${{ matrix.compose-file }}; then
-            echo "ℹ️ No health checks defined in ${{ matrix.compose-file }}"
+            echo "ℹ�E�ENo health checks defined in ${{ matrix.compose-file }}"
           fi
-          echo "✅ Validation complete"
+          echo "✁EValidation complete"
 
   # ==================== Kubernetes Validation ====================
   
   # Validate Kubernetes manifests with kubeconform
   kubernetes-manifest-validation:
     name: Kubernetes Manifest Validation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -244,7 +244,7 @@ jobs:
   # Validate Helm charts
   helm-chart-validation:
     name: Helm Chart Validation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 20
     permissions:
       contents: read
@@ -269,7 +269,7 @@ jobs:
             for values in charts/nyx/values*.yaml; do
               echo "Testing with $values..."
               helm template nyx charts/nyx -f "$values" > /dev/null
-              echo "✅ $values validated successfully"
+              echo "✁E$values validated successfully"
             done
           fi
       
@@ -293,7 +293,7 @@ jobs:
   # Validate Kind configuration
   kind-config-validation:
     name: Kind Configuration Validation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -311,7 +311,7 @@ jobs:
           if [ -f kind-config.yaml ]; then
             echo "Validating kind-config.yaml..."
             # Kind doesn't have a native validation command, so we'll check syntax
-            cat kind-config.yaml | grep -E "(kind:|apiVersion:)" && echo "✅ Basic structure valid"
+            cat kind-config.yaml | grep -E "(kind:|apiVersion:)" && echo "✁EBasic structure valid"
           fi
 
   # ==================== Infrastructure as Code Validation ====================
@@ -319,7 +319,7 @@ jobs:
   # Validate infrastructure configurations
   iac-validation:
     name: Infrastructure as Code Validation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -353,7 +353,7 @@ jobs:
   
   container-validation-success:
     name: Container Validation Success
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs:
       - dockerfile-lint
       - docker-build-test
@@ -386,10 +386,10 @@ jobs:
              [[ "${{ needs.kubernetes-manifest-validation.result }}" == "failure" ]] || \
              [[ "${{ needs.helm-chart-validation.result }}" == "failure" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "❌ **Container validation failed**" >> $GITHUB_STEP_SUMMARY
+            echo "❁E**Container validation failed**" >> $GITHUB_STEP_SUMMARY
             exit 1
           else
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ **All container validations passed**" >> $GITHUB_STEP_SUMMARY
+            echo "✁E**All container validations passed**" >> $GITHUB_STEP_SUMMARY
           fi
 

@@ -35,7 +35,7 @@ jobs:
   # Validate version and prepare release metadata
   prepare-release:
     name: Prepare Release
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -71,11 +71,11 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
-            echo "❌ Invalid version format: $VERSION"
+            echo "❁EInvalid version format: $VERSION"
             echo "Expected format: X.Y.Z or X.Y.Z-prerelease"
             exit 1
           fi
-          echo "✅ Version format valid"
+          echo "✁EVersion format valid"
 
   # ==================== Build Release Artifacts ====================
   
@@ -92,11 +92,11 @@ jobs:
       matrix:
         include:
           # Linux x86_64
-          - os: ubuntu-latest
+          - os: [self-hosted, linux]
             target: x86_64-unknown-linux-gnu
             artifact_name: nyx-linux-x86_64
           # Linux aarch64
-          - os: ubuntu-latest
+          - os: [self-hosted, linux]
             target: aarch64-unknown-linux-gnu
             artifact_name: nyx-linux-aarch64
           # macOS x86_64
@@ -183,7 +183,7 @@ jobs:
   # Build Go HTTP Proxy for release
   build-go-proxy:
     name: Build Go HTTP Proxy (${{ matrix.target }})
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs: [prepare-release]
     timeout-minutes: 30
     permissions:
@@ -255,7 +255,7 @@ jobs:
   # Generate changelog from git history
   generate-changelog:
     name: Generate CHANGELOG
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs: [prepare-release]
     timeout-minutes: 15
     permissions:
@@ -303,7 +303,7 @@ jobs:
   # Create GitHub release with all artifacts
   create-release:
     name: Create GitHub Release
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs:
       - prepare-release
       - build-release-artifacts
@@ -343,7 +343,7 @@ jobs:
   
   release-success:
     name: Release Success
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs:
       - prepare-release
       - create-release
@@ -352,7 +352,7 @@ jobs:
         run: |
           echo "## Release v${{ needs.prepare-release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **Release created successfully**" >> $GITHUB_STEP_SUMMARY
+          echo "✁E**Release created successfully**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- Version: ${{ needs.prepare-release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- Pre-release: ${{ needs.prepare-release.outputs.is_prerelease }}" >> $GITHUB_STEP_SUMMARY

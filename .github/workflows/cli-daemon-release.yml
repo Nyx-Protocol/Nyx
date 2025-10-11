@@ -44,7 +44,7 @@ jobs:
   
   prepare:
     name: Prepare Release
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     outputs:
       version: ${{ steps.version.outputs.version }}
       component: ${{ steps.component.outputs.component }}
@@ -67,7 +67,7 @@ jobs:
               VERSION="${BASH_REMATCH[1]}"
               COMPONENT="daemon"
             else
-              echo "❌ Invalid tag format: $TAG"
+              echo "❁EInvalid tag format: $TAG"
               exit 1
             fi
             
@@ -111,14 +111,14 @@ jobs:
       matrix:
         include:
           # Linux x86_64
-          - os: ubuntu-latest
+          - os: [self-hosted, linux]
             target: x86_64-unknown-linux-gnu
             artifact_name_cli: nyx-cli-linux-x86_64
             artifact_name_daemon: nyx-daemon-linux-x86_64
             binary_ext: ''
           
           # Linux aarch64
-          - os: ubuntu-latest
+          - os: [self-hosted, linux]
             target: aarch64-unknown-linux-gnu
             artifact_name_cli: nyx-cli-linux-aarch64
             artifact_name_daemon: nyx-daemon-linux-aarch64
@@ -268,7 +268,7 @@ jobs:
   
   create-release:
     name: Create GitHub Release
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs: [prepare, build-binaries]
     
     steps:
@@ -338,11 +338,11 @@ jobs:
           
           ## Platform Support
           
-          - ✅ Linux x86_64
-          - ✅ Linux aarch64
-          - ✅ Windows x86_64
-          - ✅ macOS x86_64 (Intel)
-          - ✅ macOS aarch64 (Apple Silicon)
+          - ✁ELinux x86_64
+          - ✁ELinux aarch64
+          - ✁EWindows x86_64
+          - ✁EmacOS x86_64 (Intel)
+          - ✁EmacOS aarch64 (Apple Silicon)
           
           ## Checksums
           

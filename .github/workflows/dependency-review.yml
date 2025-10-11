@@ -28,7 +28,7 @@ jobs:
   # GitHub's native dependency review for PRs
   dependency-review:
     name: Dependency Review (GitHub)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     if: github.event_name == 'pull_request'
     timeout-minutes: 15
     permissions:
@@ -49,7 +49,7 @@ jobs:
   # Check for outdated Rust dependencies
   rust-dependency-check:
     name: Rust Dependency Check
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 20
     permissions:
       contents: read
@@ -97,7 +97,7 @@ jobs:
   # Check for dependency tree conflicts
   rust-dependency-tree:
     name: Rust Dependency Tree Analysis
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 20
     permissions:
       contents: read
@@ -120,10 +120,10 @@ jobs:
           cargo tree --workspace --all-features --duplicates > duplicate-deps.txt || true
           
           if [ -s duplicate-deps.txt ]; then
-            echo "⚠️ Duplicate dependencies detected:"
+            echo "⚠�E�EDuplicate dependencies detected:"
             cat duplicate-deps.txt
           else
-            echo "✅ No duplicate dependencies found"
+            echo "✁ENo duplicate dependencies found"
           fi
       
       - name: Upload dependency tree analysis
@@ -142,7 +142,7 @@ jobs:
   # Check for outdated Go dependencies
   go-dependency-check:
     name: Go Dependency Check
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -183,7 +183,7 @@ jobs:
   # Check license compliance
   license-compliance:
     name: License Compliance Check
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 20
     permissions:
       contents: read
@@ -216,7 +216,7 @@ jobs:
           fi
           
           echo "" >> LICENSE_REPORT.md
-          echo "⚠️ Please review licenses for compliance with project requirements." >> LICENSE_REPORT.md
+          echo "⚠�E�EPlease review licenses for compliance with project requirements." >> LICENSE_REPORT.md
       
       - name: Upload license report
         if: always()
@@ -233,7 +233,7 @@ jobs:
   
   dependency-review-success:
     name: Dependency Review Success
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs:
       - rust-dependency-check
       - rust-dependency-tree
@@ -253,5 +253,5 @@ jobs:
           echo "| License Compliance | ${{ needs.license-compliance.result }} |" >> $GITHUB_STEP_SUMMARY
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **Dependency review completed**" >> $GITHUB_STEP_SUMMARY
+          echo "✁E**Dependency review completed**" >> $GITHUB_STEP_SUMMARY
 

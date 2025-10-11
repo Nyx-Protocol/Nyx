@@ -42,7 +42,7 @@ jobs:
   
   build-and-test:
     name: Build and Test Docker Image
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 30
     
     steps:
@@ -109,7 +109,7 @@ jobs:
           docker stop nyx-daemon-test
           docker rm nyx-daemon-test
           
-          echo "✅ Docker image test passed"
+          echo "✁EDocker image test passed"
       
       - name: Scan for vulnerabilities
         uses: aquasecurity/trivy-action@master
@@ -128,7 +128,7 @@ jobs:
   
   build-and-push:
     name: Build and Push Multi-arch Images
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs: [build-and-test]
     if: github.event_name != 'pull_request'
     timeout-minutes: 60
@@ -209,7 +209,7 @@ jobs:
   
   update-docs:
     name: Update Documentation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs: [build-and-push]
     if: github.event_name == 'release'
     permissions:

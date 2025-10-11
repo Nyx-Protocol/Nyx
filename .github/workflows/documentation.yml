@@ -31,7 +31,7 @@ jobs:
   # Generate and validate Rust API documentation
   rust-docs:
     name: Rust API Documentation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 45
     permissions:
       contents: read
@@ -84,7 +84,7 @@ jobs:
   # Generate Go documentation
   go-docs:
     name: Go Documentation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -103,7 +103,7 @@ jobs:
       - name: Generate Go documentation
         run: |
           go doc -all > ../go-docs.txt
-          echo "✅ Go documentation generated"
+          echo "✁EGo documentation generated"
       
       - name: Upload Go documentation
         uses: actions/upload-artifact@v4
@@ -117,7 +117,7 @@ jobs:
   # Build MkDocs-based documentation site
   mkdocs-build:
     name: MkDocs Documentation Build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 20
     permissions:
       contents: read
@@ -140,9 +140,9 @@ jobs:
         run: |
           if [ -f mkdocs.yml ]; then
             mkdocs build --strict --verbose
-            echo "✅ MkDocs build successful"
+            echo "✁EMkDocs build successful"
           else
-            echo "ℹ️ No mkdocs.yml found, skipping MkDocs build"
+            echo "ℹ�E�ENo mkdocs.yml found, skipping MkDocs build"
           fi
       
       - name: Upload MkDocs site
@@ -159,7 +159,7 @@ jobs:
   # Validate markdown files for consistency
   markdown-validation:
     name: Markdown Validation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -185,14 +185,14 @@ jobs:
       
       - name: Check for broken links
         run: |
-          echo "ℹ️ Link checking would be performed here"
+          echo "ℹ�E�ELink checking would be performed here"
           echo "Consider using tools like lychee for comprehensive link validation"
 
   # ==================== Documentation Summary ====================
   
   docs-success:
     name: Documentation Success
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs:
       - rust-docs
       - go-docs
@@ -214,9 +214,9 @@ jobs:
           if [[ "${{ needs.rust-docs.result }}" == "success" ]] && \
              [[ "${{ needs.go-docs.result }}" == "success" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ **All documentation builds successful**" >> $GITHUB_STEP_SUMMARY
+            echo "✁E**All documentation builds successful**" >> $GITHUB_STEP_SUMMARY
           else
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "⚠️ **Some documentation builds failed**" >> $GITHUB_STEP_SUMMARY
+            echo "⚠�E�E**Some documentation builds failed**" >> $GITHUB_STEP_SUMMARY
           fi
 

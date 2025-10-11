@@ -25,7 +25,7 @@ jobs:
   # Detect changed file paths for conditional execution
   detect-changes:
     name: Detect Changed Files
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 5
     outputs:
       rust-changed: ${{ steps.filter.outputs.rust }}
@@ -61,7 +61,7 @@ jobs:
   # Fast checks for immediate feedback
   quick-checks:
     name: Quick PR Checks
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 10
     permissions:
       contents: read
@@ -78,19 +78,19 @@ jobs:
           PR_TITLE="${{ github.event.pull_request.title }}"
           # Check if PR title follows conventional commits
           if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?:.+ ]]; then
-            echo "⚠️ PR title should follow Conventional Commits format"
+            echo "⚠�E�EPR title should follow Conventional Commits format"
             echo "Examples: 'feat: add new feature', 'fix(core): resolve bug'"
           else
-            echo "✅ PR title follows Conventional Commits format"
+            echo "✁EPR title follows Conventional Commits format"
           fi
       
       - name: Check for TODO/FIXME comments
         run: |
           echo "Checking for TODO/FIXME comments in changed files..."
           if git diff origin/main...HEAD | grep -E '^\+.*\b(TODO|FIXME|XXX|HACK)\b'; then
-            echo "⚠️ Found TODO/FIXME comments in changes"
+            echo "⚠�E�EFound TODO/FIXME comments in changes"
           else
-            echo "✅ No TODO/FIXME comments found"
+            echo "✁ENo TODO/FIXME comments found"
           fi
       
       - name: Check file sizes
@@ -98,10 +98,10 @@ jobs:
           echo "Checking for large files..."
           large_files=$(git diff --stat origin/main...HEAD | awk '{if ($3 > 1000) print $1}')
           if [ -n "$large_files" ]; then
-            echo "⚠️ Large file changes detected:"
+            echo "⚠�E�ELarge file changes detected:"
             echo "$large_files"
           else
-            echo "✅ No unusually large file changes"
+            echo "✁ENo unusually large file changes"
           fi
       
       - name: Generate PR summary
@@ -121,7 +121,7 @@ jobs:
   # Fast Rust lint check for PRs
   rust-quick-lint:
     name: Rust Quick Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 10
     needs: [detect-changes]
     if: needs.detect-changes.outputs.rust-changed == 'true'
@@ -158,7 +158,7 @@ jobs:
   # Fast Go lint check for PRs
   go-quick-lint:
     name: Go Quick Lint
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 8
     needs: [detect-changes]
     if: needs.detect-changes.outputs.go-changed == 'true'
@@ -199,7 +199,7 @@ jobs:
   # Auto-label PRs based on changed files
   auto-label:
     name: Auto Label PR
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 10
     permissions:
       contents: read
@@ -236,7 +236,7 @@ jobs:
   # Ensure changelog is updated
   changelog-check:
     name: Changelog Check
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 10
     permissions:
       contents: read
@@ -251,16 +251,16 @@ jobs:
       - name: Check if CHANGELOG.md was updated
         run: |
           if git diff --name-only origin/main...HEAD | grep -q 'CHANGELOG.md'; then
-            echo "✅ CHANGELOG.md was updated"
+            echo "✁ECHANGELOG.md was updated"
           else
-            echo "ℹ️ Consider updating CHANGELOG.md for user-facing changes"
+            echo "ℹ�E�EConsider updating CHANGELOG.md for user-facing changes"
           fi
 
   # ==================== Summary ====================
   
   pr-validation-success:
     name: PR Validation Success
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs:
       - detect-changes
       - quick-checks
@@ -285,9 +285,9 @@ jobs:
              ([[ "${{ needs.go-quick-lint.result }}" == "success" ]] || [[ "${{ needs.go-quick-lint.result }}" == "skipped" ]]) && \
              [[ "${{ needs.auto-label.result }}" == "success" ]] && \
              [[ "${{ needs.changelog-check.result }}" == "success" ]]; then
-            echo "✅ All PR validation checks passed"
+            echo "✁EAll PR validation checks passed"
           else
-            echo "⚠️ Some PR validation checks had issues"
+            echo "⚠�E�ESome PR validation checks had issues"
             exit 1
           fi
 

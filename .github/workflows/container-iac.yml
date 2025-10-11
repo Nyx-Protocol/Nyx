@@ -33,7 +33,7 @@ jobs:
   # Validate Dockerfiles using hadolint (Go-based, acceptable)
   dockerfile-lint:
     name: Dockerfile Linting
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -82,7 +82,7 @@ jobs:
   # Validate docker-compose files using docker-compose config
   docker-compose-validation:
     name: Docker Compose Validation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 10
     permissions:
       contents: read
@@ -100,9 +100,9 @@ jobs:
           for compose_file in $compose_files; do
             echo "### Validating: $compose_file" >> $GITHUB_STEP_SUMMARY
             if docker-compose -f "$compose_file" config > /dev/null 2>&1; then
-              echo "✅ $compose_file is valid" >> $GITHUB_STEP_SUMMARY
+              echo "✁E$compose_file is valid" >> $GITHUB_STEP_SUMMARY
             else
-              echo "❌ $compose_file has errors" >> $GITHUB_STEP_SUMMARY
+              echo "❁E$compose_file has errors" >> $GITHUB_STEP_SUMMARY
               docker-compose -f "$compose_file" config 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
             fi
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -113,7 +113,7 @@ jobs:
   # Validate Kubernetes manifests using kubeconform (Go-based, acceptable)
   kubernetes-validation:
     name: Kubernetes Manifest Validation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -154,16 +154,16 @@ jobs:
       
       - name: Generate K8s validation summary
         run: |
-          echo "## ☸️ Kubernetes Manifest Validation" >> $GITHUB_STEP_SUMMARY
+          echo "## ☸�E�EKubernetes Manifest Validation" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Validated key manifests:" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ k8s-nyx-multinode.yaml" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ kind-config.yaml" >> $GITHUB_STEP_SUMMARY
+          echo "- ✁Ek8s-nyx-multinode.yaml" >> $GITHUB_STEP_SUMMARY
+          echo "- ✁Ekind-config.yaml" >> $GITHUB_STEP_SUMMARY
 
   # Validate Helm charts
   helm-validation:
     name: Helm Chart Validation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -185,7 +185,7 @@ jobs:
             echo "Validating charts/nyx..."
             helm lint charts/nyx --strict
             helm template nyx charts/nyx --debug > /tmp/helm-template-output.yaml
-            echo "✅ Helm chart validation passed"
+            echo "✁EHelm chart validation passed"
           fi
           echo "::endgroup::"
       
@@ -208,18 +208,18 @@ jobs:
       
       - name: Generate Helm validation summary
         run: |
-          echo "## ⎈ Helm Chart Validation" >> $GITHUB_STEP_SUMMARY
+          echo "## ⎁EHelm Chart Validation" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Helm lint: Passed" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Template rendering: Passed" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Kubeconform validation: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "✁EHelm lint: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "✁ETemplate rendering: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "✁EKubeconform validation: Passed" >> $GITHUB_STEP_SUMMARY
 
   # ==================== Container Image Build Test ====================
   
   # Test building container images without pushing
   container-build-test:
     name: Container Build Test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 30
     permissions:
       contents: read
@@ -256,20 +256,20 @@ jobs:
       
       - name: Generate build summary
         run: |
-          echo "## 🏗️ Container Build Summary (${{ matrix.dockerfile }})" >> $GITHUB_STEP_SUMMARY
+          echo "## 🏗�E�EContainer Build Summary (${{ matrix.dockerfile }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Get image size
           size=$(docker images nyx:test-${{ github.sha }} --format "{{.Size}}")
           echo "- 📦 Image size: $size" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Build: Successful" >> $GITHUB_STEP_SUMMARY
+          echo "- ✁EBuild: Successful" >> $GITHUB_STEP_SUMMARY
 
   # ==================== Container Security Scanning ====================
   
   # Scan container images for vulnerabilities using Trivy (Go-based, acceptable)
   container-security-scan:
     name: Container Security Scan
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 20
     needs: container-build-test
     permissions:
@@ -331,7 +331,7 @@ jobs:
   # Aggregate all validation results
   validation-summary:
     name: Validation Summary
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs:
       - dockerfile-lint
       - docker-compose-validation
@@ -350,39 +350,39 @@ jobs:
           
           # Check each job status
           if [[ "${{ needs.dockerfile-lint.result }}" == "success" ]]; then
-            echo "✅ Dockerfile Linting: Passed" >> $GITHUB_STEP_SUMMARY
+            echo "✁EDockerfile Linting: Passed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ Dockerfile Linting: Issues detected" >> $GITHUB_STEP_SUMMARY
+            echo "⚠�E�EDockerfile Linting: Issues detected" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [[ "${{ needs.docker-compose-validation.result }}" == "success" ]]; then
-            echo "✅ Docker Compose: Valid" >> $GITHUB_STEP_SUMMARY
+            echo "✁EDocker Compose: Valid" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Docker Compose: Validation failed" >> $GITHUB_STEP_SUMMARY
+            echo "❁EDocker Compose: Validation failed" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [[ "${{ needs.kubernetes-validation.result }}" == "success" ]]; then
-            echo "✅ Kubernetes Manifests: Valid" >> $GITHUB_STEP_SUMMARY
+            echo "✁EKubernetes Manifests: Valid" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Kubernetes Manifests: Validation failed" >> $GITHUB_STEP_SUMMARY
+            echo "❁EKubernetes Manifests: Validation failed" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [[ "${{ needs.helm-validation.result }}" == "success" ]]; then
-            echo "✅ Helm Charts: Valid" >> $GITHUB_STEP_SUMMARY
+            echo "✁EHelm Charts: Valid" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Helm Charts: Validation failed" >> $GITHUB_STEP_SUMMARY
+            echo "❁EHelm Charts: Validation failed" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [[ "${{ needs.container-build-test.result }}" == "success" ]]; then
-            echo "✅ Container Builds: Successful" >> $GITHUB_STEP_SUMMARY
+            echo "✁EContainer Builds: Successful" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Container Builds: Failed" >> $GITHUB_STEP_SUMMARY
+            echo "❁EContainer Builds: Failed" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [[ "${{ needs.container-security-scan.result }}" == "success" ]]; then
-            echo "✅ Security Scan: Passed" >> $GITHUB_STEP_SUMMARY
+            echo "✁ESecurity Scan: Passed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ Security Scan: Vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
+            echo "⚠�E�ESecurity Scan: Vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY

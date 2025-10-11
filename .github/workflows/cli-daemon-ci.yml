@@ -53,7 +53,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: [self-hosted, linux]
             target: x86_64-unknown-linux-gnu
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -120,7 +120,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [[self-hosted, linux], windows-latest, macos-latest]
     
     steps:
       - name: Checkout repository
@@ -181,7 +181,7 @@ jobs:
           # Test rollback
           ./target/release/nyx-cli rollback 1 || true
           
-          echo "✅ All CLI commands executed successfully"
+          echo "✁EAll CLI commands executed successfully"
       
       - name: Stop daemon (Unix)
         if: runner.os != 'Windows' && always()
@@ -202,7 +202,7 @@ jobs:
   
   benchmarks:
     name: Performance Benchmarks
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 45
     if: github.event.inputs.skip_benchmarks != 'true'
     
@@ -266,7 +266,7 @@ jobs:
   
   clippy-daemon-cli:
     name: Clippy (Daemon & CLI)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 20
     
     steps:
@@ -295,7 +295,7 @@ jobs:
   
   security-audit:
     name: Security Audit
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     
     steps:
@@ -315,15 +315,15 @@ jobs:
       - name: Check for unsafe code
         run: |
           # Ensure no unsafe code in daemon and CLI
-          ! grep -r "unsafe" nyx-daemon/src/ || (echo "❌ Found unsafe code in nyx-daemon" && exit 1)
-          ! grep -r "unsafe" nyx-cli/src/ || (echo "❌ Found unsafe code in nyx-cli" && exit 1)
-          echo "✅ No unsafe code found"
+          ! grep -r "unsafe" nyx-daemon/src/ || (echo "❁EFound unsafe code in nyx-daemon" && exit 1)
+          ! grep -r "unsafe" nyx-cli/src/ || (echo "❁EFound unsafe code in nyx-cli" && exit 1)
+          echo "✁ENo unsafe code found"
 
   # ==================== Code Coverage ====================
   
   coverage:
     name: Code Coverage
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 30
     
     steps:
@@ -361,7 +361,7 @@ jobs:
   
   docs:
     name: Documentation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 20
     
     steps:
@@ -400,7 +400,7 @@ jobs:
   
   ci-success:
     name: CI Success
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs: [build-and-test, integration-tests, clippy-daemon-cli, security-audit, coverage, docs]
     if: always()
     
@@ -408,19 +408,19 @@ jobs:
       - name: Check all jobs
         run: |
           if [[ "${{ needs.build-and-test.result }}" != "success" ]]; then
-            echo "❌ Build and test failed"
+            echo "❁EBuild and test failed"
             exit 1
           fi
           if [[ "${{ needs.integration-tests.result }}" != "success" ]]; then
-            echo "❌ Integration tests failed"
+            echo "❁EIntegration tests failed"
             exit 1
           fi
           if [[ "${{ needs.clippy-daemon-cli.result }}" != "success" ]]; then
-            echo "❌ Clippy checks failed"
+            echo "❁EClippy checks failed"
             exit 1
           fi
           if [[ "${{ needs.security-audit.result }}" != "success" ]]; then
-            echo "❌ Security audit failed"
+            echo "❁ESecurity audit failed"
             exit 1
           fi
-          echo "✅ All CI checks passed successfully"
+          echo "✁EAll CI checks passed successfully"

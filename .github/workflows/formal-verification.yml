@@ -48,7 +48,7 @@ jobs:
   # Quick TLA+ model checking for fast feedback
   tla-quick-check:
     name: TLA+ Quick Model Check
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 20
     if: ${{ github.event.inputs.verification_type != 'rust-only' }}
     permissions:
@@ -91,9 +91,9 @@ jobs:
           
           # Verify JAR file
           if java -jar tla2tools.jar -h > /dev/null 2>&1; then
-            echo "✅ TLA+ tools verified"
+            echo "✁ETLA+ tools verified"
           else
-            echo "❌ TLA+ tools verification failed, re-downloading..."
+            echo "❁ETLA+ tools verification failed, re-downloading..."
             rm -f tla2tools.jar
             curl -L -o tla2tools.jar \
               https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
@@ -145,7 +145,7 @@ jobs:
   # Comprehensive TLA+ model checking
   tla-full-verification:
     name: TLA+ Full Verification
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 90
     if: ${{ github.event_name == 'schedule' || github.event.inputs.verification_type == 'full' || github.event.inputs.verification_type == 'tla-only' }}
     permissions:
@@ -188,9 +188,9 @@ jobs:
           
           # Verify JAR file
           if java -jar tla2tools.jar -h > /dev/null 2>&1; then
-            echo "✅ TLA+ tools verified"
+            echo "✁ETLA+ tools verified"
           else
-            echo "❌ TLA+ tools verification failed, re-downloading..."
+            echo "❁ETLA+ tools verification failed, re-downloading..."
             rm -f tla2tools.jar
             curl -L -o tla2tools.jar \
               https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
@@ -211,8 +211,8 @@ jobs:
           ./final_verification.sh 2>&1 | tee ../tla_verification_full.log
           
           # Generate JSON summary
-          PASSED=$(grep -c "✓" ../tla_verification_full.log || echo "0")
-          FAILED=$(grep -c "✗" ../tla_verification_full.log || echo "0")
+          PASSED=$(grep -c "✁E ../tla_verification_full.log || echo "0")
+          FAILED=$(grep -c "✁E ../tla_verification_full.log || echo "0")
           
           cat > ../tla_verification_full.json << EOF
           {
@@ -257,7 +257,7 @@ jobs:
   # Rust-side conformance and property testing
   rust-conformance:
     name: Rust Conformance Tests
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 60
     if: ${{ github.event.inputs.verification_type != 'tla-only' }}
     permissions:
@@ -312,8 +312,8 @@ jobs:
   
   # Cross-check TLA+ specs against Rust implementation
   cross-verification:
-    name: Cross-Verification (TLA+ ↔ Rust)
-    runs-on: ubuntu-latest
+    name: Cross-Verification (TLA+ ↁERust)
+    runs-on: [self-hosted, linux]
     timeout-minutes: 60
     needs: [tla-quick-check, rust-conformance]
     if: ${{ always() && github.event.inputs.verification_type == 'full' }}
@@ -350,7 +350,7 @@ jobs:
               --rust-results rust-results/ \
               --output cross-verification-report.json || true
           else
-            echo "ℹ️ Cross-verification script not available"
+            echo "ℹ�E�ECross-verification script not available"
             echo "Manual review of TLA+ and Rust results required"
           fi
       
@@ -368,7 +368,7 @@ jobs:
   # Validate specification documents for consistency
   spec-validation:
     name: Specification Validation
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     timeout-minutes: 15
     permissions:
       contents: read
@@ -393,7 +393,7 @@ jobs:
               --spec-dir spec/ \
               --output spec-validation-report.json || true
           else
-            echo "ℹ️ Checking specification files..."
+            echo "ℹ�E�EChecking specification files..."
             find spec/ -name "*.md" -type f | while read file; do
               echo "Validating: $file"
               # Basic markdown syntax check
@@ -416,7 +416,7 @@ jobs:
   
   formal-verification-success:
     name: Formal Verification Success
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux]
     needs:
       - tla-quick-check
       - rust-conformance
@@ -448,8 +448,8 @@ jobs:
           if [ -f tla-results/tla_verification_quick.log ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### TLA+ Verification Details" >> $GITHUB_STEP_SUMMARY
-            PASSED=$(grep -c "✓" tla-results/tla_verification_quick.log 2>/dev/null || echo "0")
-            FAILED=$(grep -c "✗" tla-results/tla_verification_quick.log 2>/dev/null || echo "0")
+            PASSED=$(grep -c "✁E tla-results/tla_verification_quick.log 2>/dev/null || echo "0")
+            FAILED=$(grep -c "✁E tla-results/tla_verification_quick.log 2>/dev/null || echo "0")
             echo "- Passed: $PASSED" >> $GITHUB_STEP_SUMMARY
             echo "- Failed: $FAILED" >> $GITHUB_STEP_SUMMARY
           fi
@@ -459,11 +459,11 @@ jobs:
              [[ "${{ needs.rust-conformance.result }}" == "success" ]] && \
              [[ "${{ needs.spec-validation.result }}" == "success" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ **All formal verification checks passed**" >> $GITHUB_STEP_SUMMARY
+            echo "✁E**All formal verification checks passed**" >> $GITHUB_STEP_SUMMARY
             echo "status=success" >> $GITHUB_OUTPUT
           else
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "⚠️ **Some verification checks require attention**" >> $GITHUB_STEP_SUMMARY
+            echo "⚠�E�E**Some verification checks require attention**" >> $GITHUB_STEP_SUMMARY
             echo "status=warning" >> $GITHUB_OUTPUT
           fi
       
@@ -483,15 +483,15 @@ jobs:
             
             if (fs.existsSync('tla-results/tla_verification_quick.log')) {
               const log = fs.readFileSync('tla-results/tla_verification_quick.log', 'utf8');
-              const passed = (log.match(/✓/g) || []).length;
-              const failed = (log.match(/✗/g) || []).length;
-              comment += `### TLA+ Verification\n- ✅ Passed: ${passed}\n- ❌ Failed: ${failed}\n\n`;
+              const passed = (log.match(/✁Eg) || []).length;
+              const failed = (log.match(/✁Eg) || []).length;
+              comment += `### TLA+ Verification\n- ✁EPassed: ${passed}\n- ❁EFailed: ${failed}\n\n`;
             }
             
             if ('${{ steps.summary.outputs.status }}' === 'success') {
-              comment += '✅ **All formal verification checks passed!**';
+              comment += '✁E**All formal verification checks passed!**';
             } else {
-              comment += '⚠️ **Some verification checks require attention. Please review the artifacts.**';
+              comment += '⚠�E�E**Some verification checks require attention. Please review the artifacts.**';
             }
             
             github.rest.issues.createComment({
