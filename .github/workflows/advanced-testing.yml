@@ -46,11 +46,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [self-hosted, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         rust: [stable, nightly]
         include:
           # Test MSRV (Minimum Supported Rust Version)
-          - os: self-hosted
+          - os: ubuntu-latest
             rust: 1.70.0
             msrv: true
         exclude:
@@ -264,7 +264,7 @@ jobs:
         if: always()
         run: |
           if [ -d "fuzz/artifacts" ] && [ "$(ls -A fuzz/artifacts)" ]; then
-            echo "‚ö†ÅEΩEÅEΩEÅEΩEÅEΩEFuzzing crashes detected!"
+            echo "‚ö†ÔøΩEÔøΩEÔøΩEÔøΩEÔøΩEÔøΩEÔøΩEÔøΩEFuzzing crashes detected!"
             ls -la fuzz/artifacts/
             exit 1
           else
