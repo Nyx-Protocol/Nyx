@@ -41,24 +41,22 @@ jobs:
   rust-version-matrix:
     name: Rust ${{ matrix.rust }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 60
     if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'matrix' || github.event.inputs.test_type == '' }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        rust: [stable, beta, nightly]
+        rust: [stable, nightly]
         include:
           # Test MSRV (Minimum Supported Rust Version)
           - os: ubuntu-latest
             rust: 1.70.0
             msrv: true
         exclude:
-          # Skip some combinations to save CI time
-          - os: windows-latest
-            rust: beta
+          # Skip nightly on macOS to save CI time
           - os: macos-latest
-            rust: beta
+            rust: nightly
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -68,11 +66,15 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
       
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.4
+      
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.os }}-${{ matrix.rust }}
+          key: ${{ matrix.os }}-${{ matrix.rust }}-v2
           cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       
       # OS-specific dependency installation
       - name: Install dependencies (Ubuntu)
@@ -89,13 +91,21 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install protoc -y
       
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+      
       - name: Build workspace
         run: cargo build --workspace --all-features --locked
         continue-on-error: ${{ matrix.rust == 'nightly' }}
       
-      - name: Run tests
-        run: cargo test --workspace --all-features --no-fail-fast
+      - name: Run tests with nextest
+        run: cargo nextest run --workspace --all-features --no-fail-fast
         continue-on-error: ${{ matrix.rust == 'nightly' }}
+      
+      - name: Show sccache stats
+        run: sccache --show-stats
       
       - name: Check MSRV compatibility
         if: matrix.msrv

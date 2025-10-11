@@ -12,6 +12,8 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
 
 permissions:
   contents: read
@@ -20,11 +22,47 @@ permissions:
 jobs:
   # ==================== Quick Validation ====================
   
+  # Detect changed file paths for conditional execution
+  detect-changes:
+    name: Detect Changed Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      rust-changed: ${{ steps.filter.outputs.rust }}
+      go-changed: ${{ steps.filter.outputs.go }}
+      docker-changed: ${{ steps.filter.outputs.docker }}
+      docs-changed: ${{ steps.filter.outputs.docs }}
+      ci-changed: ${{ steps.filter.outputs.ci }}
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+      
+      - name: Check changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'nyx-*/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+            go:
+              - 'nyx-http-proxy/**'
+            docker:
+              - 'Dockerfile'
+              - 'docker-compose*.yml'
+            docs:
+              - 'docs/**'
+              - '**.md'
+            ci:
+              - '.github/workflows/**'
+
   # Fast checks for immediate feedback
   quick-checks:
     name: Quick PR Checks
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: write
@@ -79,6 +117,82 @@ jobs:
           git diff --name-only origin/main...HEAD | head -20 | while read file; do
             echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
           done
+  
+  # Fast Rust lint check for PRs
+  rust-quick-lint:
+    name: Rust Quick Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.rust-changed == 'true'
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+      
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.4
+      
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "pr-lint-v2"
+          save-if: false
+      
+      - name: Install protobuf
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      
+      - name: Run clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      
+      - name: Show sccache stats
+        run: sccache --show-stats
+
+  # Fast Go lint check for PRs
+  go-quick-lint:
+    name: Go Quick Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.go-changed == 'true'
+    defaults:
+      run:
+        working-directory: nyx-http-proxy
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+          cache: true
+          cache-dependency-path: nyx-http-proxy/go.sum
+      
+      - name: Run go fmt
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "Go code is not formatted. Run 'go fmt ./...'"
+            gofmt -s -l .
+            exit 1
+          fi
+      
+      - name: Run go vet
+        run: go vet ./...
+      
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: nyx-http-proxy
+          args: --timeout=5m
 
   # ==================== PR Labels ====================
   
@@ -148,18 +262,32 @@ jobs:
     name: PR Validation Success
     runs-on: ubuntu-latest
     needs:
+      - detect-changes
       - quick-checks
+      - rust-quick-lint
+      - go-quick-lint
       - auto-label
       - changelog-check
     if: always()
     steps:
       - name: Check validation status
         run: |
+          echo "## PR Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Quick Checks: ${{ needs.quick-checks.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Rust Lint: ${{ needs.rust-quick-lint.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Go Lint: ${{ needs.go-quick-lint.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Auto Label: ${{ needs.auto-label.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Changelog: ${{ needs.changelog-check.result }}" >> $GITHUB_STEP_SUMMARY
+          
           if [[ "${{ needs.quick-checks.result }}" == "success" ]] && \
+             ([[ "${{ needs.rust-quick-lint.result }}" == "success" ]] || [[ "${{ needs.rust-quick-lint.result }}" == "skipped" ]]) && \
+             ([[ "${{ needs.go-quick-lint.result }}" == "success" ]] || [[ "${{ needs.go-quick-lint.result }}" == "skipped" ]]) && \
              [[ "${{ needs.auto-label.result }}" == "success" ]] && \
              [[ "${{ needs.changelog-check.result }}" == "success" ]]; then
             echo "✅ All PR validation checks passed"
           else
             echo "⚠️ Some PR validation checks had issues"
+            exit 1
           fi
 

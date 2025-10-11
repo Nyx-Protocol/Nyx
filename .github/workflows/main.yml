@@ -4,8 +4,20 @@ name: Main CI/CD Pipeline
 on:
   push:
     branches: ['**']
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'presentation/**'
+      - 'LICENSE-*'
+      - '.gitignore'
   pull_request:
     branches: [main, master, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - 'presentation/**'
+      - 'LICENSE-*'
+      - '.gitignore'
   workflow_dispatch:
     inputs:
       skip_tests:
@@ -26,6 +38,8 @@ env:
   CARGO_INCREMENTAL: 0
   CARGO_NET_RETRY: 10
   RUSTUP_MAX_RETRIES: 10
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
 
 # Default permissions: read-only for security (escalate per job as needed)
 permissions:
@@ -38,7 +52,7 @@ jobs:
   lint-and-format:
     name: Lint and Format Check
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -49,25 +63,22 @@ jobs:
       
       - name: Install protobuf compiler
         run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo apt-get update && sudo apt-get install -y protobuf-compiler
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            brew install protobuf
-          elif [ "$RUNNER_OS" == "Windows" ]; then
-            choco install protoc
-          fi
-        shell: bash
+          sudo apt-get update && sudo apt-get install -y protobuf-compiler
       
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
       
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.4
+      
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "lint-format"
+          shared-key: "lint-format-v2"
           cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       
       - name: Check code formatting
         run: cargo fmt --all -- --check
@@ -77,6 +88,9 @@ jobs:
           cargo clippy --workspace --all-targets --all-features \
             --message-format=json -- -D warnings \
             | tee clippy-output.json
+      
+      - name: Show sccache stats
+        run: sccache --show-stats
       
       - name: Upload Clippy results
         if: always()
@@ -90,7 +104,7 @@ jobs:
   cargo-check:
     name: Cargo Check (All Features)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -100,11 +114,15 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.4
+      
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "cargo-check"
+          shared-key: "cargo-check-v2"
           cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       
       # Install system dependencies for full compilation check
       - name: Install system dependencies
@@ -112,14 +130,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libcap-dev pkg-config protobuf-compiler libprotobuf-dev
       
-      - name: Check workspace (default features)
-        run: cargo check --workspace --locked
+      - name: Check workspace (all features in parallel)
+        run: |
+          cargo check --workspace --all-features --locked &
+          cargo check --workspace --no-default-features --locked &
+          wait
       
-      - name: Check workspace (all features)
-        run: cargo check --workspace --all-features --locked
-      
-      - name: Check workspace (no default features)
-        run: cargo check --workspace --no-default-features --locked
+      - name: Show sccache stats
+        run: sccache --show-stats
 
   # ==================== Phase 2: Build and Test (Core Validation) ====================
   
@@ -127,8 +145,8 @@ jobs:
   build-and-test-linux:
     name: Build and Test (Linux)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-    needs: [lint-and-format, cargo-check]
+    timeout-minutes: 60
+    needs: [cargo-check]
     if: ${{ github.event.inputs.skip_tests != 'true' }}
     permissions:
       contents: read
@@ -141,51 +159,50 @@ jobs:
         with:
           components: llvm-tools-preview
       
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.4
+      
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-test-linux"
+          shared-key: "build-test-linux-v2"
           cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libcap-dev pkg-config protobuf-compiler
       
-      - name: Install cargo-llvm-cov for coverage
+      - name: Install cargo-nextest and cargo-llvm-cov
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-llvm-cov
+          tool: cargo-nextest,cargo-llvm-cov
       
       - name: Build workspace (all features)
         run: cargo build --workspace --all-features --locked --verbose
       
-      - name: Run workspace tests with coverage
+      - name: Run workspace tests with coverage (using nextest)
         run: |
-          # Generate LCOV format coverage report
-          cargo llvm-cov --workspace --all-features --no-fail-fast \
+          cargo llvm-cov nextest --workspace --all-features --no-fail-fast \
             --lcov --output-path lcov.info
-          # Generate HTML coverage report (requires separate invocation)
-          cargo llvm-cov --workspace --all-features --no-fail-fast \
-            --html --output-dir coverage-html
       
       - name: Run daemon metrics tests (experimental-metrics)
         run: |
-          cargo test -p nyx-daemon --features experimental-metrics \
-            --tests --no-fail-fast -- --nocapture
+          cargo nextest run -p nyx-daemon --features experimental-metrics \
+            --no-fail-fast
       
       - name: Run daemon OTLP exporter tests
         run: |
-          cargo test -p nyx-daemon \
+          cargo nextest run -p nyx-daemon \
             --features experimental-metrics,otlp_exporter \
-            --tests --no-fail-fast -- --nocapture
+            --no-fail-fast
         env:
           NYX_OTLP_ENABLED: "0"
       
       - name: Run CLI alerts tests
         run: |
-          cargo build -p nyx-cli --tests
-          cargo test -p nyx-cli --test alerts_cmd --no-fail-fast -- --nocapture
+          cargo nextest run -p nyx-cli --test alerts_cmd --no-fail-fast
       
       - name: Build mobile FFI with telemetry
         run: cargo build -p nyx-mobile-ffi --features telemetry
@@ -196,16 +213,17 @@ jobs:
       - name: Run nyx-sdk-wasm tests
         run: |
           cargo test -p nyx-sdk-wasm --target wasm32-unknown-unknown \
-            --no-fail-fast -- --nocapture
+            --no-fail-fast
+      
+      - name: Show sccache stats
+        run: sccache --show-stats
       
       - name: Upload coverage to artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-linux
-          path: |
-            lcov.info
-            coverage-html/
+          path: lcov.info
           retention-days: 30
       
       - name: Generate coverage summary
@@ -219,15 +237,24 @@ jobs:
               }
             }'
 
-  # Windows-specific build and test
-  build-and-test-windows:
-    name: Build and Test (Windows)
-    runs-on: windows-latest
-    timeout-minutes: 90
-    needs: [lint-and-format, cargo-check]
+  # Cross-platform build and test matrix
+  build-and-test:
+    name: Build and Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    needs: [cargo-check]
     if: ${{ github.event.inputs.skip_tests != 'true' }}
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+        include:
+          - os: windows-latest
+            protoc-install: choco install protoc -y
+          - os: macos-latest
+            protoc-install: brew install protobuf
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -235,55 +262,36 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.4
+      
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "build-test-windows"
+          shared-key: "build-test-${{ matrix.os }}-v2"
           cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       
       - name: Install protoc
-        run: |
-          choco install protoc -y
+        run: ${{ matrix.protoc-install }}
+        shell: bash
+      
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
       
       - name: Build workspace
         run: cargo build --workspace --all-features --locked --verbose
       
-      - name: Run workspace tests
-        run: cargo test --workspace --all-features --no-fail-fast -- --nocapture
+      - name: Run workspace tests with nextest
+        run: cargo nextest run --workspace --all-features --no-fail-fast
       
       - name: Build mobile FFI
         run: cargo build -p nyx-mobile-ffi --features telemetry
-
-  # macOS-specific build and test
-  build-and-test-macos:
-    name: Build and Test (macOS)
-    runs-on: macos-latest
-    timeout-minutes: 90
-    needs: [lint-and-format, cargo-check]
-    if: ${{ github.event.inputs.skip_tests != 'true' }}
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
       
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      
-      - name: Setup Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "build-test-macos"
-          cache-on-failure: true
-      
-      - name: Install protobuf
-        run: brew install protobuf
-      
-      - name: Build workspace
-        run: cargo build --workspace --all-features --locked --verbose
-      
-      - name: Run workspace tests
-        run: cargo test --workspace --all-features --no-fail-fast -- --nocapture
+      - name: Show sccache stats
+        run: sccache --show-stats
 
   # ==================== Phase 3: Go HTTP Proxy ====================
   
@@ -291,8 +299,7 @@ jobs:
   go-http-proxy:
     name: Go HTTP Proxy CI
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    needs: [lint-and-format]
+    timeout-minutes: 15
     permissions:
       contents: read
     defaults:
@@ -306,6 +313,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.0'
+          cache: true
           cache-dependency-path: nyx-http-proxy/go.sum
       
       - name: Download Go dependencies
@@ -322,7 +330,7 @@ jobs:
         with:
           version: latest
           working-directory: nyx-http-proxy
-          args: --timeout=10m
+          args: --timeout=5m
       
       - name: Build HTTP Proxy
         run: go build -v -o nyx-http-proxy ./...
@@ -334,7 +342,6 @@ jobs:
       
       - name: Generate coverage report
         run: |
-          go tool cover -html=coverage.out -o coverage.html
           go tool cover -func=coverage.out | tee coverage-summary.txt
       
       - name: Upload Go coverage
@@ -344,7 +351,6 @@ jobs:
           name: go-coverage
           path: |
             nyx-http-proxy/coverage.out
-            nyx-http-proxy/coverage.html
             nyx-http-proxy/coverage-summary.txt
           retention-days: 30
 
@@ -354,7 +360,7 @@ jobs:
   compliance-tests:
     name: Compliance and Conformance Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     needs: [build-and-test-linux]
     permissions:
       contents: read
@@ -365,39 +371,51 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.4
+      
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "compliance"
+          shared-key: "compliance-v2"
           cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libcap-dev pkg-config protobuf-compiler
       
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+      
       - name: Run core compliance gate
         run: |
           export NYX_REQUIRED_COMPLIANCE_LEVEL=core
-          cargo test --package nyx-conformance ci_compliance_gate_main \
-            --features hybrid -- --nocapture
+          cargo nextest run --package nyx-conformance ci_compliance_gate_main \
+            --features hybrid
       
       - name: Run compliance matrix
         run: |
           mkdir -p compliance-reports
           export NYX_CI_OUTPUT_DIR=./compliance-reports
-          cargo test --package nyx-conformance ci_compliance_matrix_full \
-            --features hybrid,multipath,telemetry -- --nocapture
+          cargo nextest run --package nyx-conformance ci_compliance_matrix_full \
+            --features hybrid,multipath,telemetry
       
       - name: Run feature compilation verification
         run: |
-          cargo test --package nyx-conformance ci_feature_compilation_verification \
-            --features hybrid,multipath,telemetry -- --nocapture
+          cargo nextest run --package nyx-conformance ci_feature_compilation_verification \
+            --features hybrid,multipath,telemetry
       
       - name: Run hierarchy validation
         run: |
-          cargo test --package nyx-conformance ci_compliance_hierarchy_validation \
-            --features hybrid,multipath,telemetry -- --nocapture
+          cargo nextest run --package nyx-conformance ci_compliance_hierarchy_validation \
+            --features hybrid,multipath,telemetry
+      
+      - name: Show sccache stats
+        run: sccache --show-stats
       
       - name: Upload compliance reports
         if: always()
@@ -417,8 +435,7 @@ jobs:
       - lint-and-format
       - cargo-check
       - build-and-test-linux
-      - build-and-test-windows
-      - build-and-test-macos
+      - build-and-test
       - go-http-proxy
       - compliance-tests
     if: always()
@@ -428,8 +445,7 @@ jobs:
           if [[ "${{ needs.lint-and-format.result }}" != "success" ]] || \
              [[ "${{ needs.cargo-check.result }}" != "success" ]] || \
              [[ "${{ needs.build-and-test-linux.result }}" != "success" ]] || \
-             [[ "${{ needs.build-and-test-windows.result }}" != "success" ]] || \
-             [[ "${{ needs.build-and-test-macos.result }}" != "success" ]] || \
+             [[ "${{ needs.build-and-test.result }}" != "success" ]] || \
              [[ "${{ needs.go-http-proxy.result }}" != "success" ]] || \
              [[ "${{ needs.compliance-tests.result }}" != "success" ]]; then
             echo "❌ CI pipeline failed"

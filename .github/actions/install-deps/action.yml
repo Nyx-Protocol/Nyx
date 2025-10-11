@@ -1,0 +1,27 @@
+name: 'Install System Dependencies'
+description: 'Installs system dependencies for Nyx project'
+inputs:
+  os:
+    description: 'Operating system (auto-detected if not specified)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install dependencies (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcap-dev pkg-config protobuf-compiler libprotobuf-dev
+    
+    - name: Install dependencies (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: brew install protobuf
+    
+    - name: Install dependencies (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: choco install protoc -y

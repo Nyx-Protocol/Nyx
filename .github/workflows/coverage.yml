@@ -31,7 +31,7 @@ jobs:
   rust-coverage:
     name: Rust Code Coverage
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
@@ -43,47 +43,35 @@ jobs:
         with:
           components: llvm-tools-preview
       
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.4
+      
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "coverage"
+          shared-key: "coverage-v2"
           cache-on-failure: true
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y libcap-dev pkg-config protobuf-compiler libprotobuf-dev
       
-      - name: Install cargo-llvm-cov
+      - name: Install cargo-llvm-cov and cargo-nextest
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-llvm-cov
+          tool: cargo-llvm-cov,cargo-nextest
       
-      - name: Generate coverage (workspace)
+      - name: Generate coverage (workspace) with nextest
         run: |
           cargo llvm-cov clean --workspace
-          # Generate LCOV format coverage report
-          cargo llvm-cov --workspace --all-features --no-fail-fast \
+          # Generate LCOV format coverage report using nextest
+          cargo llvm-cov nextest --workspace --all-features --no-fail-fast \
             --lcov --output-path lcov-workspace.info
-          # Generate HTML coverage report (requires separate invocation)
-          cargo llvm-cov --workspace --all-features --no-fail-fast \
-            --html --output-dir coverage-html-workspace
       
-      - name: Generate coverage per package
-        run: |
-          mkdir -p coverage-per-package
-          for pkg in nyx-core nyx-crypto nyx-transport nyx-mix nyx-fec \
-                     nyx-stream nyx-telemetry nyx-control nyx-cli \
-                     nyx-daemon nyx-sdk nyx-conformance; do
-            echo "Generating coverage for $pkg..."
-            cargo llvm-cov clean -p $pkg
-            # Generate LCOV format coverage report for package
-            cargo llvm-cov -p $pkg --all-features --no-fail-fast \
-              --lcov --output-path coverage-per-package/$pkg.lcov || true
-            # Generate HTML coverage report for package (separate invocation required)
-            cargo llvm-cov -p $pkg --all-features --no-fail-fast \
-              --html --output-dir coverage-per-package/$pkg-html || true
-          done
+      - name: Show sccache stats
+        run: sccache --show-stats
       
       - name: Generate coverage summary
         run: |
