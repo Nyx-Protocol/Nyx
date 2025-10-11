@@ -30,7 +30,7 @@ jobs:
   # Comprehensive Rust code coverage
   rust-coverage:
     name: Rust Code Coverage
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 60
     permissions:
       contents: read
@@ -155,7 +155,7 @@ jobs:
   # Go HTTP Proxy coverage
   go-coverage:
     name: Go Code Coverage
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 30
     permissions:
       contents: read
@@ -217,7 +217,7 @@ jobs:
   # Aggregate and generate unified coverage report
   aggregate-coverage:
     name: Aggregate Coverage Report
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     needs: [rust-coverage, go-coverage]
     timeout-minutes: 15
     permissions:
@@ -288,7 +288,7 @@ jobs:
   # Generate coverage badges (optional)
   generate-badges:
     name: Generate Coverage Badges
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     needs: [aggregate-coverage]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     timeout-minutes: 15
@@ -340,7 +340,7 @@ jobs:
   
   coverage-success:
     name: Coverage Success
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     needs:
       - rust-coverage
       - go-coverage

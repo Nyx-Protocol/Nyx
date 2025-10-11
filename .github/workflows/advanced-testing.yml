@@ -46,11 +46,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [[self-hosted, linux], windows-latest, macos-latest]
+        os: [self-hosted, windows-latest, macos-latest]
         rust: [stable, nightly]
         include:
           # Test MSRV (Minimum Supported Rust Version)
-          - os: [self-hosted, linux]
+          - os: self-hosted
             rust: 1.70.0
             msrv: true
         exclude:
@@ -117,7 +117,7 @@ jobs:
   # Test various feature flag combinations
   feature-matrix:
     name: Feature Matrix Testing
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 60
     if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'matrix' || github.event.inputs.test_type == '' }}
     strategy:
@@ -171,7 +171,7 @@ jobs:
   # Full integration test suite
   integration-tests:
     name: Integration Tests
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 60
     if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'integration' || github.event.inputs.test_type == '' }}
     permissions:
@@ -223,7 +223,7 @@ jobs:
   # Continuous fuzzing with cargo-fuzz
   fuzzing:
     name: Fuzzing Suite
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 90
     if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'fuzzing' || github.event.inputs.test_type == '' }}
     permissions:
@@ -264,7 +264,7 @@ jobs:
         if: always()
         run: |
           if [ -d "fuzz/artifacts" ] && [ "$(ls -A fuzz/artifacts)" ]; then
-            echo "‚ö†ÔøΩEÔøΩEFuzzing crashes detected!"
+            echo "‚ö†ÅEΩEÅEΩEFuzzing crashes detected!"
             ls -la fuzz/artifacts/
             exit 1
           else
@@ -285,7 +285,7 @@ jobs:
   # Miri for detecting undefined behavior in unsafe code
   miri-tests:
     name: Miri UB Detection
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 60
     if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'miri' || github.event.inputs.test_type == '' }}
     permissions:
@@ -333,7 +333,7 @@ jobs:
   # Performance benchmarking
   benchmarks:
     name: Performance Benchmarks
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 60
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     permissions:
@@ -386,7 +386,7 @@ jobs:
   
   advanced-testing-success:
     name: Advanced Testing Success
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     needs:
       - rust-version-matrix
       - feature-matrix

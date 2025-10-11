@@ -31,7 +31,7 @@ jobs:
   # Generate and validate Rust API documentation
   rust-docs:
     name: Rust API Documentation
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 45
     permissions:
       contents: read
@@ -84,7 +84,7 @@ jobs:
   # Generate Go documentation
   go-docs:
     name: Go Documentation
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 15
     permissions:
       contents: read
@@ -117,7 +117,7 @@ jobs:
   # Build MkDocs-based documentation site
   mkdocs-build:
     name: MkDocs Documentation Build
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 20
     permissions:
       contents: read
@@ -159,7 +159,7 @@ jobs:
   # Validate markdown files for consistency
   markdown-validation:
     name: Markdown Validation
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 15
     permissions:
       contents: read
@@ -192,7 +192,7 @@ jobs:
   
   docs-success:
     name: Documentation Success
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     needs:
       - rust-docs
       - go-docs

@@ -48,7 +48,7 @@ jobs:
   # Quick TLA+ model checking for fast feedback
   tla-quick-check:
     name: TLA+ Quick Model Check
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 20
     if: ${{ github.event.inputs.verification_type != 'rust-only' }}
     permissions:
@@ -145,7 +145,7 @@ jobs:
   # Comprehensive TLA+ model checking
   tla-full-verification:
     name: TLA+ Full Verification
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 90
     if: ${{ github.event_name == 'schedule' || github.event.inputs.verification_type == 'full' || github.event.inputs.verification_type == 'tla-only' }}
     permissions:
@@ -257,7 +257,7 @@ jobs:
   # Rust-side conformance and property testing
   rust-conformance:
     name: Rust Conformance Tests
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 60
     if: ${{ github.event.inputs.verification_type != 'tla-only' }}
     permissions:
@@ -313,7 +313,7 @@ jobs:
   # Cross-check TLA+ specs against Rust implementation
   cross-verification:
     name: Cross-Verification (TLA+ ↁERust)
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 60
     needs: [tla-quick-check, rust-conformance]
     if: ${{ always() && github.event.inputs.verification_type == 'full' }}
@@ -368,7 +368,7 @@ jobs:
   # Validate specification documents for consistency
   spec-validation:
     name: Specification Validation
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 15
     permissions:
       contents: read
@@ -416,7 +416,7 @@ jobs:
   
   formal-verification-success:
     name: Formal Verification Success
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     needs:
       - tla-quick-check
       - rust-conformance

@@ -33,7 +33,7 @@ jobs:
   # Validate Dockerfiles using hadolint (Go-based, acceptable)
   dockerfile-lint:
     name: Dockerfile Linting
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 15
     permissions:
       contents: read
@@ -82,7 +82,7 @@ jobs:
   # Validate docker-compose files using docker-compose config
   docker-compose-validation:
     name: Docker Compose Validation
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 10
     permissions:
       contents: read
@@ -113,7 +113,7 @@ jobs:
   # Validate Kubernetes manifests using kubeconform (Go-based, acceptable)
   kubernetes-validation:
     name: Kubernetes Manifest Validation
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 15
     permissions:
       contents: read
@@ -163,7 +163,7 @@ jobs:
   # Validate Helm charts
   helm-validation:
     name: Helm Chart Validation
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 15
     permissions:
       contents: read
@@ -219,7 +219,7 @@ jobs:
   # Test building container images without pushing
   container-build-test:
     name: Container Build Test
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 30
     permissions:
       contents: read
@@ -269,7 +269,7 @@ jobs:
   # Scan container images for vulnerabilities using Trivy (Go-based, acceptable)
   container-security-scan:
     name: Container Security Scan
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 20
     needs: container-build-test
     permissions:
@@ -331,7 +331,7 @@ jobs:
   # Aggregate all validation results
   validation-summary:
     name: Validation Summary
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     needs:
       - dockerfile-lint
       - docker-compose-validation

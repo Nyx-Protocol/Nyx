@@ -35,7 +35,7 @@ jobs:
   # Validate version and prepare release metadata
   prepare-release:
     name: Prepare Release
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     timeout-minutes: 15
     permissions:
       contents: read
@@ -92,11 +92,11 @@ jobs:
       matrix:
         include:
           # Linux x86_64
-          - os: [self-hosted, linux]
+          - os: self-hosted
             target: x86_64-unknown-linux-gnu
             artifact_name: nyx-linux-x86_64
           # Linux aarch64
-          - os: [self-hosted, linux]
+          - os: self-hosted
             target: aarch64-unknown-linux-gnu
             artifact_name: nyx-linux-aarch64
           # macOS x86_64
@@ -183,7 +183,7 @@ jobs:
   # Build Go HTTP Proxy for release
   build-go-proxy:
     name: Build Go HTTP Proxy (${{ matrix.target }})
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     needs: [prepare-release]
     timeout-minutes: 30
     permissions:
@@ -255,7 +255,7 @@ jobs:
   # Generate changelog from git history
   generate-changelog:
     name: Generate CHANGELOG
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     needs: [prepare-release]
     timeout-minutes: 15
     permissions:
@@ -303,7 +303,7 @@ jobs:
   # Create GitHub release with all artifacts
   create-release:
     name: Create GitHub Release
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     needs:
       - prepare-release
       - build-release-artifacts
@@ -343,7 +343,7 @@ jobs:
   
   release-success:
     name: Release Success
-    runs-on: [self-hosted, linux]
+    runs-on: self-hosted
     needs:
       - prepare-release
       - create-release
