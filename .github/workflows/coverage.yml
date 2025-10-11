@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -144,7 +144,7 @@ jobs:
           THRESHOLD=70.0
           
           if (( $(echo "$coverage < $THRESHOLD" | bc -l) )); then
-            echo "âš EECoverage ${coverage}% is below threshold ${THRESHOLD}%"
+            echo "âš ï¿½Eï¿½ECoverage ${coverage}% is below threshold ${THRESHOLD}%"
             # Don't fail on coverage for now, just warn
           else
             echo "âœECoverage ${coverage}% meets threshold ${THRESHOLD}%"
@@ -207,7 +207,7 @@ jobs:
           THRESHOLD=60.0
           
           if (( $(echo "$coverage < $THRESHOLD" | bc -l) )); then
-            echo "âš EEGo coverage ${coverage}% is below threshold ${THRESHOLD}%"
+            echo "âš ï¿½Eï¿½EGo coverage ${coverage}% is below threshold ${THRESHOLD}%"
           else
             echo "âœEGo coverage ${coverage}% meets threshold ${THRESHOLD}%"
           fi
@@ -360,7 +360,7 @@ jobs:
           if [[ "${{ needs.rust-coverage.result }}" != "success" ]] || \
              [[ "${{ needs.go-coverage.result }}" != "success" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "âš EE**Some coverage checks failed**" >> $GITHUB_STEP_SUMMARY
+            echo "âš ï¿½Eï¿½E**Some coverage checks failed**" >> $GITHUB_STEP_SUMMARY
           else
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "âœE**All coverage checks completed successfully**" >> $GITHUB_STEP_SUMMARY

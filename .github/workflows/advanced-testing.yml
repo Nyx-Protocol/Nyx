@@ -24,7 +24,7 @@ on:
           - miri
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -264,7 +264,7 @@ jobs:
         if: always()
         run: |
           if [ -d "fuzz/artifacts" ] && [ "$(ls -A fuzz/artifacts)" ]; then
-            echo "‚ö†ÅEΩEÅEΩEFuzzing crashes detected!"
+            echo "‚ö†ÔøΩEÔøΩEÔøΩEÔøΩEFuzzing crashes detected!"
             ls -la fuzz/artifacts/
             exit 1
           else

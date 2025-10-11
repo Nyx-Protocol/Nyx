@@ -22,7 +22,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -199,11 +199,11 @@ jobs:
           echo "Checking ${{ matrix.compose-file }} for best practices..."
           # Check for version specification
           if ! grep -q "^version:" ${{ matrix.compose-file }}; then
-            echo "‚ö†ÅEÅENo version specified in ${{ matrix.compose-file }}"
+            echo "‚ö†ÔøΩEÔøΩENo version specified in ${{ matrix.compose-file }}"
           fi
           # Check for health checks
           if ! grep -q "healthcheck:" ${{ matrix.compose-file }}; then
-            echo "‚ÑπÅEÅENo health checks defined in ${{ matrix.compose-file }}"
+            echo "‚ÑπÔøΩEÔøΩENo health checks defined in ${{ matrix.compose-file }}"
           fi
           echo "‚úÅEValidation complete"
 

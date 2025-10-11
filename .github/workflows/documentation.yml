@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -142,7 +142,7 @@ jobs:
             mkdocs build --strict --verbose
             echo "âœEMkDocs build successful"
           else
-            echo "â„¹EENo mkdocs.yml found, skipping MkDocs build"
+            echo "â„¹ï¿½Eï¿½ENo mkdocs.yml found, skipping MkDocs build"
           fi
       
       - name: Upload MkDocs site
@@ -185,7 +185,7 @@ jobs:
       
       - name: Check for broken links
         run: |
-          echo "â„¹EELink checking would be performed here"
+          echo "â„¹ï¿½Eï¿½ELink checking would be performed here"
           echo "Consider using tools like lychee for comprehensive link validation"
 
   # ==================== Documentation Summary ====================
@@ -217,6 +217,6 @@ jobs:
             echo "âœE**All documentation builds successful**" >> $GITHUB_STEP_SUMMARY
           else
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "âš EE**Some documentation builds failed**" >> $GITHUB_STEP_SUMMARY
+            echo "âš ï¿½Eï¿½E**Some documentation builds failed**" >> $GITHUB_STEP_SUMMARY
           fi
 

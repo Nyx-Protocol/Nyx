@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -120,7 +120,7 @@ jobs:
           cargo tree --workspace --all-features --duplicates > duplicate-deps.txt || true
           
           if [ -s duplicate-deps.txt ]; then
-            echo "âš EEDuplicate dependencies detected:"
+            echo "âš ï¿½Eï¿½EDuplicate dependencies detected:"
             cat duplicate-deps.txt
           else
             echo "âœENo duplicate dependencies found"
@@ -216,7 +216,7 @@ jobs:
           fi
           
           echo "" >> LICENSE_REPORT.md
-          echo "âš EEPlease review licenses for compliance with project requirements." >> LICENSE_REPORT.md
+          echo "âš ï¿½Eï¿½EPlease review licenses for compliance with project requirements." >> LICENSE_REPORT.md
       
       - name: Upload license report
         if: always()

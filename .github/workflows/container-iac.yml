@@ -21,7 +21,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -154,7 +154,7 @@ jobs:
       
       - name: Generate K8s validation summary
         run: |
-          echo "## â˜¸EEKubernetes Manifest Validation" >> $GITHUB_STEP_SUMMARY
+          echo "## â˜¸ï¿½Eï¿½EKubernetes Manifest Validation" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Validated key manifests:" >> $GITHUB_STEP_SUMMARY
           echo "- âœEk8s-nyx-multinode.yaml" >> $GITHUB_STEP_SUMMARY
@@ -256,7 +256,7 @@ jobs:
       
       - name: Generate build summary
         run: |
-          echo "## ðŸ—EEContainer Build Summary (${{ matrix.dockerfile }})" >> $GITHUB_STEP_SUMMARY
+          echo "## ðŸ—ï¿½Eï¿½EContainer Build Summary (${{ matrix.dockerfile }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Get image size
@@ -352,7 +352,7 @@ jobs:
           if [[ "${{ needs.dockerfile-lint.result }}" == "success" ]]; then
             echo "âœEDockerfile Linting: Passed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "âš EEDockerfile Linting: Issues detected" >> $GITHUB_STEP_SUMMARY
+            echo "âš ï¿½Eï¿½EDockerfile Linting: Issues detected" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [[ "${{ needs.docker-compose-validation.result }}" == "success" ]]; then
@@ -382,7 +382,7 @@ jobs:
           if [[ "${{ needs.container-security-scan.result }}" == "success" ]]; then
             echo "âœESecurity Scan: Passed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "âš EESecurity Scan: Vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
+            echo "âš ï¿½Eï¿½ESecurity Scan: Vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY

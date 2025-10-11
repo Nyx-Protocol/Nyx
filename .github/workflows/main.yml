@@ -28,7 +28,7 @@ on:
 
 # Cancel in-progress runs for the same workflow/PR to save resources
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 # Global environment variables for consistent behavior across all jobs
