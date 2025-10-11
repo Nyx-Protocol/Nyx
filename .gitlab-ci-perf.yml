@@ -27,7 +27,7 @@ rust:bench:
   stage: test
   script:
     - echo "⚡ Running Rust performance benchmarks"
-    - cargo bench --workspace --exclude nyx-sdk-wasm -- --output-format bencher | tee bench-results.txt
+    - cargo bench --workspace --exclude nyx-sdk-wasm --exclude build-protoc --exclude nyx-sdk 2>&1 | tee bench-results.txt
     - |
       echo "📊 Benchmark Summary:"
       grep "test result:" bench-results.txt || true
@@ -48,7 +48,7 @@ rust:bench-crypto:
   stage: test
   script:
     - echo "🔐 Benchmarking cryptographic operations"
-    - cargo bench -p nyx-crypto -- --output-format bencher | tee crypto-bench.txt
+    - cargo bench -p nyx-crypto 2>&1 | tee crypto-bench.txt
     - echo "✁ECrypto benchmarks completed"
   artifacts:
     expire_in: 1 month
@@ -65,7 +65,7 @@ rust:bench-transport:
   stage: test
   script:
     - echo "🌐 Benchmarking network transport"
-    - cargo bench -p nyx-transport -- --output-format bencher | tee transport-bench.txt
+    - cargo bench -p nyx-transport 2>&1 | tee transport-bench.txt
     - echo "✁ETransport benchmarks completed"
   artifacts:
     expire_in: 1 month
