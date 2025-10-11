@@ -42,7 +42,7 @@ once_cell = "1.19"
 thiserror = "1"
 toml = "0.8"
 async-trait = "0.1"
-bincode = "1.3" # Binary serialization for Kademlia RPC messages
+bincode = "2.0" # Binary serialization for Kademlia RPC messages
 
 [features]
 # Full DHT functionality - pure Rust implementation
