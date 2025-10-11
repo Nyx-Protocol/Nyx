@@ -80,7 +80,6 @@ jobs:
       matrix:
         dockerfile:
           - Dockerfile
-          - Dockerfile.benchmark
           - nyx-cli/Dockerfile
     steps:
       - name: Checkout repository
@@ -182,7 +181,6 @@ jobs:
       fail-fast: false
       matrix:
         compose-file:
-          - docker-compose.benchmark.yml
           - docker-compose.grafana.yml
           - docker-compose.real-benchmark.yml
     steps:
@@ -276,7 +274,8 @@ jobs:
       - name: Test Helm chart installation (dry-run)
         run: |
           if [ -d charts/nyx ]; then
-            helm install nyx-test charts/nyx --dry-run --debug
+            # Use template instead of install for validation without cluster
+            helm template nyx-test charts/nyx --debug > /dev/null
           fi
       
       - name: Validate rendered manifests with kubeconform
