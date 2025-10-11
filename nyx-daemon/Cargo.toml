@@ -44,7 +44,7 @@ config-gossip-tests = []
 
 [dependencies]
 async-trait = "0.1"
-prost = "0.12"
+prost = "0.13"
 prost-types = "0.12"
 tokio = { version = "1.37", features = ["full"] }
 thiserror = "1.0"
