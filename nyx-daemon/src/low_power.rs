@@ -529,7 +529,7 @@ mod test_s {
 
         // Enter Active to reset activity timer
         let _ = nyx_mobile_ffi::nyx_power_set_state(NyxPowerState::Active as u32);
-        
+
         // Drain any state transition events with longer timeout
         while timeout(Duration::from_millis(200), rx.recv()).await.is_ok() {}
 
