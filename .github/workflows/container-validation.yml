@@ -32,7 +32,7 @@ permissions:
 jobs:
   # ==================== Docker Validation ====================
   
-  # Validate Dockerfiles with hadolint (pure Python alternative
+  # Validate Dockerfiles with hadolint (pure Python alternative)
   dockerfile-lint:
     name: Dockerfile Linting
     runs-on: ubuntu-latest
