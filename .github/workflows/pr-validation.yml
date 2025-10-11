@@ -25,7 +25,7 @@ jobs:
   # Detect changed file paths for conditional execution
   detect-changes:
     name: Detect Changed Files
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       rust-changed: ${{ steps.filter.outputs.rust }}
@@ -61,7 +61,7 @@ jobs:
   # Fast checks for immediate feedback
   quick-checks:
     name: Quick PR Checks
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
@@ -121,7 +121,7 @@ jobs:
   # Fast Rust lint check for PRs
   rust-quick-lint:
     name: Rust Quick Lint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [detect-changes]
     if: needs.detect-changes.outputs.rust-changed == 'true'
@@ -158,7 +158,7 @@ jobs:
   # Fast Go lint check for PRs
   go-quick-lint:
     name: Go Quick Lint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 8
     needs: [detect-changes]
     if: needs.detect-changes.outputs.go-changed == 'true'
@@ -199,7 +199,7 @@ jobs:
   # Auto-label PRs based on changed files
   auto-label:
     name: Auto Label PR
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
@@ -236,7 +236,7 @@ jobs:
   # Ensure changelog is updated
   changelog-check:
     name: Changelog Check
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
@@ -260,7 +260,7 @@ jobs:
   
   pr-validation-success:
     name: PR Validation Success
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs:
       - detect-changes
       - quick-checks

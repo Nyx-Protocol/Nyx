@@ -30,7 +30,7 @@ jobs:
   # Comprehensive Rust code coverage
   rust-coverage:
     name: Rust Code Coverage
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: read
@@ -144,7 +144,7 @@ jobs:
           THRESHOLD=70.0
           
           if (( $(echo "$coverage < $THRESHOLD" | bc -l) )); then
-            echo "âš ï¿½Eï¿½ECoverage ${coverage}% is below threshold ${THRESHOLD}%"
+            echo "âš E½EE½ECoverage ${coverage}% is below threshold ${THRESHOLD}%"
             # Don't fail on coverage for now, just warn
           else
             echo "âœECoverage ${coverage}% meets threshold ${THRESHOLD}%"
@@ -155,7 +155,7 @@ jobs:
   # Go HTTP Proxy coverage
   go-coverage:
     name: Go Code Coverage
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
@@ -207,7 +207,7 @@ jobs:
           THRESHOLD=60.0
           
           if (( $(echo "$coverage < $THRESHOLD" | bc -l) )); then
-            echo "âš ï¿½Eï¿½EGo coverage ${coverage}% is below threshold ${THRESHOLD}%"
+            echo "âš E½EE½EGo coverage ${coverage}% is below threshold ${THRESHOLD}%"
           else
             echo "âœEGo coverage ${coverage}% meets threshold ${THRESHOLD}%"
           fi
@@ -217,7 +217,7 @@ jobs:
   # Aggregate and generate unified coverage report
   aggregate-coverage:
     name: Aggregate Coverage Report
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: [rust-coverage, go-coverage]
     timeout-minutes: 15
     permissions:
@@ -288,7 +288,7 @@ jobs:
   # Generate coverage badges (optional)
   generate-badges:
     name: Generate Coverage Badges
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: [aggregate-coverage]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     timeout-minutes: 15
@@ -340,7 +340,7 @@ jobs:
   
   coverage-success:
     name: Coverage Success
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs:
       - rust-coverage
       - go-coverage
@@ -360,7 +360,7 @@ jobs:
           if [[ "${{ needs.rust-coverage.result }}" != "success" ]] || \
              [[ "${{ needs.go-coverage.result }}" != "success" ]]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "âš ï¿½Eï¿½E**Some coverage checks failed**" >> $GITHUB_STEP_SUMMARY
+            echo "âš E½EE½E**Some coverage checks failed**" >> $GITHUB_STEP_SUMMARY
           else
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "âœE**All coverage checks completed successfully**" >> $GITHUB_STEP_SUMMARY

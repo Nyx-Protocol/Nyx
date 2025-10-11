@@ -51,7 +51,7 @@ jobs:
   # Static analysis and code formatting checks - fastest feedback
   lint-and-format:
     name: Lint and Format Check
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
@@ -103,7 +103,7 @@ jobs:
   # Cargo check for all feature combinations to detect compilation issues early
   cargo-check:
     name: Cargo Check (All Features)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -144,7 +144,7 @@ jobs:
   # Main build and test job for Linux
   build-and-test-linux:
     name: Build and Test (Linux)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [cargo-check]
     if: ${{ github.event.inputs.skip_tests != 'true' }}
@@ -298,7 +298,7 @@ jobs:
   # Go HTTP Proxy build, test, and coverage
   go-http-proxy:
     name: Go HTTP Proxy CI
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -359,7 +359,7 @@ jobs:
   # Compliance and conformance testing
   compliance-tests:
     name: Compliance and Conformance Tests
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: [build-and-test-linux]
     permissions:
@@ -430,7 +430,7 @@ jobs:
   # Job summary that fails if any critical job failed
   ci-success:
     name: CI Success
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: 
       - lint-and-format
       - cargo-check

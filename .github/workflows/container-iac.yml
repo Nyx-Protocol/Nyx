@@ -33,7 +33,7 @@ jobs:
   # Validate Dockerfiles using hadolint (Go-based, acceptable)
   dockerfile-lint:
     name: Dockerfile Linting
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -41,11 +41,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Fix Docker permissions
-        run: |
-          sudo chmod 666 /var/run/docker.sock || true
-          sudo usermod -aG docker $USER || true
       
       # Hadolint is written in Haskell but distributed as Docker image (Go runtime)
       # This is acceptable as it doesn't require C/C++ compilation in CI
@@ -87,18 +82,13 @@ jobs:
   # Validate docker-compose files using docker-compose config
   docker-compose-validation:
     name: Docker Compose Validation
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Fix Docker permissions
-        run: |
-          sudo chmod 666 /var/run/docker.sock || true
-          sudo usermod -aG docker $USER || true
       
       - name: Validate docker-compose files
         run: |
@@ -123,7 +113,7 @@ jobs:
   # Validate Kubernetes manifests using kubeconform (Go-based, acceptable)
   kubernetes-validation:
     name: Kubernetes Manifest Validation
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -164,7 +154,7 @@ jobs:
       
       - name: Generate K8s validation summary
         run: |
-          echo "## â˜¸ï¿½Eï¿½EKubernetes Manifest Validation" >> $GITHUB_STEP_SUMMARY
+          echo "## â˜¸E½EE½EKubernetes Manifest Validation" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Validated key manifests:" >> $GITHUB_STEP_SUMMARY
           echo "- âœEk8s-nyx-multinode.yaml" >> $GITHUB_STEP_SUMMARY
@@ -173,7 +163,7 @@ jobs:
   # Validate Helm charts
   helm-validation:
     name: Helm Chart Validation
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -229,7 +219,7 @@ jobs:
   # Test building container images without pushing
   container-build-test:
     name: Container Build Test
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
@@ -266,7 +256,7 @@ jobs:
       
       - name: Generate build summary
         run: |
-          echo "## ðŸ—ï¿½Eï¿½EContainer Build Summary (${{ matrix.dockerfile }})" >> $GITHUB_STEP_SUMMARY
+          echo "## ðŸ—E½EE½EContainer Build Summary (${{ matrix.dockerfile }})" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Get image size
@@ -279,7 +269,7 @@ jobs:
   # Scan container images for vulnerabilities using Trivy (Go-based, acceptable)
   container-security-scan:
     name: Container Security Scan
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: container-build-test
     permissions:
@@ -341,7 +331,7 @@ jobs:
   # Aggregate all validation results
   validation-summary:
     name: Validation Summary
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs:
       - dockerfile-lint
       - docker-compose-validation
@@ -362,7 +352,7 @@ jobs:
           if [[ "${{ needs.dockerfile-lint.result }}" == "success" ]]; then
             echo "âœEDockerfile Linting: Passed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "âš ï¿½Eï¿½EDockerfile Linting: Issues detected" >> $GITHUB_STEP_SUMMARY
+            echo "âš E½EE½EDockerfile Linting: Issues detected" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [[ "${{ needs.docker-compose-validation.result }}" == "success" ]]; then
@@ -392,7 +382,7 @@ jobs:
           if [[ "${{ needs.container-security-scan.result }}" == "success" ]]; then
             echo "âœESecurity Scan: Passed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "âš ï¿½Eï¿½ESecurity Scan: Vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
+            echo "âš E½EE½ESecurity Scan: Vulnerabilities detected" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY

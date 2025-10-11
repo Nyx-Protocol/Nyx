@@ -202,7 +202,7 @@ jobs:
   
   benchmarks:
     name: Performance Benchmarks
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     if: github.event.inputs.skip_benchmarks != 'true'
     
@@ -266,7 +266,7 @@ jobs:
   
   clippy-daemon-cli:
     name: Clippy (Daemon & CLI)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     
     steps:
@@ -295,7 +295,7 @@ jobs:
   
   security-audit:
     name: Security Audit
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     
     steps:
@@ -323,7 +323,7 @@ jobs:
   
   coverage:
     name: Code Coverage
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     
     steps:
@@ -361,7 +361,7 @@ jobs:
   
   docs:
     name: Documentation
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     
     steps:
@@ -400,7 +400,7 @@ jobs:
   
   ci-success:
     name: CI Success
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: [build-and-test, integration-tests, clippy-daemon-cli, security-audit, coverage, docs]
     if: always()
     

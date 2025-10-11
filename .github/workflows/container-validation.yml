@@ -35,7 +35,7 @@ jobs:
   # Validate Dockerfiles with hadolint (pure Python alternative)
   dockerfile-lint:
     name: Dockerfile Linting
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -43,11 +43,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Fix Docker permissions
-        run: |
-          sudo chmod 666 /var/run/docker.sock || true
-          sudo usermod -aG docker $USER || true
       
       - name: Run Hadolint
         uses: hadolint/hadolint-action@v3.1.0
@@ -76,7 +71,7 @@ jobs:
   # Build Docker images to ensure they compile correctly
   docker-build-test:
     name: Docker Build Test
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: read
@@ -90,11 +85,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Fix Docker permissions
-        run: |
-          sudo chmod 666 /var/run/docker.sock || true
-          sudo usermod -aG docker $USER || true
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -124,7 +114,7 @@ jobs:
   # Container image security scanning with Trivy
   container-security-scan:
     name: Container Security Scan (Trivy)
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     needs: [docker-build-test]
     permissions:
@@ -133,11 +123,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Fix Docker permissions
-        run: |
-          sudo chmod 666 /var/run/docker.sock || true
-          sudo usermod -aG docker $USER || true
       
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -189,7 +174,7 @@ jobs:
   # Validate docker-compose configurations
   docker-compose-validation:
     name: Docker Compose Validation
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -214,11 +199,11 @@ jobs:
           echo "Checking ${{ matrix.compose-file }} for best practices..."
           # Check for version specification
           if ! grep -q "^version:" ${{ matrix.compose-file }}; then
-            echo "‚ö†ÔøΩEÔøΩENo version specified in ${{ matrix.compose-file }}"
+            echo "‚ö†ÅEΩEÅEΩENo version specified in ${{ matrix.compose-file }}"
           fi
           # Check for health checks
           if ! grep -q "healthcheck:" ${{ matrix.compose-file }}; then
-            echo "‚ÑπÔøΩEÔøΩENo health checks defined in ${{ matrix.compose-file }}"
+            echo "‚ÑπÅEΩEÅEΩENo health checks defined in ${{ matrix.compose-file }}"
           fi
           echo "‚úÅEValidation complete"
 
@@ -227,7 +212,7 @@ jobs:
   # Validate Kubernetes manifests with kubeconform
   kubernetes-manifest-validation:
     name: Kubernetes Manifest Validation
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -259,7 +244,7 @@ jobs:
   # Validate Helm charts
   helm-chart-validation:
     name: Helm Chart Validation
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
@@ -308,7 +293,7 @@ jobs:
   # Validate Kind configuration
   kind-config-validation:
     name: Kind Configuration Validation
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -334,7 +319,7 @@ jobs:
   # Validate infrastructure configurations
   iac-validation:
     name: Infrastructure as Code Validation
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
@@ -368,7 +353,7 @@ jobs:
   
   container-validation-success:
     name: Container Validation Success
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs:
       - dockerfile-lint
       - docker-build-test
