@@ -42,6 +42,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      - name: Fix Docker permissions
+        run: |
+          sudo chmod 666 /var/run/docker.sock || true
+          sudo usermod -aG docker $USER || true
+      
       # Hadolint is written in Haskell but distributed as Docker image (Go runtime)
       # This is acceptable as it doesn't require C/C++ compilation in CI
       - name: Run Hadolint
@@ -89,6 +94,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      
+      - name: Fix Docker permissions
+        run: |
+          sudo chmod 666 /var/run/docker.sock || true
+          sudo usermod -aG docker $USER || true
       
       - name: Validate docker-compose files
         run: |
