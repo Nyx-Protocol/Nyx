@@ -136,15 +136,23 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        # Liveness probe: Check if Unix socket exists and is responsive
         livenessProbe:
-          tcpSocket:
-            port: 9000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          tcpSocket:
-            port: 9000
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - "test -S /tmp/nyx.sock"
           initialDelaySeconds: 10
+          periodSeconds: 10
+        # Readiness probe: Check if daemon is accepting connections
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - "test -S /tmp/nyx.sock"
+          initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
       - name: nyx-config
@@ -175,16 +183,15 @@ spec:
     targetPort: 9090
     protocol: TCP
 ---
-# Deployment for nyx-http-proxy (SOCKS5/HTTP proxy)
+# DaemonSet for nyx-http-proxy (SOCKS5/HTTP proxy on each node)
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
   name: nyx-proxy
   namespace: nyx-test
   labels:
     app: nyx-proxy
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: nyx-proxy
@@ -199,8 +206,8 @@ spec:
         imagePullPolicy: Never
         command: ["/usr/local/bin/nyx-http-proxy"]
         args:
-          - "-daemon-socket"
-          - "/var/run/nyx/nyx-mix.sock"
+          - "-ipc"
+          - "/tmp/nyx.sock"
           - "-socks5"
           - "0.0.0.0:9050"
           - "-http"
@@ -214,10 +221,11 @@ spec:
           protocol: TCP
         env:
         - name: NYX_DAEMON_SOCKET
-          value: "unix:///var/run/nyx/nyx-mix.sock"
+          value: "unix:///tmp/nyx.sock"
         volumeMounts:
         - name: nyx-socket
-          mountPath: /var/run/nyx
+          mountPath: /tmp
+          readOnly: true
         resources:
           requests:
             memory: "128Mi"
@@ -225,19 +233,27 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "200m"
+        # Liveness probe: Check if SOCKS5 port is responding
         livenessProbe:
           tcpSocket:
             port: 9050
-          initialDelaySeconds: 15
+          initialDelaySeconds: 30
           periodSeconds: 10
+          failureThreshold: 5
+        # Readiness probe: Check if proxy is ready to accept connections
         readinessProbe:
           tcpSocket:
             port: 9050
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 5
+          failureThreshold: 3
+      # Use hostPath to access daemon's Unix socket on the same node
+      hostNetwork: false
       volumes:
       - name: nyx-socket
-        emptyDir: {}
+        hostPath:
+          path: /tmp
+          type: Directory
 ---
 # Service for nyx-http-proxy
 apiVersion: v1
