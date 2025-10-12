@@ -1,0 +1,101 @@
+# Multi-stage Dockerfile for NyxNet test environment
+# Builds: nyx-daemon (Rust) + nyx-http-proxy (Go) + testing tools
+
+##############################################################################
+# Stage 1: Build Rust components (nyx-daemon)
+##############################################################################
+FROM rust:1.75-slim-bookworm AS rust-builder
+
+WORKDIR /build
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    protobuf-compiler \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy workspace files
+COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
+COPY nyx-core ./nyx-core
+COPY nyx-crypto ./nyx-crypto
+COPY nyx-transport ./nyx-transport
+COPY nyx-mix ./nyx-mix
+COPY nyx-stream ./nyx-stream
+COPY nyx-fec ./nyx-fec
+COPY nyx-control ./nyx-control
+COPY nyx-daemon ./nyx-daemon
+COPY nyx-telemetry ./nyx-telemetry
+COPY build-protoc ./build-protoc
+
+# Build nyx-daemon in release mode
+RUN cargo build --release --bin nyx-daemon
+
+##############################################################################
+# Stage 2: Build Go components (nyx-http-proxy)
+##############################################################################
+FROM golang:1.21-bookworm AS go-builder
+
+WORKDIR /build
+
+# Copy Go proxy source
+COPY nyx-http-proxy/go.mod nyx-http-proxy/go.sum ./
+RUN go mod download
+
+COPY nyx-http-proxy/*.go ./
+
+# Build nyx-http-proxy
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o nyx-http-proxy .
+
+##############################################################################
+# Stage 3: Final runtime image
+##############################################################################
+FROM debian:bookworm-slim
+
+# Install runtime dependencies and testing tools
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    curl \
+    iperf3 \
+    netcat-openbsd \
+    iproute2 \
+    iputils-ping \
+    dnsutils \
+    tcpdump \
+    net-tools \
+    procps \
+    socat \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create nyx user
+RUN useradd -m -u 1000 -s /bin/bash nyx
+
+# Copy binaries from builders
+COPY --from=rust-builder /build/target/release/nyx-daemon /usr/local/bin/
+COPY --from=go-builder /build/nyx-http-proxy /usr/local/bin/
+
+# Create necessary directories
+RUN mkdir -p /etc/nyx /var/lib/nyx /var/log/nyx /var/run/nyx && \
+    chown -R nyx:nyx /etc/nyx /var/lib/nyx /var/log/nyx /var/run/nyx
+
+# Copy default configuration
+COPY examples/full_config.toml /etc/nyx/nyx.toml
+
+USER nyx
+WORKDIR /home/nyx
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Expose ports
+# 9050: SOCKS5 proxy
+# 8080: HTTP proxy
+# 9000: gRPC API
+# 9090: Prometheus metrics
+EXPOSE 9050 8080 9000 9090
+
+# Default command: start nyx-daemon
+CMD ["/usr/local/bin/nyx-daemon", "--config", "/etc/nyx/nyx.toml"]

@@ -1,0 +1,124 @@
+# NyxNet Test Configuration for Multi-Cluster Kubernetes Testing
+# This configuration enables Mix Network with 3-hop routing for anonymity testing
+
+[node]
+# Node identity (will be overridden per cluster)
+node_id = "test-node-1"
+listen_addr = "0.0.0.0:9000"
+
+[crypto]
+# Post-Quantum Cryptography settings
+use_pq_crypto = true
+# Hybrid handshake: ML-KEM-768 + X25519
+key_exchange = "hybrid"
+# Session key rotation every 1 hour
+session_key_rotation_interval = 3600
+
+[mix]
+# Mix Network configuration
+enabled = true
+# Number of hops in mix circuit (standard: 3)
+num_hops = 3
+# Mix node selection strategy
+path_selection = "weighted"  # Options: random, weighted, latency_aware
+
+[mix.cover_traffic]
+# Cover traffic for traffic analysis resistance
+enabled = true
+# Poisson distribution parameter (λ = packets/sec)
+lambda = 5.0
+# Adaptive rate based on real traffic
+adaptive = true
+# Low power mode (60% reduction)
+low_power_mode = false
+
+[transport]
+# QUIC transport settings
+protocol = "quic"
+# UDP port for QUIC
+udp_port = 9001
+# Enable multipath QUIC
+multipath = true
+# Connection timeout
+timeout_secs = 30
+
+[transport.nat]
+# NAT traversal
+ice_lite = true
+teredo = true
+upnp = false
+
+[fec]
+# Forward Error Correction
+enabled = true
+# Reed-Solomon parameters
+algorithm = "reed_solomon"
+# Data shards : Parity shards = 8:4
+data_shards = 8
+parity_shards = 4
+# Adaptive redundancy based on packet loss
+adaptive = true
+
+[stream]
+# Stream multiplexing
+max_streams = 1000
+# Stream buffer size (bytes)
+buffer_size = 1048576  # 1MB
+# Stream timeout (seconds)
+timeout = 300
+
+[proxy]
+# HTTP/SOCKS5 proxy settings
+enabled = true
+# SOCKS5 port (Tor-compatible)
+socks5_addr = "0.0.0.0:9050"
+# HTTP CONNECT proxy port
+http_addr = "0.0.0.0:8080"
+# Always route through Mix Network
+force_mix_routing = true
+
+[api]
+# gRPC API
+grpc_addr = "0.0.0.0:9000"
+# Enable reflection for debugging
+reflection = true
+
+[telemetry]
+# OpenTelemetry settings
+enabled = true
+# Prometheus metrics
+prometheus_addr = "0.0.0.0:9090"
+# Jaeger tracing (disabled for testing)
+jaeger_endpoint = ""
+
+[logging]
+# Logging configuration
+level = "info"  # Options: trace, debug, info, warn, error
+format = "json"
+output = "stdout"
+
+[security]
+# Security settings
+# Replay attack protection
+replay_protection = true
+# Bloom filter size for replay detection
+bloom_filter_size = 1000000
+# Nonce timeout (seconds)
+nonce_timeout = 300
+
+[dht]
+# Distributed Hash Table for peer discovery
+enabled = true
+# Bootstrap nodes (will be populated per cluster)
+bootstrap_nodes = []
+# DHT replication factor
+replication = 3
+
+[testing]
+# Testing-specific settings
+# Disable some checks for testing
+skip_certificate_validation = false
+# Enable verbose logging for debugging
+verbose = true
+# Test mode (enables additional diagnostics)
+test_mode = true
