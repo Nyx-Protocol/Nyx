@@ -135,9 +135,9 @@ install_go() {
         return 0
     fi
     
-    log_info "Installing Go 1.21..."
+    log_info "Installing Go 1.23..."
     
-    local GO_VERSION="1.21.5"
+    local GO_VERSION="1.23.4"
     local GO_ARCH="amd64"
     
     wget "https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz" -O /tmp/go.tar.gz
