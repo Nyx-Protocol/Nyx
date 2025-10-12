@@ -138,8 +138,74 @@ deploy_nyxnet() {
             -n "${TEST_NAMESPACE}" \
             --timeout=120s || true
         
+        # Check pod status and get logs if failed
+        local daemon_pods=$(kubectl get pods -n "${TEST_NAMESPACE}" -l app=nyx-daemon -o jsonpath='{.items[*].metadata.name}')
+        local proxy_pods=$(kubectl get pods -n "${TEST_NAMESPACE}" -l app=nyx-proxy -o jsonpath='{.items[*].metadata.name}')
+        
+        for pod in $daemon_pods; do
+            local status=$(kubectl get pod -n "${TEST_NAMESPACE}" "${pod}" -o jsonpath='{.status.phase}')
+            if [[ "${status}" != "Running" ]]; then
+                log_warning "Pod ${pod} status: ${status}"
+                log_info "Getting logs for ${pod}..."
+                kubectl logs -n "${TEST_NAMESPACE}" "${pod}" --tail=50 || true
+                log_info "Getting pod events for ${pod}..."
+                kubectl describe pod -n "${TEST_NAMESPACE}" "${pod}" | tail -20 || true
+            fi
+        done
+        
+        for pod in $proxy_pods; do
+            local status=$(kubectl get pod -n "${TEST_NAMESPACE}" "${pod}" -o jsonpath='{.status.phase}')
+            if [[ "${status}" != "Running" ]]; then
+                log_warning "Pod ${pod} status: ${status}"
+                log_info "Getting logs for ${pod}..."
+                kubectl logs -n "${TEST_NAMESPACE}" "${pod}" --tail=50 || true
+                log_info "Getting pod events for ${pod}..."
+                kubectl describe pod -n "${TEST_NAMESPACE}" "${pod}" | tail -20 || true
+            fi
+        done
+        
         log_success "Deployed to ${cluster}"
     done
+}
+
+# Check deployment status
+check_deployment_status() {
+    log_section "Checking Deployment Status"
+    
+    local all_ready=true
+    
+    for cluster in "${CLUSTERS[@]}"; do
+        kubectl config use-context "kind-${cluster}" > /dev/null
+        
+        log_info "Cluster: ${cluster}"
+        
+        # Get pod status
+        log_info "Pod status:"
+        kubectl get pods -n "${TEST_NAMESPACE}" -o wide
+        
+        # Check if any pods are not running
+        local not_running=$(kubectl get pods -n "${TEST_NAMESPACE}" --field-selector=status.phase!=Running -o jsonpath='{.items[*].metadata.name}')
+        if [[ -n "${not_running}" ]]; then
+            all_ready=false
+            log_warning "Pods not running: ${not_running}"
+            
+            # Get detailed logs for problematic pods
+            for pod in $not_running; do
+                log_info "=== Logs for ${pod} ==="
+                kubectl logs -n "${TEST_NAMESPACE}" "${pod}" --tail=100 2>&1 || true
+                log_info "=== Events for ${pod} ==="
+                kubectl describe pod -n "${TEST_NAMESPACE}" "${pod}" | grep -A 20 "Events:" || true
+            done
+        fi
+        
+        echo ""
+    done
+    
+    if [[ "${all_ready}" == "false" ]]; then
+        log_warning "Some pods are not ready. Continuing with tests anyway..."
+    else
+        log_success "All pods are running"
+    fi
 }
 
 # Test NyxNet daemon health
@@ -498,6 +564,9 @@ main() {
     
     # Deploy NyxNet
     deploy_nyxnet
+    
+    # Check deployment status
+    check_deployment_status
     
     # Run tests
     test_daemon_health
