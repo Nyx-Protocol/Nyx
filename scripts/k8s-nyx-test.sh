@@ -308,29 +308,24 @@ test_socks5_proxy() {
         
         kubectl config use-context "kind-${src_cluster}" > /dev/null
         
-        # Get nyx-proxy service NodePort
-        local proxy_nodeport=$(kubectl get svc nyx-proxy -n "${TEST_NAMESPACE}" -o jsonpath='{.spec.ports[?(@.name=="socks5")].nodePort}')
-        
-        # Get control plane IP
-        local proxy_ip=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "${src_cluster}-control-plane")
-        
         test_count=$((test_count + 1))
         TOTAL_TESTS=$((TOTAL_TESTS + 1))
         
-        log_info "Testing SOCKS5 proxy: ${src_cluster} (${proxy_ip}:${proxy_nodeport})"
+        log_info "Testing SOCKS5 proxy: ${src_cluster} via nyx-proxy service"
         
-        # First check if proxy port is accessible
-        if ! kubectl exec -n "${TEST_NAMESPACE}" test-client -- timeout 5 nc -zv "${proxy_ip}" "${proxy_nodeport}" 2>&1 | grep -q "open"; then
-            log_warning "Proxy port ${proxy_nodeport} not accessible on ${proxy_ip}"
-            log_info "Checking nyx-proxy logs..."
-            local proxy_pod=$(kubectl get pods -n "${TEST_NAMESPACE}" -l app=nyx-proxy -o jsonpath='{.items[0].metadata.name}')
-            kubectl logs -n "${TEST_NAMESPACE}" "${proxy_pod}" --tail=20 || true
+        # Check nyx-proxy logs first
+        log_info "Recent nyx-proxy logs:"
+        local proxy_pod=$(kubectl get pods -n "${TEST_NAMESPACE}" -l app=nyx-proxy -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [[ -n "${proxy_pod}" ]]; then
+            kubectl logs -n "${TEST_NAMESPACE}" "${proxy_pod}" --tail=5 2>&1 | head -5
         fi
         
-        # Test with curl through SOCKS5
+        # Test with curl through SOCKS5 service DNS name
+        # Use socks5h:// to let SOCKS server resolve DNS (important for Mix Network)
         local curl_output=$(kubectl exec -n "${TEST_NAMESPACE}" test-client -- \
-            curl -x "socks5://${proxy_ip}:${proxy_nodeport}" \
+            curl -x "socks5h://nyx-proxy.${TEST_NAMESPACE}.svc.cluster.local:9050" \
             --connect-timeout 10 \
+            --max-time 15 \
             -v -o /dev/null -w "%{http_code}" \
             "http://example.com" 2>&1)
         local curl_exit=$?
