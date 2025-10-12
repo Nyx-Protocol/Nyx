@@ -46,6 +46,42 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
+# Create Kind clusters
+create_clusters() {
+    log_section "Creating Kind clusters"
+    
+    local total=${#CLUSTERS[@]}
+    local current=0
+    local cluster_start=$(date +%s)
+    
+    for i in "${!CLUSTERS[@]}"; do
+        local cluster="${CLUSTERS[$i]}"
+        local config_file="${PROJECT_ROOT}/k8s-multi-cluster-config-$((i+1)).yaml"
+        
+        current=$((current + 1))
+        log_info "[$current/$total] Creating cluster: ${cluster}"
+        
+        if kind get clusters 2>/dev/null | grep -q "^${cluster}$"; then
+            log_warning "Cluster ${cluster} already exists, deleting..."
+            kind delete cluster --name "${cluster}"
+        fi
+        
+        local single_start=$(date +%s)
+        kind create cluster --config "${config_file}" --wait 5m
+        local single_end=$(date +%s)
+        local single_duration=$((single_end - single_start))
+        
+        log_success "Cluster ${cluster} created in ${single_duration}s"
+    done
+    
+    local cluster_end=$(date +%s)
+    local total_duration=$((cluster_end - cluster_start))
+    
+    echo ""
+    log_info "All clusters created in ${total_duration}s"
+    echo ""
+}
+
 # Build NyxNet Docker image
 build_nyxnet_image() {
     log_section "Building NyxNet Docker image"
@@ -450,6 +486,9 @@ EOF
 # Main execution
 main() {
     log_section "NyxNet Multi-Cluster Mix Network Test"
+    
+    # Create clusters first
+    create_clusters
     
     # Build image
     build_nyxnet_image
