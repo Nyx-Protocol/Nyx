@@ -28,6 +28,10 @@ COPY nyx-fec ./nyx-fec
 COPY nyx-control ./nyx-control
 COPY nyx-daemon ./nyx-daemon
 COPY nyx-telemetry ./nyx-telemetry
+COPY nyx-mobile-ffi ./nyx-mobile-ffi
+COPY nyx-sdk ./nyx-sdk
+COPY nyx-http-proxy ./nyx-http-proxy
+COPY nyx-push-proxy ./nyx-push-proxy
 COPY build-protoc ./build-protoc
 
 # Build nyx-daemon in release mode
