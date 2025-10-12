@@ -615,7 +615,17 @@ EOF
 main() {
     log_section "NyxNet Multi-Cluster Mix Network Test"
     
-    # Create clusters first
+    # Check and warn about existing clusters
+    local existing_clusters=$(kind get clusters 2>/dev/null | grep -E "^(nyx-cluster-1|nyx-cluster-2|nyx-cluster-3)$" || true)
+    if [[ -n "${existing_clusters}" ]]; then
+        log_warning "Found existing test clusters. They will be recreated:"
+        echo "${existing_clusters}" | while read cluster; do
+            log_info "  - ${cluster}"
+        done
+        echo ""
+    fi
+    
+    # Create clusters first (will delete existing ones automatically)
     create_clusters
     
     # Build image
