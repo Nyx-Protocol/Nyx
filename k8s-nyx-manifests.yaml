@@ -129,6 +129,8 @@ spec:
           mountPath: /etc/nyx
         - name: nyx-data
           mountPath: /var/lib/nyx
+        - name: host-tmp
+          mountPath: /tmp
         resources:
           requests:
             memory: "256Mi"
@@ -160,6 +162,10 @@ spec:
           name: nyx-config
       - name: nyx-data
         emptyDir: {}
+      - name: host-tmp
+        hostPath:
+          path: /tmp
+          type: Directory
 ---
 # Service for nyx-daemon gRPC API
 apiVersion: v1
