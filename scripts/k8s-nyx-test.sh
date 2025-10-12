@@ -124,44 +124,82 @@ deploy_nyxnet() {
         # Apply manifests
         kubectl apply -f "${PROJECT_ROOT}/k8s-nyx-manifests.yaml"
         
-        # Wait for nyx-daemon to be ready
+        # Wait for nyx-daemon to be ready (reduced timeout for faster feedback)
         log_info "Waiting for nyx-daemon DaemonSet..."
         kubectl wait --for=condition=ready pod \
             -l app=nyx-daemon \
             -n "${TEST_NAMESPACE}" \
-            --timeout=120s || true
+            --timeout=30s || log_warning "Daemon pods not ready after 30s"
         
-        # Wait for nyx-proxy to be ready
+        # Wait for nyx-proxy to be ready (reduced timeout for faster feedback)
         log_info "Waiting for nyx-proxy Deployment..."
         kubectl wait --for=condition=ready pod \
             -l app=nyx-proxy \
             -n "${TEST_NAMESPACE}" \
-            --timeout=120s || true
+            --timeout=30s || log_warning "Proxy pods not ready after 30s"
         
-        # Check pod status and get logs if failed
+        # Always check pod status after deployment
+        echo ""
+        log_info "=== Checking Pod Status ==="
+        kubectl get pods -n "${TEST_NAMESPACE}" -o wide
+        
+        echo ""
+        log_info "=== Checking Daemon Pods ==="
         local daemon_pods=$(kubectl get pods -n "${TEST_NAMESPACE}" -l app=nyx-daemon -o jsonpath='{.items[*].metadata.name}')
-        local proxy_pods=$(kubectl get pods -n "${TEST_NAMESPACE}" -l app=nyx-proxy -o jsonpath='{.items[*].metadata.name}')
         
         for pod in $daemon_pods; do
             local status=$(kubectl get pod -n "${TEST_NAMESPACE}" "${pod}" -o jsonpath='{.status.phase}')
-            if [[ "${status}" != "Running" ]]; then
-                log_warning "Pod ${pod} status: ${status}"
-                log_info "Getting logs for ${pod}..."
-                kubectl logs -n "${TEST_NAMESPACE}" "${pod}" --tail=50 || true
-                log_info "Getting pod events for ${pod}..."
-                kubectl describe pod -n "${TEST_NAMESPACE}" "${pod}" | tail -20 || true
+            local ready=$(kubectl get pod -n "${TEST_NAMESPACE}" "${pod}" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')
+            
+            log_info "Pod: ${pod} | Status: ${status} | Ready: ${ready}"
+            
+            if [[ "${status}" != "Running" ]] || [[ "${ready}" != "True" ]]; then
+                log_warning "🔴 Pod ${pod} is not healthy"
+                
+                echo ""
+                log_info "--- Container Status ---"
+                kubectl get pod -n "${TEST_NAMESPACE}" "${pod}" -o jsonpath='{range .status.containerStatuses[*]}{.name}{": "}{.state}{"\n"}{end}'
+                
+                echo ""
+                log_info "--- Pod Logs (last 100 lines) ---"
+                kubectl logs -n "${TEST_NAMESPACE}" "${pod}" --tail=100 2>&1 || echo "No logs available"
+                
+                echo ""
+                log_info "--- Pod Events ---"
+                kubectl describe pod -n "${TEST_NAMESPACE}" "${pod}" | grep -A 30 "Events:" || echo "No events"
+            else
+                log_success "✅ Pod ${pod} is healthy"
             fi
+            echo ""
         done
+        
+        log_info "=== Checking Proxy Pods ==="
+        local proxy_pods=$(kubectl get pods -n "${TEST_NAMESPACE}" -l app=nyx-proxy -o jsonpath='{.items[*].metadata.name}')
         
         for pod in $proxy_pods; do
             local status=$(kubectl get pod -n "${TEST_NAMESPACE}" "${pod}" -o jsonpath='{.status.phase}')
-            if [[ "${status}" != "Running" ]]; then
-                log_warning "Pod ${pod} status: ${status}"
-                log_info "Getting logs for ${pod}..."
-                kubectl logs -n "${TEST_NAMESPACE}" "${pod}" --tail=50 || true
-                log_info "Getting pod events for ${pod}..."
-                kubectl describe pod -n "${TEST_NAMESPACE}" "${pod}" | tail -20 || true
+            local ready=$(kubectl get pod -n "${TEST_NAMESPACE}" "${pod}" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')
+            
+            log_info "Pod: ${pod} | Status: ${status} | Ready: ${ready}"
+            
+            if [[ "${status}" != "Running" ]] || [[ "${ready}" != "True" ]]; then
+                log_warning "🔴 Pod ${pod} is not healthy"
+                
+                echo ""
+                log_info "--- Container Status ---"
+                kubectl get pod -n "${TEST_NAMESPACE}" "${pod}" -o jsonpath='{range .status.containerStatuses[*]}{.name}{": "}{.state}{"\n"}{end}'
+                
+                echo ""
+                log_info "--- Pod Logs (last 100 lines) ---"
+                kubectl logs -n "${TEST_NAMESPACE}" "${pod}" --tail=100 2>&1 || echo "No logs available"
+                
+                echo ""
+                log_info "--- Pod Events ---"
+                kubectl describe pod -n "${TEST_NAMESPACE}" "${pod}" | grep -A 30 "Events:" || echo "No events"
+            else
+                log_success "✅ Pod ${pod} is healthy"
             fi
+            echo ""
         done
         
         log_success "Deployed to ${cluster}"
