@@ -7,6 +7,13 @@ metadata:
   labels:
     name: nyx-test
 ---
+# ServiceAccount for test pods
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: nyx-test
+---
 # ConfigMap for NyxNet configuration
 apiVersion: v1
 kind: ConfigMap

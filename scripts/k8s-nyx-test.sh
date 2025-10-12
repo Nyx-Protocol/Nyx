@@ -131,6 +131,11 @@ deploy_nyxnet() {
         # Apply manifests
         kubectl apply -f "${PROJECT_ROOT}/k8s-nyx-manifests.yaml"
         
+        # Wait for ServiceAccount to be created (fixes "serviceaccount default not found" error)
+        log_info "Waiting for ServiceAccount to be ready..."
+        sleep 2
+        kubectl wait --for=create serviceaccount/default -n "${TEST_NAMESPACE}" --timeout=10s 2>/dev/null || true
+        
         # Wait for nyx-daemon to be ready (reduced timeout for faster feedback)
         log_info "Waiting for nyx-daemon DaemonSet..."
         kubectl wait --for=condition=ready pod \
