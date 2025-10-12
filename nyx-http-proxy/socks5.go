@@ -112,17 +112,22 @@ func (s *SOCKS5Server) Close() error {
 func (s *SOCKS5Server) handleConnection(clientConn net.Conn) {
 	defer clientConn.Close()
 
+	remoteAddr := clientConn.RemoteAddr().String()
+	log.Printf("SOCKS5 new connection from %s", remoteAddr)
+
 	s.stats.TotalConnections.Add(1)
 	s.stats.SOCKS5Connections.Add(1)
 	s.stats.ActiveConnections.Add(1)
 	defer s.stats.ActiveConnections.Add(-1)
 
 	// Phase 1: Authentication handshake
+	log.Printf("SOCKS5 [%s] starting authentication handshake", remoteAddr)
 	if err := s.handleAuth(clientConn); err != nil {
-		log.Printf("SOCKS5 auth failed: %v", err)
+		log.Printf("SOCKS5 [%s] auth failed: %v", remoteAddr, err)
 		s.stats.Errors.Add(1)
 		return
 	}
+	log.Printf("SOCKS5 [%s] authentication successful", remoteAddr)
 
 	// Phase 2: Request processing
 	targetAddr, err := s.handleRequest(clientConn)
@@ -312,24 +317,39 @@ func (s *SOCKS5Server) relayBidirectional(clientConn net.Conn, streamID string, 
 
 // handleAuth processes the SOCKS5 authentication handshake
 func (s *SOCKS5Server) handleAuth(conn net.Conn) error {
+	// Set read timeout for authentication phase
+	if err := conn.SetReadDeadline(time.Now().Add(30 * time.Second)); err != nil {
+		return fmt.Errorf("set read deadline: %w", err)
+	}
+	defer conn.SetReadDeadline(time.Time{}) // Clear deadline after auth
+
 	// Read client greeting: [VER, NMETHODS, METHODS...]
+	// First, read the header (version + nmethods)
 	buf := make([]byte, 257) // Max: 1 + 1 + 255 methods
-	n, err := io.ReadAtLeast(conn, buf, 2)
-	if err != nil {
-		return fmt.Errorf("read greeting: %w", err)
+	if _, err := io.ReadFull(conn, buf[:2]); err != nil {
+		return fmt.Errorf("read greeting header: %w", err)
 	}
 
 	// Verify protocol version
 	if buf[0] != socks5Version {
+		log.Printf("SOCKS5 invalid version: got 0x%02x, expected 0x%02x", buf[0], socks5Version)
 		return errSOCKS5InvalidVersion
 	}
 
-	// Parse authentication methods
+	// Parse number of authentication methods
 	nmethods := int(buf[1])
-	if n < 2+nmethods {
+	if nmethods == 0 {
+		log.Printf("SOCKS5 no authentication methods provided")
 		return errSOCKS5InvalidRequest
 	}
+
+	// Read authentication methods
+	if _, err := io.ReadFull(conn, buf[2:2+nmethods]); err != nil {
+		return fmt.Errorf("read auth methods: %w", err)
+	}
 	methods := buf[2 : 2+nmethods]
+	
+	log.Printf("SOCKS5 client greeting: version=0x%02x, nmethods=%d, methods=%v", buf[0], nmethods, methods)
 
 	// Select authentication method (prefer no-auth for simplicity)
 	selectedMethod := byte(socks5AuthNoAccept)
@@ -340,6 +360,8 @@ func (s *SOCKS5Server) handleAuth(conn net.Conn) error {
 		}
 	}
 
+	log.Printf("SOCKS5 selected auth method: 0x%02x (0x00=no-auth, 0xFF=no-accept)", selectedMethod)
+
 	// Send method selection: [VER, METHOD]
 	reply := []byte{socks5Version, selectedMethod}
 	if _, err := conn.Write(reply); err != nil {
@@ -347,8 +369,11 @@ func (s *SOCKS5Server) handleAuth(conn net.Conn) error {
 	}
 
 	if selectedMethod == socks5AuthNoAccept {
+		log.Printf("SOCKS5 no acceptable auth method found in client methods: %v", methods)
 		return errSOCKS5NoAcceptableAuth
 	}
+
+	log.Printf("SOCKS5 authentication handshake successful")
 
 	// Handle username/password authentication if selected
 	if selectedMethod == socks5AuthPassword {
@@ -449,14 +474,24 @@ func (s *SOCKS5Server) sendAuthReply(conn net.Conn, status byte) error {
 
 // handleRequest processes the SOCKS5 request
 func (s *SOCKS5Server) handleRequest(conn net.Conn) (string, error) {
+	// Set read timeout for request phase
+	if err := conn.SetReadDeadline(time.Now().Add(30 * time.Second)); err != nil {
+		return "", fmt.Errorf("set read deadline: %w", err)
+	}
+	defer conn.SetReadDeadline(time.Time{}) // Clear deadline after request
+
 	// Read request header: [VER, CMD, RSV, ATYP]
 	buf := make([]byte, 4)
 	if _, err := io.ReadFull(conn, buf); err != nil {
 		return "", fmt.Errorf("read request header: %w", err)
 	}
 
+	log.Printf("SOCKS5 request header: version=0x%02x, cmd=0x%02x, rsv=0x%02x, atyp=0x%02x", 
+		buf[0], buf[1], buf[2], buf[3])
+
 	// Verify protocol version
 	if buf[0] != socks5Version {
+		log.Printf("SOCKS5 invalid request version: got 0x%02x, expected 0x%02x", buf[0], socks5Version)
 		if err := s.sendReply(conn, socks5RepGeneralFailure, nil); err != nil {
 			log.Printf("SOCKS5 send reply error: %v", err)
 		}
@@ -466,6 +501,7 @@ func (s *SOCKS5Server) handleRequest(conn net.Conn) (string, error) {
 	// Check command (only CONNECT supported)
 	cmd := buf[1]
 	if cmd != socks5CmdConnect {
+		log.Printf("SOCKS5 unsupported command: 0x%02x (only CONNECT=0x01 supported)", cmd)
 		if err := s.sendReply(conn, socks5RepCommandNotSupported, nil); err != nil {
 			log.Printf("SOCKS5 send reply error: %v", err)
 		}
@@ -522,7 +558,7 @@ func (s *SOCKS5Server) handleRequest(conn net.Conn) (string, error) {
 	port = binary.BigEndian.Uint16(portBuf)
 
 	targetAddr := net.JoinHostPort(host, strconv.Itoa(int(port)))
-	log.Printf("SOCKS5 CONNECT request to %s", targetAddr)
+	log.Printf("SOCKS5 CONNECT request parsed: target=%s (atyp=0x%02x)", targetAddr, atyp)
 
 	return targetAddr, nil
 }
