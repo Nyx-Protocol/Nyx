@@ -326,9 +326,25 @@ test_socks5_proxy() {
         
         log_info "Testing SOCKS5 proxy: ${src_cluster} via nyx-proxy service"
         
+        # Debug: Check socket file existence in daemon and proxy
+        log_info "=== DEBUG: Socket File Check ==="
+        local daemon_pod=$(kubectl get pods -n "${TEST_NAMESPACE}" -l app=nyx-daemon -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        local proxy_pod=$(kubectl get pods -n "${TEST_NAMESPACE}" -l app=nyx-proxy -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        
+        if [[ -n "${daemon_pod}" ]]; then
+            log_info "Checking socket in nyx-daemon pod: ${daemon_pod}"
+            kubectl exec -n "${TEST_NAMESPACE}" "${daemon_pod}" -- ls -la /tmp/nyx.sock 2>&1 | head -1 || log_warning "Socket not found in daemon /tmp"
+        fi
+        
+        if [[ -n "${proxy_pod}" ]]; then
+            log_info "Checking socket in nyx-proxy pod: ${proxy_pod}"
+            kubectl exec -n "${TEST_NAMESPACE}" "${proxy_pod}" -- ls -la /host-tmp/nyx.sock 2>&1 | head -1 || log_warning "Socket not found in proxy /host-tmp"
+            log_info "Checking nyx-proxy startup logs:"
+            kubectl logs -n "${TEST_NAMESPACE}" "${proxy_pod}" 2>&1 | grep -i "DEBUG\|socket\|connected\|ipc" | tail -10
+        fi
+        
         # Check nyx-proxy logs first
         log_info "Recent nyx-proxy logs:"
-        local proxy_pod=$(kubectl get pods -n "${TEST_NAMESPACE}" -l app=nyx-proxy -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
         if [[ -n "${proxy_pod}" ]]; then
             kubectl logs -n "${TEST_NAMESPACE}" "${proxy_pod}" --tail=5 2>&1 | head -5
         fi
