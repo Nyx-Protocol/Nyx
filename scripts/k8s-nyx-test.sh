@@ -31,6 +31,11 @@ for i in $(seq 1 "$CLUSTER_COUNT"); do
 done
 
 TEST_NAMESPACE="nyx-test"
+
+# Test options (can be overridden via environment variables)
+SKIP_SOCKS5_TESTS="${SKIP_SOCKS5_TESTS:-false}"
+SKIP_MIX_ROUTING_TESTS="${SKIP_MIX_ROUTING_TESTS:-false}"
+RUN_NETWORK_PERF_TESTS="${RUN_NETWORK_PERF_TESTS:-true}"
 TEST_RESULTS_DIR="${PROJECT_ROOT}/test-results"
 START_TIME=$(date +%s)
 
@@ -679,10 +684,29 @@ main() {
     
     # Run tests
     test_daemon_health
-    test_socks5_proxy
-    test_mix_network_routing
+    
+    # Skip SOCKS5 tests if requested
+    if [[ "${SKIP_SOCKS5_TESTS}" != "true" ]]; then
+        test_socks5_proxy
+    else
+        log_warning "Skipping SOCKS5 proxy tests (SKIP_SOCKS5_TESTS=true)"
+    fi
+    
+    # Skip Mix routing tests if requested
+    if [[ "${SKIP_MIX_ROUTING_TESTS}" != "true" ]]; then
+        test_mix_network_routing
+    else
+        log_warning "Skipping Mix Network routing tests (SKIP_MIX_ROUTING_TESTS=true)"
+    fi
+    
     test_anonymization
     test_cover_traffic
+    
+    # Run network performance tests if requested
+    if [[ "${RUN_NETWORK_PERF_TESTS}" == "true" ]]; then
+        log_info "Running network performance tests..."
+        bash "${SCRIPT_DIR}/k8s-network-perf-test.sh" || log_warning "Performance tests failed"
+    fi
     
     # Generate report
     generate_report
