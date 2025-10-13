@@ -348,7 +348,7 @@ func (s *SOCKS5Server) handleAuth(conn net.Conn) error {
 		return fmt.Errorf("read auth methods: %w", err)
 	}
 	methods := buf[2 : 2+nmethods]
-	
+
 	log.Printf("SOCKS5 client greeting: version=0x%02x, nmethods=%d, methods=%v", buf[0], nmethods, methods)
 
 	// Select authentication method (prefer no-auth for simplicity)
@@ -486,7 +486,7 @@ func (s *SOCKS5Server) handleRequest(conn net.Conn) (string, error) {
 		return "", fmt.Errorf("read request header: %w", err)
 	}
 
-	log.Printf("SOCKS5 request header: version=0x%02x, cmd=0x%02x, rsv=0x%02x, atyp=0x%02x", 
+	log.Printf("SOCKS5 request header: version=0x%02x, cmd=0x%02x, rsv=0x%02x, atyp=0x%02x",
 		buf[0], buf[1], buf[2], buf[3])
 
 	// Verify protocol version

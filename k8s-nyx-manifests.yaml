@@ -213,6 +213,9 @@ spec:
       labels:
         app: nyx-proxy
     spec:
+      # IMPORTANT: Share host's /tmp with nyx-daemon socket
+      hostNetwork: false  # Keep Pod network for service accessibility
+      hostPID: false
       containers:
       - name: nyx-proxy
         image: nyxnet-test:latest
@@ -220,7 +223,7 @@ spec:
         command: ["/usr/local/bin/nyx-http-proxy"]
         args:
           - "-ipc"
-          - "/tmp/nyx.sock"
+          - "/host-tmp/nyx.sock"  # Access via hostPath volume
           - "-socks5"
           - "0.0.0.0:9050"
           - "-http"
@@ -234,11 +237,10 @@ spec:
           protocol: TCP
         env:
         - name: NYX_DAEMON_SOCKET
-          value: "unix:///tmp/nyx.sock"
+          value: "unix:///host-tmp/nyx.sock"
         volumeMounts:
-        - name: nyx-socket
-          mountPath: /tmp
-          readOnly: true
+        - name: host-tmp
+          mountPath: /host-tmp
         resources:
           requests:
             memory: "128Mi"
@@ -261,9 +263,8 @@ spec:
           periodSeconds: 5
           failureThreshold: 3
       # Use hostPath to access daemon's Unix socket on the same node
-      hostNetwork: false
       volumes:
-      - name: nyx-socket
+      - name: host-tmp
         hostPath:
           path: /tmp
           type: Directory

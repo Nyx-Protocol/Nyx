@@ -162,7 +162,7 @@ func (mbc *MixBridgeClient) ProxyConnect(target string, protocol string) (*Conne
 		Jsonrpc: "2.0",
 		Method:  "proxy.connect",
 		Params:  params,
-		ID:      mbc.nextRequestID(),
+		ID:      fmt.Sprintf("%d", mbc.nextRequestID()),
 	}
 
 	// Send request and receive response
@@ -208,7 +208,7 @@ func (mbc *MixBridgeClient) ProxySend(streamID string, data []byte) (*SendResult
 		Jsonrpc: "2.0",
 		Method:  "proxy.send",
 		Params:  params,
-		ID:      mbc.nextRequestID(),
+		ID:      fmt.Sprintf("%d", mbc.nextRequestID()),
 	}
 
 	response, err := mbc.sendRequest(request)
@@ -257,7 +257,7 @@ func (mbc *MixBridgeClient) ProxyReceive(streamID string, maxBytes int) ([]byte,
 		Jsonrpc: "2.0",
 		Method:  "proxy.receive",
 		Params:  params,
-		ID:      mbc.nextRequestID(),
+		ID:      fmt.Sprintf("%d", mbc.nextRequestID()),
 	}
 
 	response, err := mbc.sendRequest(request)
@@ -295,7 +295,7 @@ func (mbc *MixBridgeClient) ProxyClose(streamID string) error {
 		Jsonrpc: "2.0",
 		Method:  "proxy.close",
 		Params:  params,
-		ID:      mbc.nextRequestID(),
+		ID:      fmt.Sprintf("%d", mbc.nextRequestID()),
 	}
 
 	response, err := mbc.sendRequest(request)
