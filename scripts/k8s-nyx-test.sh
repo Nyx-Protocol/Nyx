@@ -23,6 +23,11 @@ source "${SCRIPT_DIR}/k8s-test-logger.sh"
 # Allow cluster count to be set via environment variable (default: 3)
 CLUSTER_COUNT="${CLUSTER_COUNT:-3}"
 
+# Test control flags (default: skip SOCKS5, run Mix Network)
+SKIP_SOCKS5_TESTS="${SKIP_SOCKS5_TESTS:-true}"
+SKIP_MIX_ROUTING_TESTS="${SKIP_MIX_ROUTING_TESTS:-false}"
+RUN_NETWORK_PERF_TESTS="${RUN_NETWORK_PERF_TESTS:-false}"
+
 # Build cluster array based on CLUSTER_COUNT
 CLUSTERS=()
 for i in $(seq 1 "$CLUSTER_COUNT"); do
