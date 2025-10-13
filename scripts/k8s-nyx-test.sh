@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 
 ##############################################################################
-# NyxNet Multi-Cluster Test - Mix Network Verification Script
+# NyxNet Multi-Cluster Test - Network Performance Verification Script
 # 
-# This script tests NyxNet's anonymization capabilities:
-# 1. Deploy NyxNet daemons across multiple clusters
-# 2. Build 3-hop Mix Network circuits
-# 3. Test SOCKS5/HTTP proxy routing through Mix Network
-# 4. Verify encryption and anonymization
-# 5. Measure Mix Network performance
+# This script tests NyxNet's network capabilities:
+# 1. Deploy NyxNet daemons across multiple Kubernetes clusters
+# 2. Test inter-cluster network connectivity
+# 3. Measure network throughput and latency
+# 4. Verify daemon-to-daemon communication
 ##############################################################################
 
 set -euo pipefail
@@ -31,11 +30,6 @@ for i in $(seq 1 "$CLUSTER_COUNT"); do
 done
 
 TEST_NAMESPACE="nyx-test"
-
-# Test options (can be overridden via environment variables)
-SKIP_SOCKS5_TESTS="${SKIP_SOCKS5_TESTS:-false}"
-SKIP_MIX_ROUTING_TESTS="${SKIP_MIX_ROUTING_TESTS:-false}"
-RUN_NETWORK_PERF_TESTS="${RUN_NETWORK_PERF_TESTS:-true}"
 TEST_RESULTS_DIR="${PROJECT_ROOT}/test-results"
 START_TIME=$(date +%s)
 
@@ -314,9 +308,9 @@ test_daemon_health() {
     log_info "Daemon health tests completed: ${passed}/${test_count} passed"
 }
 
-# Test SOCKS5 proxy connectivity
-test_socks5_proxy() {
-    log_section "Testing SOCKS5 Proxy via Mix Network"
+# Test inter-cluster network connectivity
+test_network_connectivity() {
+    log_section "Testing Inter-Cluster Network Connectivity"
     
     local test_count=0
     local passed=0
