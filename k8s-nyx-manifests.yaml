@@ -129,7 +129,8 @@ spec:
           mountPath: /etc/nyx
         - name: nyx-data
           mountPath: /var/lib/nyx
-        # Note: /tmp is NOT mounted - hostNetwork=true gives direct host /tmp access
+        - name: host-tmp
+          mountPath: /tmp
         resources:
           requests:
             memory: "256Mi"
@@ -161,7 +162,10 @@ spec:
           name: nyx-config
       - name: nyx-data
         emptyDir: {}
-      # Note: host-tmp volume removed - hostNetwork=true gives direct access
+      - name: host-tmp
+        hostPath:
+          path: /tmp
+          type: Directory
 ---
 # Service for nyx-daemon gRPC API
 apiVersion: v1

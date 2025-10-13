@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -114,6 +115,14 @@ func (mbc *MixBridgeClient) Connect() error {
 		mbc.conn = nil
 		mbc.reader = nil
 		mbc.writer = nil
+	}
+
+	// Debug: Check if socket file exists before connecting
+	log.Printf("DEBUG: Attempting to connect to socket: %s", mbc.socketPath)
+	if _, err := os.Stat(mbc.socketPath); err != nil {
+		log.Printf("DEBUG: Socket file stat error: %v", err)
+	} else {
+		log.Printf("DEBUG: Socket file exists at %s", mbc.socketPath)
 	}
 
 	// Platform-specific connection
