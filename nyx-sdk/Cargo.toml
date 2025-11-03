@@ -20,7 +20,7 @@ tokio-stream = "0.1"
 # Using tonic without default features to exclude ring/openssl (C dependencies)
 # Features: transport (TCP/HTTP2), prost (protobuf), codegen (client generation)
 tonic = { version = "0.11", default-features = false, features = ["transport", "prost", "codegen"] }
-prost = "0.12"
+prost = "0.13"
 prost-types = "0.12"
 tokio-util = { version = "0.7", features = ["codec"] }
 
